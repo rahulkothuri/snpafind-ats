@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SnapFind Client ATS – Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --muted: #64748b;
+      --text: #0f172a;
+      --accent: #0b6cf0;
+      --accent-soft: #e0ecff;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --ok: #22c55e;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 16px 24px;
+      background: #0b1120;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .brand span {
+      color: #38bdf8;
+    }
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .search input {
+      border: none;
+      background: transparent;
+      color: #e5e7eb;
+      outline: none;
+      font-size: 13px;
+      width: 220px;
+    }
+    .search span {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: #cbd5f5;
+    }
+    .filter {
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 4px 8px;
+      color: #e5e7eb;
+      font-size: 12px;
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 12px;
+    }
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+    }
+
+    main {
+      padding: 16px 24px 24px;
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(260px, 1.1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      padding: 14px 14px 12px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .chip {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .kpi {
+      padding: 10px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    .kpi-label {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .kpi-value {
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .kpi-trend {
+      font-size: 11px;
+      margin-top: 3px;
+    }
+    .kpi-trend.ok {
+      color: var(--ok);
+    }
+    .kpi-trend.warn {
+      color: var(--warn);
+    }
+    .kpi-trend.bad {
+      color: var(--danger);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      text-align: left;
+      padding: 6px 4px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    .badge.green {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge.orange {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+    .badge.red {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .badge.blue {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .badge.gray {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .funnel-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+    .funnel-label {
+      width: 80px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .funnel-bar {
+      flex: 1;
+      height: 10px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+    .funnel-inner {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0b6cf0, #22c55e);
+    }
+    .funnel-count {
+      width: 34px;
+      font-size: 11px;
+      text-align: right;
+      color: var(--muted);
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 8px;
+      border-radius: 9px;
+      border: 1px solid #e2e8f0;
+      background: #f9fafb;
+    }
+    .list-main {
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .list-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .list-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .pill {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: #eff6ff;
+      color: #1e3a8a;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid #bfdbfe;
+    }
+    .btn-text {
+      background: transparent;
+      color: var(--muted);
+      padding-inline: 4px;
+    }
+
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .alert-item {
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .alert-item span {
+      display: block;
+    }
+    .alert-critical {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+    }
+    .alert-warning {
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      color: #92400e;
+    }
+    .alert-info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+    }
+    .alert-action {
+      font-size: 11px;
+      color: #0369a1;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .sources {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .source-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .source-label {
+      width: 90px;
+      color: var(--muted);
+    }
+    .source-bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+    .source-inner {
+      height: 100%;
+      border-radius: 999px;
+      background: #0b6cf0;
+    }
+    .source-pct {
+      width: 34px;
+      font-size: 11px;
+      text-align: right;
+      color: var(--muted);
+    }
+
+    .activity {
+      margin-top: 4px;
+      max-height: 180px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .activity-item {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #f9fafb;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+    .activity-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #9ca3af;
+    }
+    .dot.green { background: #22c55e; }
+    .dot.orange { background: #f97316; }
+    .dot.red { background: #ef4444; }
+    .dot.blue { background: #0b6cf0; }
+
+    footer {
+      padding: 8px 24px 16px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 720px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .top-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .search input {
+        width: 140px;
+      }
+      .kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="brand">SnapFind <span>Client ATS</span> · Dashboard</div>
+    <div class="top-right">
+      <div class="search">
+        <input type="text" id="globalSearch" placeholder="Search candidates, roles, tags..." />
+        <span>Ctrl + K</span>
+      </div>
+      <select id="timeRange" class="filter">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+      <div class="user-pill">
+        <div class="user-avatar">T</div>
+        <div>
+          <div style="font-size: 12px;">Tushar (Client HR)</div>
+          <div style="font-size: 10px; color:#9ca3af;">Acme Technologies</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT MAIN -->
+    <section>
+
+      <!-- Overview + KPIs -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Overview</div>
+            <div class="card-sub">Live snapshot of your hiring pipeline</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-outline">+ New Role</button>
+            <button class="btn btn-primary">Export Dashboard</button>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="kpi-label">
+              <span>Open Roles</span>
+              <span class="chip" id="kpiRolesChip">Priority: 3 High</span>
+            </div>
+            <div class="kpi-value" id="kpiOpenRoles">—</div>
+            <div class="kpi-trend ok" id="kpiOpenRolesTrend">Stable vs last 30 days</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">
+              <span>Active Candidates</span>
+              <span class="chip">In pipeline</span>
+            </div>
+            <div class="kpi-value" id="kpiActiveCandidates">—</div>
+            <div class="kpi-trend ok" id="kpiActiveCandidatesTrend">+18% vs last 30 days</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">
+              <span>Interviews Today</span>
+              <span class="chip">Calendar synced</span>
+            </div>
+            <div class="kpi-value" id="kpiInterviewsToday">—</div>
+            <div class="kpi-trend warn" id="kpiInterviewsTrend">Load concentrated on 2 panelists</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">
+              <span>Offers Pending</span>
+              <span class="chip">Awaiting response</span>
+            </div>
+            <div class="kpi-value" id="kpiOffersPending">—</div>
+            <div class="kpi-trend bad" id="kpiOffersTrend">3 offers > 5 days</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Role-wise pipeline -->
+          <div class="card" style="margin-top:10px;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Role-wise Pipeline</div>
+                <div class="card-sub">Deep dive into current hiring load</div>
+              </div>
+              <button class="btn btn-text" onclick="alert('This is a static prototype action.')">View all</button>
+            </div>
+            <table>
+              <thead>
+              <tr>
+                <th>Role</th>
+                <th>Applicants</th>
+                <th>Interview</th>
+                <th>Offer</th>
+                <th>Age (days)</th>
+                <th>SLA</th>
+              </tr>
+              </thead>
+              <tbody id="rolesTableBody">
+              <!-- Filled by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Funnel + legend -->
+          <div class="card" style="margin-top:10px;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Hiring Funnel</div>
+                <div class="card-sub">Conversion by stage (last 30 days)</div>
+              </div>
+              <button class="btn btn-text" onclick="alert('Static prototype – no filter applied.')">Change view</button>
+            </div>
+            <div id="funnelContainer">
+              <!-- JS -->
+            </div>
+            <div class="legend">
+              <div class="legend-item"><div class="dot blue"></div> Applied</div>
+              <div class="legend-item"><div class="dot.green"></div> Hired</div>
+              <div class="legend-item"><div class="dot.orange"></div> High drop</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interviews + Tasks -->
+      <div class="two-col" style="margin-top:12px;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Upcoming Interviews</div>
+              <div class="card-sub">Today & this week</div>
+            </div>
+            <button class="btn btn-outline" onclick="alert('Static prototype – schedule flow not wired.')">
+              + Schedule
+            </button>
+          </div>
+          <div class="list" id="interviewsList"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Open Tasks & SLAs</div>
+              <div class="card-sub">Feedback, approvals & pending actions</div>
+            </div>
+            <button class="btn btn-text" onclick="alert('Static prototype – view all tasks.')">View all</button>
+          </div>
+          <div class="list" id="tasksList"></div>
+        </div>
+      </div>
+
+      <!-- Activity feed -->
+      <div class="card" style="margin-top:12px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Activity Feed</div>
+            <div class="card-sub">Most recent actions across your ATS</div>
+          </div>
+          <button class="btn btn-text" onclick="alert('Static prototype – filter not wired.')">Filter</button>
+        </div>
+        <div class="activity" id="activityList"></div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="right-column">
+
+      <!-- Alerts -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Alerts</div>
+            <div class="card-sub">Items that need your attention</div>
+          </div>
+        </div>
+        <div id="alertsList">
+          <!-- JS -->
+        </div>
+      </div>
+
+      <!-- Source performance -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Source Performance</div>
+            <div class="card-sub">Where your best candidates come from</div>
+          </div>
+        </div>
+        <div class="sources" id="sourcesList"></div>
+      </div>
+
+      <!-- Recruiter load -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Recruiter Load</div>
+            <div class="card-sub">Distribution of active roles</div>
+          </div>
+        </div>
+        <div class="list" id="recruiterLoadList"></div>
+      </div>
+
+    </aside>
+  </main>
+
+  <footer>
+    <div>SnapFind Client ATS · Dashboard prototype for reference only</div>
+    <div>Time-to-fill (median): <strong id="ttfMedian">—</strong> · Offer acceptance: <strong id="offerRate">—</strong></div>
+  </footer>
+
+</div>
+
+<script>
+  // -------- SAMPLE DATA FOR DEMO --------
+  const dashboardData = {
+    roles: [
+      { id: 1, title: "Senior Backend Engineer", applicants: 124, interview: 18, offer: 3, ageDays: 26, slaStatus: "At risk" },
+      { id: 2, title: "Product Manager", applicants: 43, interview: 7, offer: 1, ageDays: 19, slaStatus: "On track" },
+      { id: 3, title: "Sales Lead (North)", applicants: 96, interview: 14, offer: 2, ageDays: 32, slaStatus: "Breached" },
+      { id: 4, title: "UX Designer", applicants: 58, interview: 9, offer: 1, ageDays: 15, slaStatus: "On track" },
+      { id: 5, title: "Data Analyst", applicants: 71, interview: 10, offer: 0, ageDays: 12, slaStatus: "On track" }
+    ],
+    funnel: [
+      { stage: "Applied", count: 520 },
+      { stage: "Screened", count: 310 },
+      { stage: "Shortlisted", count: 130 },
+      { stage: "Interview", count: 64 },
+      { stage: "Offer", count: 14 },
+      { stage: "Hired", count: 9 }
+    ],
+    interviews: [
+      { time: "10:30 AM", candidate: "Ravi Kumar", role: "Senior Backend Engineer", panel: "Aarti · Rahul", type: "Google Meet" },
+      { time: "11:15 AM", candidate: "Ananya Sharma", role: "Product Manager", panel: "Rahul", type: "Zoom" },
+      { time: "02:00 PM", candidate: "Karan Mehta", role: "Sales Lead (North)", panel: "Vikram", type: "In-office" },
+      { time: "04:30 PM", candidate: "Priya Gupta", role: "UX Designer", panel: "Sana", type: "Google Meet" }
+    ],
+    tasks: [
+      { type: "Feedback", text: "Interview feedback pending for Ravi Kumar (Backend)", age: "22 hours", severity: "high" },
+      { type: "Approval", text: "Offer approval required for Karan Mehta (Sales Lead)", age: "3 days", severity: "high" },
+      { type: "Reminder", text: "Follow-up with candidate Ananya Sharma on offer clarification", age: "1 day", severity: "medium" },
+      { type: "Pipeline", text: "Add more profiles for Data Scientist role (low pipeline)", age: "4 days", severity: "medium" }
+    ],
+    alerts: [
+      { level: "critical", message: "3 roles breached time-to-fill SLA (> 30 days)", action: "View impacted roles" },
+      { level: "warning", message: "Parsing failures above 8% this week – review resume formats", action: "View logs" },
+      { level: "info", message: "New integration: LinkedIn job posting enabled", action: "Configure now" }
+    ],
+    sources: [
+      { name: "LinkedIn", pct: 44 },
+      { name: "Referrals", pct: 19 },
+      { name: "Job Board X", pct: 16 },
+      { name: "Career Page", pct: 12 },
+      { name: "Agencies", pct: 9 }
+    ],
+    recruiterLoad: [
+      { name: "Aarti (Tech)", roles: 6, candidates: 112 },
+      { name: "Rahul (Product)", roles: 3, candidates: 54 },
+      { name: "Vikram (Sales)", roles: 4, candidates: 91 },
+      { name: "Sana (Design)", roles: 2, candidates: 39 }
+    ],
+    metrics: {
+      openRoles: 12,
+      activeCandidates: 326,
+      interviewsToday: 9,
+      offersPending: 5,
+      timeToFillMedian: 24,
+      offerAcceptanceRate: 78
+    }
+  };
+
+  function renderKPIs() {
+    document.getElementById("kpiOpenRoles").textContent = dashboardData.metrics.openRoles;
+    document.getElementById("kpiActiveCandidates").textContent = dashboardData.metrics.activeCandidates;
+    document.getElementById("kpiInterviewsToday").textContent = dashboardData.metrics.interviewsToday;
+    document.getElementById("kpiOffersPending").textContent = dashboardData.metrics.offersPending;
+    document.getElementById("ttfMedian").textContent = dashboardData.metrics.timeToFillMedian + " days";
+    document.getElementById("offerRate").textContent = dashboardData.metrics.offerAcceptanceRate + "%";
+  }
+
+  function renderRoles() {
+    const body = document.getElementById("rolesTableBody");
+    body.innerHTML = "";
+    dashboardData.roles.forEach(role => {
+      const tr = document.createElement("tr");
+
+      const slaBadgeClass =
+        role.slaStatus === "On track" ? "green" :
+        role.slaStatus === "At risk" ? "orange" : "red";
+
+      tr.innerHTML = `
+        <td>${role.title}</td>
+        <td>${role.applicants}</td>
+        <td>${role.interview}</td>
+        <td>${role.offer}</td>
+        <td>${role.ageDays}</td>
+        <td><span class="badge ${slaBadgeClass}">${role.slaStatus}</span></td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  function renderFunnel() {
+    const container = document.getElementById("funnelContainer");
+    container.innerHTML = "";
+    const max = Math.max(...dashboardData.funnel.map(s => s.count));
+    dashboardData.funnel.forEach((step, index) => {
+      const row = document.createElement("div");
+      row.className = "funnel-step";
+
+      const label = document.createElement("div");
+      label.className = "funnel-label";
+      label.textContent = step.stage;
+
+      const bar = document.createElement("div");
+      bar.className = "funnel-bar";
+
+      const inner = document.createElement("div");
+      inner.className = "funnel-inner";
+      inner.style.width = (step.count / max * 100).toFixed(0) + "%";
+
+      // highlight high drop stage
+      if (index > 0) {
+        const prev = dashboardData.funnel[index - 1].count;
+        const drop = 1 - step.count / prev;
+        if (drop > 0.55) {
+          inner.style.background = "linear-gradient(90deg, #f97316, #ef4444)";
+        }
+      }
+
+      bar.appendChild(inner);
+
+      const count = document.createElement("div");
+      count.className = "funnel-count";
+      count.textContent = step.count;
+
+      row.appendChild(label);
+      row.appendChild(bar);
+      row.appendChild(count);
+      container.appendChild(row);
+    });
+  }
+
+  function renderInterviews() {
+    const list = document.getElementById("interviewsList");
+    list.innerHTML = "";
+    dashboardData.interviews.forEach(int => {
+      const item = document.createElement("div");
+      item.className = "list-item";
+      item.innerHTML = `
+        <div>
+          <div class="list-main">${int.candidate}</div>
+          <div class="list-sub">${int.role} · ${int.time} · ${int.type}</div>
+          <div class="list-sub">Panel: ${int.panel}</div>
+        </div>
+        <div class="list-right">
+          <span class="pill">Today</span>
+          <button class="btn btn-primary" onclick="alert('Static prototype – would open video link.')">Join</button>
+          <button class="btn btn-text" onclick="alert('Static prototype – reschedule flow.')">Reschedule</button>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function renderTasks() {
+    const list = document.getElementById("tasksList");
+    list.innerHTML = "";
+    dashboardData.tasks.forEach(task => {
+      const severityClass =
+        task.severity === "high" ? "red" :
+        task.severity === "medium" ? "orange" : "green";
+
+      const item = document.createElement("div");
+      item.className = "list-item";
+      item.innerHTML = `
+        <div>
+          <div class="list-main">${task.type}</div>
+          <div class="list-sub">${task.text}</div>
+        </div>
+        <div class="list-right">
+          <span class="badge ${severityClass}">${task.age}</span>
+          <button class="btn btn-outline" onclick="alert('Static prototype – mark as done.')">Mark done</button>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function renderAlerts() {
+    const container = document.getElementById("alertsList");
+    container.innerHTML = "";
+    dashboardData.alerts.forEach(alert => {
+      const div = document.createElement("div");
+      const cls =
+        alert.level === "critical" ? "alert-critical" :
+        alert.level === "warning" ? "alert-warning" : "alert-info";
+      div.className = "alert-item " + cls;
+      div.innerHTML = `
+        <div>
+          <span>${alert.message}</span>
+          <span class="alert-action" onclick="alert('Static prototype – would deep link.')">${alert.action}</span>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function renderSources() {
+    const container = document.getElementById("sourcesList");
+    container.innerHTML = "";
+    dashboardData.sources.forEach(src => {
+      const row = document.createElement("div");
+      row.className = "source-row";
+      row.innerHTML = `
+        <div class="source-label">${src.name}</div>
+        <div class="source-bar"><div class="source-inner" style="width:${src.pct}%;"></div></div>
+        <div class="source-pct">${src.pct}%</div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function renderRecruiterLoad() {
+    const list = document.getElementById("recruiterLoadList");
+    list.innerHTML = "";
+    dashboardData.recruiterLoad.forEach(rec => {
+      const item = document.createElement("div");
+      item.className = "list-item";
+      item.innerHTML = `
+        <div>
+          <div class="list-main">${rec.name}</div>
+          <div class="list-sub">${rec.roles} active roles · ${rec.candidates} candidates</div>
+        </div>
+        <div class="list-right">
+          <span class="pill">${Math.round(rec.candidates / rec.roles)} per role</span>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function renderActivity() {
+    const list = document.getElementById("activityList");
+    list.innerHTML = "";
+    const mockActivity = [
+      "Ravi Kumar moved to Interview for Senior Backend (by Aarti)",
+      "Job 'UX Designer' posted to LinkedIn & Career Page (by Sana)",
+      "Offer letter sent to Karan Mehta for Sales Lead (by Vikram)",
+      "Reminder email sent to Ananya Sharma for offer clarification (by Rahul)",
+      "New candidate 'Deepak Raj' added to Data Analyst (via Referral)"
+    ];
+    const now = new Date();
+    mockActivity.forEach((text, idx) => {
+      const item = document.createElement("div");
+      item.className = "activity-item";
+      const ts = new Date(now.getTime() - (idx * 60 + 10) * 60000);
+      item.innerHTML = `
+        <div class="activity-meta">${ts.toLocaleString()}</div>
+        <div>${text}</div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function initDashboard() {
+    renderKPIs();
+    renderRoles();
+    renderFunnel();
+    renderInterviews();
+    renderTasks();
+    renderAlerts();
+    renderSources();
+    renderRecruiterLoad();
+    renderActivity();
+
+    document.getElementById("timeRange").addEventListener("change", function () {
+      alert("Static prototype – changing range to last " + this.value + " days would refresh metrics.");
+    });
+
+    document.getElementById("globalSearch").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        alert("Static prototype – would search ATS for: " + this.value);
+      }
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", initDashboard);
+</script>
+
+</body>
+</html>

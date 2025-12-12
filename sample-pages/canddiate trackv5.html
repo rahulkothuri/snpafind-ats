@@ -1,0 +1,1936 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SnapFind Client ATS – Role-wise Pipeline</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --muted: #64748b;
+      --text: #0f172a;
+      --accent: #0b6cf0;
+      --accent-soft: #e0ecff;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --ok: #22c55e;
+      --sidebar-bg: #020617;
+      --sidebar-active: #0b6cf0;
+      --stage-queue: #e5e7eb;
+      --stage-applied: #e0f2fe;
+      --stage-screening: #fef3c7;
+      --stage-shortlisted: #dcfce7;
+      --stage-interview: #e0e7ff;
+      --stage-offer: #f5f3ff;
+      --stage-hired: #d1fae5;
+      --stage-rejected: #fee2e2;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      padding: 10px 16px;
+      background: #020617;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .h-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .page-title {
+      font-size: 17px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-sub {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .h-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill-dark {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.6);
+      color: #e5e7eb;
+    }
+    .btn {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 6px 11px;
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+    .btn-outline {
+      border-color: rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.7);
+      color: #e5e7eb;
+    }
+    .btn-secondary {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 6px 11px;
+      font-size: 11px;
+      cursor: pointer;
+      background: #f9fafb;
+      color: #374151;
+    }
+    .btn-header-icon {
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      padding: 4px 8px;
+      font-size: 11px;
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+
+    /* LAYOUT: SIDEBAR + MAIN */
+    .layout {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* SIDEBAR NAV */
+    .sidebar {
+      width: 210px;
+      background: var(--sidebar-bg);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px;
+      gap: 10px;
+      overflow-y: auto; /* scrollable menu */
+      transition: width 0.18s ease;
+    }
+    .sidebar.collapsed {
+      width: 60px;
+    }
+    .sidebar-logo {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .logo-mark {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: #0b6cf0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .logo-text {
+      color: #e5e7eb;
+    }
+    .sidebar.collapsed .logo-text {
+      display: none;
+    }
+    .nav-section-title {
+      font-size: 10px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 6px 4px 2px;
+    }
+    .sidebar.collapsed .nav-section-title {
+      display: none;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #cbd5f5;
+    }
+    .nav-item span.icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+    .nav-item span.label {
+      white-space: nowrap;
+    }
+    .sidebar.collapsed .nav-item span.label {
+      display: none;
+    }
+    .nav-item.active {
+      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--sidebar-active);
+      color: #f9fafb;
+    }
+    .nav-footer {
+      margin-top: auto;
+      font-size: 10px;
+      color: #9ca3af;
+      padding: 4px 6px;
+      border-top: 1px solid rgba(30,64,175,0.5);
+    }
+    .sidebar.collapsed .nav-footer {
+      display: none;
+    }
+
+    /* MAIN AREA */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 12px;
+      gap: 8px;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .select, .search-box {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      padding: 4px 9px;
+      font-size: 11px;
+      color: var(--text);
+    }
+    .select {
+      padding-right: 24px;
+    }
+    .search-box {
+      width: 210px;
+    }
+    .search-box input {
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 11px;
+      color: var(--text);
+      width: 100%;
+    }
+    .chip {
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .content-row {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      padding: 9px 9px 8px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .card-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ROLES PANEL */
+    .roles-panel {
+      flex: 0 0 280px;
+      max-width: 280px;
+      min-width: 240px;
+      max-height: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    th, td {
+      text-align: left;
+      padding: 5px 4px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tbody tr {
+      cursor: pointer;
+    }
+    tbody tr:hover {
+      background: #eff6ff;
+    }
+    tbody tr.selected {
+      background: #dbeafe;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    .badge.green {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge.orange {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+    .badge.red {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .priority-pill {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid #fed7aa;
+      background: #fffbeb;
+      color: #9a3412;
+    }
+
+    /* PIPELINE PANEL */
+    .pipeline-panel {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .role-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .role-top-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .role-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .role-meta-small {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .kpi-card {
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 6px 7px;
+    }
+    .kpi-label {
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .kpi-value {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .kpi-small {
+      font-size: 10px;
+      margin-top: 1px;
+      color: var(--muted);
+    }
+
+    /* Stage summary strip */
+    .stage-summary-strip {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 10px;
+    }
+    .stage-summary-item {
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px dashed #e5e7eb;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+
+    /* View tabs */
+    .view-tabs {
+      margin-top: 6px;
+      display: flex;
+      gap: 6px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 4px;
+    }
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: 999px;
+      color: #6b7280;
+    }
+    .tab-btn.active {
+      background: #e0ecff;
+      color: #0b6cf0;
+      font-weight: 500;
+    }
+
+    .candidate-table-view {
+      margin-top: 6px;
+      max-height: calc(100vh - 280px);
+      overflow-y: auto;
+    }
+    .candidate-board-view {
+      margin-top: 6px;
+      max-height: calc(100vh - 280px);
+    }
+
+    .stage-filter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .stage-pill {
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      border: 1px solid #e2e8f0;
+      background: #f1f5f9;
+    }
+
+    /* Board (kanban) */
+    .pipeline-wrapper {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .stage-column {
+      min-width: 190px;
+      max-width: 220px;
+      background: #f1f5f9;
+      border-radius: 12px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 300px);
+    }
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .stage-title {
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stage-count {
+      font-size: 10px;
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .stage-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .stage-body {
+      overflow-y: auto;
+      padding-right: 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .candidate-card {
+      border-radius: 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 7px 8px;
+      box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+      cursor: pointer;
+      transition: box-shadow 0.12s ease, transform 0.12s ease;
+    }
+    .candidate-card:hover {
+      box-shadow: 0 6px 16px rgba(15,23,42,0.12);
+      transform: translateY(-1px);
+    }
+    .cand-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .cand-name {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .cand-title {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .cand-score {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 999px;
+    }
+    .score-high {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .score-med {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+    .score-low {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .cand-meta {
+      margin-top: 3px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .tags {
+      margin-top: 3px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #e2e8f0;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+
+    .cand-actions {
+      margin-top: 5px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .btn-mini {
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      font-size: 9px;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+    .btn-mini.note {
+      background: #f3f4f6;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+    .btn-mini.move {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #facc15;
+    }
+    .btn-mini.schedule {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+    .btn-mini.cv {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #86efac;
+    }
+
+    /* DETAIL SLIDER */
+    .detail-panel {
+      flex: 0 0 auto;
+      width: 0;
+      max-width: 320px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: -4px 0 14px rgba(15,23,42,0.16);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: width 0.18s ease;
+    }
+    .detail-panel.open {
+      width: 300px;
+    }
+    .detail-header {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .detail-sub {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .detail-close {
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .detail-body {
+      padding: 8px 10px 10px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+    .detail-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-top: 8px;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-bottom: 2px;
+      color: var(--muted);
+    }
+    .detail-tags {
+      margin: 3px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .timeline {
+      margin-top: 3px;
+      border-left: 2px solid #e5e7eb;
+      padding-left: 7px;
+    }
+    .timeline-item {
+      margin-bottom: 5px;
+    }
+    .timeline-time {
+      font-size: 9px;
+      color: var(--muted);
+    }
+    .timeline-text {
+      font-size: 10px;
+    }
+    .notes-box {
+      width: 100%;
+      min-height: 50px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 5px 7px;
+      font-size: 10px;
+      resize: vertical;
+    }
+    .detail-actions {
+      margin-top: 7px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip-soft {
+      font-size: 9px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px dashed #cbd5e1;
+      background: #f8fafc;
+      color: #4b5563;
+    }
+    .cv-link-block {
+      margin-top: 4px;
+      padding: 5px 7px;
+      border-radius: 8px;
+      background: #f1f5f9;
+      border: 1px dashed #cbd5e1;
+      font-size: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cv-link-block button {
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #93c5fd;
+      background: #dbeafe;
+      color: #1d4ed8;
+      cursor: pointer;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 10px 12px;
+      max-width: 520px;
+      width: 92%;
+      box-shadow: 0 14px 40px rgba(15,23,42,0.35);
+      font-size: 11px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .modal-close {
+      border: none;
+      background: transparent;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .modal-body {
+      margin-top: 3px;
+    }
+    .field-row {
+      margin-bottom: 7px;
+    }
+    .field-label {
+      font-size: 10px;
+      margin-bottom: 2px;
+      color: var(--muted);
+    }
+    .field-input, .field-select, .field-textarea {
+      width: 100%;
+      padding: 5px 7px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      background: #f9fafb;
+    }
+    .field-textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+    .modal-footer {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    footer {
+      padding: 6px 16px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    @media (max-width: 1100px) {
+      .roles-panel { flex: 0 0 260px; max-width: 260px; }
+      .detail-panel.open { width: 260px; }
+    }
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .detail-panel.open { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="h-left">
+      <div class="page-title">
+        <button class="btn-header-icon" onclick="toggleSidebar()">☰</button>
+        <span>Role-wise Pipeline</span>
+      </div>
+      <div class="page-sub" id="headerSubtitle">
+        3 active roles · 9 total openings · 326 candidates in pipeline
+      </div>
+    </div>
+    <div class="h-right">
+      <span class="pill-dark">Client: Acme Technologies</span>
+      <span class="pill-dark">Scope: Engineering · Backend</span>
+      <button class="btn btn-outline" onclick="alert('Static – saved views')">Saved views</button>
+      <button class="btn btn-primary" onclick="alert('Static – export pipeline CSV')">Export pipeline</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- SIDEBAR NAV -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">SF</div>
+        <div class="logo-text">SnapFind ATS</div>
+      </div>
+      <div class="nav-section-title">Main</div>
+      <div class="nav-item">
+        <span class="icon">D</span>
+        <span class="label">Dashboard</span>
+      </div>
+      <div class="nav-item active">
+        <span class="icon">R</span>
+        <span class="label">Roles & Pipelines</span>
+      </div>
+      <div class="nav-item">
+        <span class="icon">C</span>
+        <span class="label">Candidates</span>
+      </div>
+      <div class="nav-item">
+        <span class="icon">I</span>
+        <span class="label">Interviews</span>
+      </div>
+
+      <div class="nav-section-title">Insights</div>
+      <div class="nav-item">
+        <span class="icon">A</span>
+        <span class="label">Analytics & Reports</span>
+      </div>
+
+      <div class="nav-section-title">Setup</div>
+      <div class="nav-item">
+        <span class="icon">S</span>
+        <span class="label">Settings</span>
+      </div>
+
+      <div class="nav-footer">
+        Logged in as: <strong style="color:#e5e7eb;">Tushar</strong><br/>
+        Role: Client HR · Acme Technologies
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filter-group">
+          <span>Filters:</span>
+          <select class="select">
+            <option>Department: Engineering</option>
+            <option>Department: Sales</option>
+            <option>Department: Product</option>
+          </select>
+          <select class="select">
+            <option>Location: All</option>
+            <option>Bangalore</option>
+            <option>Hyderabad</option>
+            <option>Remote</option>
+          </select>
+          <select class="select">
+            <option>Recruiter: All</option>
+            <option>Aarti</option>
+            <option>Rahul</option>
+            <option>Sana</option>
+          </select>
+          <span class="chip">Clear filters</span>
+        </div>
+        <div class="filter-group">
+          <div class="search-box">
+            <input id="roleSearch" placeholder="Search roles by title..." />
+          </div>
+          <select class="select">
+            <option>Sort: Priority</option>
+            <option>Sort: Age</option>
+            <option>Sort: Applicants</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Content: roles + pipeline + detail -->
+      <div class="content-row">
+        <!-- ROLES PANEL -->
+        <section class="card roles-panel">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Roles</div>
+              <div class="card-sub">Click a role to view its full pipeline</div>
+            </div>
+            <span class="chip" id="rolesSummaryChip">High: 2 · Medium: 1</span>
+          </div>
+          <div style="max-height: calc(100vh - 220px); overflow-y: auto;">
+            <table>
+              <thead>
+              <tr>
+                <th>Role</th>
+                <th>Loc</th>
+                <th>Open</th>
+                <th>Apps</th>
+                <th>Interv</th>
+                <th>SLA</th>
+                <th>Pri</th>
+              </tr>
+              </thead>
+              <tbody id="rolesTableBody">
+              <!-- JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- PIPELINE PANEL -->
+        <section class="card pipeline-panel">
+          <div class="role-top">
+            <div class="role-top-left">
+              <div class="role-name" id="selectedRoleName">Select a role</div>
+              <div class="role-meta-small" id="selectedRoleMeta">Role details will appear here.</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="btn-secondary" onclick="alert('Static – edit JD')">Edit JD</button>
+              <button class="btn-primary" onclick="alert('Static – add candidate')">+ Add candidate</button>
+            </div>
+          </div>
+
+          <div class="kpi-row" id="selectedRoleKpis">
+            <!-- JS -->
+          </div>
+
+          <!-- stage summary strip -->
+          <div class="stage-summary-strip" id="stageSummaryStrip"></div>
+
+          <!-- view tabs -->
+          <div class="view-tabs">
+            <button id="tabTable" class="tab-btn active" onclick="switchView('table')">Table view</button>
+            <button id="tabBoard" class="tab-btn" onclick="switchView('board')">Board view</button>
+          </div>
+
+          <!-- TABLE VIEW -->
+          <div id="tableView" class="candidate-table-view">
+            <div class="stage-filter-row">
+              <div>
+                Stage filter:
+                <select id="stageFilter" class="select" style="padding:3px 8px;font-size:10px;">
+                  <option value="All">All stages</option>
+                  <option value="Queue">Queue</option>
+                  <option value="Applied">Applied</option>
+                  <option value="Screening">Screening</option>
+                  <option value="Shortlisted">Shortlisted</option>
+                  <option value="Interview">Interview</option>
+                  <option value="Offer">Offer</option>
+                  <option value="Hired">Hired</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+              <div style="font-size:10px;color:var(--muted);">
+                Tip: Use table view for 100+ candidates. Board view is for quick visual pipeline.
+              </div>
+            </div>
+            <table>
+              <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Stage</th>
+                <th>Score</th>
+                <th>Exp</th>
+                <th>Location</th>
+                <th>Source</th>
+                <th>Updated</th>
+                <th>Actions</th>
+              </tr>
+              </thead>
+              <tbody id="candidateTableBody">
+              <!-- JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- BOARD VIEW -->
+          <div id="boardView" class="candidate-board-view" style="display:none;">
+            <div class="pipeline-wrapper" id="boardPipelineContainer">
+              <!-- JS stage columns -->
+            </div>
+          </div>
+        </section>
+
+        <!-- DETAIL SLIDER -->
+        <aside class="detail-panel" id="detailPanel">
+          <div class="detail-header">
+            <div>
+              <div class="detail-title" id="detailName">Candidate name</div>
+              <div class="detail-sub" id="detailTitle">Title · Location · Stage</div>
+            </div>
+            <button class="detail-close" onclick="closeDetailPanel()">×</button>
+          </div>
+          <div class="detail-body">
+            <div class="detail-section-title">Summary</div>
+            <div class="detail-row">
+              <span>Current company</span>
+              <span id="detailCompany">–</span>
+            </div>
+            <div class="detail-row">
+              <span>Total experience</span>
+              <span id="detailExperience">–</span>
+            </div>
+            <div class="detail-row">
+              <span>Current CTC</span>
+              <span id="detailCTC">–</span>
+            </div>
+            <div class="detail-row">
+              <span>Expected CTC</span>
+              <span id="detailECTC">–</span>
+            </div>
+            <div class="detail-row">
+              <span>Notice period</span>
+              <span id="detailNotice">–</span>
+            </div>
+
+            <!-- CV VIEW BLOCK -->
+            <div class="detail-section-title">CV</div>
+            <div class="cv-link-block">
+              <span id="detailCvLabel">CV: Not attached</span>
+              <button onclick="alert('Static – would open CV in new tab / viewer')">View CV</button>
+            </div>
+
+            <div class="detail-section-title">Skills & Tags</div>
+            <div class="detail-tags" id="detailTags"></div>
+
+            <div class="detail-section-title">Timeline</div>
+            <div class="timeline" id="detailTimeline"></div>
+
+            <div class="detail-section-title">Notes</div>
+            <textarea class="notes-box" placeholder="Add a note for this candidate..."></textarea>
+            <div style="text-align:right;margin-top:3px;">
+              <button class="btn-mini note" onclick="alert('Static – note saved')">Save note</button>
+            </div>
+
+            <div class="detail-section-title">Actions</div>
+            <div class="detail-actions">
+              <button class="btn-secondary" onclick="openModal('stage')">Change Stage</button>
+              <button class="btn-secondary" onclick="openModal('schedule')">Schedule Interview</button>
+              <button class="btn-secondary" onclick="openModal('email')">Send Email</button>
+              <button class="btn-secondary" onclick="openModal('reject')">Reject</button>
+              <span class="chip-soft">Last updated: <span id="detailUpdated">–</span></span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <div>Role-wise pipeline · Job-centric table + optional board · Single-page interaction</div>
+    <div>Median time-to-fill (Engineering): <strong>24 days</strong> · Offer acceptance: <strong>78%</strong></div>
+  </footer>
+
+  <!-- MODAL -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modalBox">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Modal</div>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // -------- SAMPLE DATA --------
+  const roles = [
+    {
+      id: 'r1',
+      title: 'Senior Backend Engineer',
+      location: 'Bangalore',
+      openings: 3,
+      priority: 'High',
+      recruiter: 'Aarti',
+      manager: 'Aarti',
+      ageDays: 26,
+      slaStatus: 'At risk',
+      avgTat: 28,
+      applicants: 124,
+      interviews: 18,
+      offers: 3,
+      hired: 1,
+      pipelineHealth: 'Amber',
+      candidates: [
+        {
+          id: 'c1',
+          name: 'Ravi Kumar',
+          title: 'Backend Engineer · 5.2 yrs',
+          stage: 'Screening',
+          score: 78,
+          experienceYears: 5.2,
+          company: 'FinEdge Systems',
+          currentCTC: '18 LPA',
+          expectedCTC: '22 LPA',
+          notice: '30 days',
+          location: 'Bangalore',
+          source: 'Referral',
+          tags: ['Referral', 'Java', 'Spring Boot', 'AWS'],
+          updated: 'Today · 10:15 AM',
+          cvUrl: '#',
+          timeline: [
+            'Imported via referral (Aarti)',
+            'Screening call completed – strong backend & API skills',
+            'Recommended for shortlist'
+          ]
+        },
+        {
+          id: 'c2',
+          name: 'Ananya Sharma',
+          title: 'Backend Engineer · 4.0 yrs',
+          stage: 'Applied',
+          score: 81,
+          experienceYears: 4,
+          company: 'CloudNova',
+          currentCTC: '16 LPA',
+          expectedCTC: '20 LPA',
+          notice: '60 days',
+          location: 'Hyderabad',
+          source: 'Career Page',
+          tags: ['Career page', 'Java', 'Microservices', 'PostgreSQL'],
+          updated: 'Today · 09:40 AM',
+          cvUrl: '#',
+          timeline: [
+            'Applied via branded career page',
+            'Auto-screen: JD match 84%'
+          ]
+        },
+        {
+          id: 'c3',
+          name: 'Priya Gupta',
+          title: 'Software Engineer · 3.2 yrs',
+          stage: 'Shortlisted',
+          score: 74,
+          experienceYears: 3.2,
+          company: 'CodeNest',
+          currentCTC: '14 LPA',
+          expectedCTC: '18 LPA',
+          notice: 'Serving (20 days left)',
+          location: 'Bangalore',
+          source: 'Job Board X',
+          tags: ['Shortlisted', 'Java', 'REST APIs'],
+          updated: 'Today · 11:05 AM',
+          cvUrl: '#',
+          timeline: [
+            'Screening feedback: good fundamentals',
+            'Shortlisted for Tech Round 1'
+          ]
+        },
+        {
+          id: 'c4',
+          name: 'Karan Mehta',
+          title: 'Senior Software Engineer · 6.0 yrs',
+          stage: 'Interview',
+          score: 84,
+          experienceYears: 6,
+          company: 'NeoPay',
+          currentCTC: '25 LPA',
+          expectedCTC: '30 LPA',
+          notice: 'Serving (45 days left)',
+          location: 'Gurgaon',
+          source: 'LinkedIn',
+          tags: ['Tech round today', 'Java', 'Spring Boot', 'Kafka'],
+          updated: 'Today · 08:55 AM',
+          cvUrl: '#',
+          timeline: [
+            'Technical Round 1 today at 2:00 PM',
+            'Pre-brief shared with panel'
+          ]
+        },
+        {
+          id: 'c5',
+          name: 'Arjun Patel',
+          title: 'Senior Backend · 8.4 yrs',
+          stage: 'Offer',
+          score: 90,
+          experienceYears: 8.4,
+          company: 'FinRail',
+          currentCTC: '30 LPA',
+          expectedCTC: '36 LPA',
+          notice: '60 days',
+          location: 'Remote (India)',
+          source: 'Headhunted',
+          tags: ['Must-have', 'Offer draft ready'],
+          updated: 'Today · 12:05 PM',
+          cvUrl: '#',
+          timeline: [
+            'Final round cleared with CTO',
+            'Comp discussion done – awaiting approval'
+          ]
+        },
+        {
+          id: 'c6',
+          name: 'Vijay N',
+          title: 'Backend Engineer · 4.5 yrs',
+          stage: 'Hired',
+          score: 88,
+          experienceYears: 4.5,
+          company: 'InstaServe',
+          currentCTC: '18 LPA',
+          expectedCTC: '21 LPA',
+          notice: 'Joining in 35 days',
+          location: 'Bangalore',
+          source: 'Referral',
+          tags: ['Joining confirmed', 'Onboarding in progress'],
+          updated: '2 days ago',
+          cvUrl: '#',
+          timeline: [
+            'Offer accepted',
+            'Onboarding checklist in progress'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'r2',
+      title: 'Backend Engineer (L2)',
+      location: 'Hyderabad',
+      openings: 2,
+      priority: 'Medium',
+      recruiter: 'Rahul',
+      manager: 'Rahul',
+      ageDays: 14,
+      slaStatus: 'On track',
+      avgTat: 22,
+      applicants: 91,
+      interviews: 10,
+      offers: 1,
+      hired: 0,
+      pipelineHealth: 'Green',
+      candidates: [
+        {
+          id: 'c7',
+          name: 'Sara Iyer',
+          title: 'Backend Engineer · 3.6 yrs',
+          stage: 'Interview',
+          score: 79,
+          experienceYears: 3.6,
+          company: 'DataLoop',
+          currentCTC: '15 LPA',
+          expectedCTC: '19 LPA',
+          notice: '90 days',
+          location: 'Chennai',
+          source: 'Internal movement',
+          tags: ['Internal', 'Good culture fit'],
+          updated: 'Yesterday · 07:20 PM',
+          cvUrl: '#',
+          timeline: [
+            'Tech Round 1 completed – positive',
+            'HM round pending scheduling'
+          ]
+        },
+        {
+          id: 'c8',
+          name: 'Rohit Singh',
+          title: 'Software Engineer · 2.2 yrs',
+          stage: 'Rejected',
+          score: 52,
+          experienceYears: 2.2,
+          company: 'ByteCraft',
+          currentCTC: '11 LPA',
+          expectedCTC: '15 LPA',
+          location: 'Hyderabad',
+          source: 'Job Board X',
+          tags: ['Rejected', 'Skill mismatch'],
+          updated: '3 days ago',
+          cvUrl: '#',
+          timeline: [
+            'Rejected – missing microservices experience',
+            'Regret email sent automatically'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'r3',
+      title: 'Backend Architect',
+      location: 'Remote (India)',
+      openings: 1,
+      priority: 'High',
+      recruiter: 'Aarti',
+      manager: 'CTO',
+      ageDays: 32,
+      slaStatus: 'Breached',
+      avgTat: 40,
+      applicants: 37,
+      interviews: 6,
+      offers: 0,
+      hired: 0,
+      pipelineHealth: 'Red',
+      candidates: [
+        {
+          id: 'c9',
+          name: 'Deepak Raj',
+          title: 'Backend Architect · 10.1 yrs',
+          stage: 'Shortlisted',
+          score: 92,
+          experienceYears: 10.1,
+          company: 'ScaleGrid',
+          currentCTC: '40 LPA',
+          expectedCTC: '48 LPA',
+          notice: '45 days',
+          location: 'Bangalore',
+          source: 'Referral',
+          tags: ['Must-have', 'Architecture', 'Kubernetes'],
+          updated: 'Today · 01:20 PM',
+          cvUrl: '#',
+          timeline: [
+            'Profile reviewed by CTO – strong',
+            'Tech panel to be finalized'
+          ]
+        }
+      ]
+    }
+  ];
+
+  let selectedRoleId = null;
+  let currentView = 'table';
+
+  const stageOrder = [
+    { id: 'Queue', label: 'Queue', colorVar: 'var(--stage-queue)', meta: 'Imported / to review' },
+    { id: 'Applied', label: 'Applied', colorVar: 'var(--stage-applied)', meta: 'New applicants' },
+    { id: 'Screening', label: 'Screening', colorVar: 'var(--stage-screening)', meta: 'Recruiter screen' },
+    { id: 'Shortlisted', label: 'Shortlisted', colorVar: 'var(--stage-shortlisted)', meta: 'Ready for interviews' },
+    { id: 'Interview', label: 'Interview', colorVar: 'var(--stage-interview)', meta: 'In interview rounds' },
+    { id: 'Offer', label: 'Offer', colorVar: 'var(--stage-offer)', meta: 'Offer in progress' },
+    { id: 'Hired', label: 'Hired', colorVar: 'var(--stage-hired)', meta: 'Offer accepted' },
+    { id: 'Rejected', label: 'Rejected', colorVar: 'var(--stage-rejected)', meta: 'Not moving forward' }
+  ];
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+  }
+
+  // RENDER ROLES TABLE
+  function renderRolesTable() {
+    const body = document.getElementById('rolesTableBody');
+    body.innerHTML = '';
+    let high = 0, med = 0, low = 0;
+    roles.forEach(role => {
+      if (role.priority === 'High') high++;
+      else if (role.priority === 'Medium') med++;
+      else low++;
+
+      const tr = document.createElement('tr');
+      tr.dataset.roleId = role.id;
+      if (role.id === selectedRoleId) tr.classList.add('selected');
+
+      const slaClass =
+        role.slaStatus === 'On track' ? 'green' :
+        role.slaStatus === 'At risk' ? 'orange' : 'red';
+
+      tr.innerHTML = `
+        <td>${role.title}</td>
+        <td>${role.location}</td>
+        <td>${role.openings}</td>
+        <td>${role.applicants}</td>
+        <td>${role.interviews}</td>
+        <td><span class="badge ${slaClass}">${role.slaStatus}</span></td>
+        <td><span class="priority-pill">${role.priority}</span></td>
+      `;
+      tr.addEventListener('click', () => selectRole(role.id));
+      body.appendChild(tr);
+    });
+    document.getElementById('rolesSummaryChip').textContent =
+      `High: ${high} · Medium: ${med} · Low: ${low}`;
+  }
+
+  function selectRole(roleId) {
+    selectedRoleId = roleId;
+    renderRolesTable();
+    const role = roles.find(r => r.id === roleId);
+    if (!role) return;
+
+    document.getElementById('selectedRoleName').textContent = role.title;
+    document.getElementById('selectedRoleMeta').textContent =
+      `${role.location} · ${role.openings} openings · Recruiter: ${role.recruiter} · Age: ${role.ageDays} days · Pipeline: ${role.pipelineHealth}`;
+
+    const kpiContainer = document.getElementById('selectedRoleKpis');
+    kpiContainer.innerHTML = '';
+    const kpis = [
+      { label: 'Applicants', value: role.applicants, sub: 'Total CVs received' },
+      { label: 'In Pipeline', value: role.candidates.length, sub: 'Active candidates' },
+      { label: 'Interviews', value: role.interviews, sub: 'Scheduled / done' },
+      { label: 'Offers', value: role.offers, sub: 'Active offers' }
+    ];
+    kpis.forEach(k => {
+      const div = document.createElement('div');
+      div.className = 'kpi-card';
+      div.innerHTML = `
+        <div class="kpi-label"><span>${k.label}</span></div>
+        <div class="kpi-value">${k.value}</div>
+        <div class="kpi-small">${k.sub}</div>
+      `;
+      kpiContainer.appendChild(div);
+    });
+
+    renderPipelineForRole(role);
+    closeDetailPanel();
+  }
+
+  function renderPipelineForRole(role) {
+    // stage summary
+    const summaryStrip = document.getElementById('stageSummaryStrip');
+    summaryStrip.innerHTML = '';
+
+    stageOrder.forEach(stageDef => {
+      const stageCandidates = role.candidates.filter(
+        c => (c.stage || '').toLowerCase() === stageDef.id.toLowerCase()
+      );
+      const sumItem = document.createElement('div');
+      sumItem.className = 'stage-summary-item';
+      sumItem.textContent = `${stageDef.label}: ${stageCandidates.length}`;
+      summaryStrip.appendChild(sumItem);
+    });
+
+    renderCandidateTable(role);
+    renderBoard(role);
+  }
+
+  // CANDIDATE TABLE VIEW
+  function renderCandidateTable(role) {
+    const tbody = document.getElementById('candidateTableBody');
+    tbody.innerHTML = '';
+    const stageFilter = document.getElementById('stageFilter').value;
+
+    const filtered = role.candidates
+      .slice()
+      .sort((a, b) => (a.stage || '').localeCompare(b.stage || ''))
+      .filter(c => stageFilter === 'All' || (c.stage || '').toLowerCase() === stageFilter.toLowerCase());
+
+    filtered.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.addEventListener('click', () => {
+        const stageDef = stageOrder.find(s => s.id.toLowerCase() === (c.stage || '').toLowerCase()) || { label: c.stage || '-' };
+        openDetail(c, stageDef, role);
+      });
+
+      const stageDef = stageOrder.find(s => s.id.toLowerCase() === (c.stage || '').toLowerCase());
+      const stageColor = stageDef ? stageDef.colorVar : '#e5e7eb';
+
+      tr.innerHTML = `
+        <td>
+          <div style="font-size:12px;font-weight:600;">${c.name}</div>
+          <div style="font-size:10px;color:var(--muted);">${c.title}</div>
+        </td>
+        <td>
+          <span class="stage-pill" style="background:${stageColor};border-color:#e5e7eb;">
+            ${c.stage || '-'}
+          </span>
+        </td>
+        <td>${c.score || '-'}</td>
+        <td>${c.experienceYears || '-'} yrs</td>
+        <td>${c.location || '-'}</td>
+        <td>${c.source || '-'}</td>
+        <td>${c.updated || '-'}</td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="btn-mini note" onclick="event.stopPropagation();openModal('quickNote','${c.name}')">Note</button>
+            <button class="btn-mini move" onclick="event.stopPropagation();openModal('quickStage','${c.name}')">Move</button>
+            <button class="btn-mini schedule" onclick="event.stopPropagation();openModal('quickSchedule','${c.name}')">Schedule</button>
+            <button class="btn-mini cv" onclick="event.stopPropagation();alert('Static – open CV for ${c.name}')">CV</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // BOARD VIEW
+  function renderBoard(role) {
+    const container = document.getElementById('boardPipelineContainer');
+    container.innerHTML = '';
+
+    stageOrder.forEach(stageDef => {
+      const stageCandidates = role.candidates.filter(
+        c => (c.stage || '').toLowerCase() === stageDef.id.toLowerCase()
+      );
+
+      const col = document.createElement('div');
+      col.className = 'stage-column';
+
+      const header = document.createElement('div');
+      header.className = 'stage-header';
+
+      const title = document.createElement('div');
+      title.className = 'stage-title';
+      title.innerHTML = `
+        <span style="width:10px;height:10px;border-radius:999px;background:${stageDef.colorVar};display:inline-block;"></span>
+        ${stageDef.label}
+      `;
+
+      const count = document.createElement('span');
+      count.className = 'stage-count';
+      count.textContent = stageCandidates.length;
+
+      header.appendChild(title);
+      header.appendChild(count);
+
+      const meta = document.createElement('div');
+      meta.className = 'stage-meta';
+      meta.textContent = stageDef.meta;
+
+      const body = document.createElement('div');
+      body.className = 'stage-body';
+
+      stageCandidates.forEach((c, idx) => {
+        const card = document.createElement('div');
+        card.className = 'candidate-card';
+
+        card.addEventListener('click', () => openDetail(c, stageDef, role));
+
+        const scoreClass =
+          c.score >= 80 ? 'score-high' :
+          c.score >= 65 ? 'score-med' : 'score-low';
+
+        card.innerHTML = `
+          <div class="cand-top">
+            <div>
+              <div class="cand-name">${c.name}</div>
+              <div class="cand-title">${c.title}</div>
+            </div>
+            <div class="cand-score ${scoreClass}">${c.score}</div>
+          </div>
+          <div class="cand-meta">
+            ${c.location} · ${c.source} · ${c.experienceYears} yrs
+          </div>
+          <div class="tags">
+            ${(c.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}
+          </div>
+          <div class="cand-actions">
+            <button class="btn-mini note" onclick="event.stopPropagation();openModal('quickNote','${c.name}')">Note</button>
+            <button class="btn-mini move" onclick="event.stopPropagation();openModal('quickStage','${c.name}')">Move</button>
+            <button class="btn-mini schedule" onclick="event.stopPropagation();openModal('quickSchedule','${c.name}')">Schedule</button>
+            <button class="btn-mini cv" onclick="event.stopPropagation();alert('Static – open CV for ${c.name}')">CV</button>
+          </div>
+        `;
+        body.appendChild(card);
+      });
+
+      col.appendChild(header);
+      col.appendChild(meta);
+      col.appendChild(body);
+      container.appendChild(col);
+    });
+  }
+
+  function switchView(mode) {
+    currentView = mode;
+    const tableView = document.getElementById('tableView');
+    const boardView = document.getElementById('boardView');
+    const tabTable = document.getElementById('tabTable');
+    const tabBoard = document.getElementById('tabBoard');
+
+    if (mode === 'table') {
+      tableView.style.display = 'block';
+      boardView.style.display = 'none';
+      tabTable.classList.add('active');
+      tabBoard.classList.remove('active');
+    } else {
+      tableView.style.display = 'none';
+      boardView.style.display = 'block';
+      tabBoard.classList.add('active');
+      tabTable.classList.remove('active');
+    }
+  }
+
+  // DETAIL SLIDER
+  function openDetail(candidate, stageDef, role) {
+    const panel = document.getElementById('detailPanel');
+    panel.classList.add('open');
+
+    document.getElementById('detailName').textContent = candidate.name;
+    document.getElementById('detailTitle').textContent =
+      `${candidate.title} · ${candidate.location} · Stage: ${stageDef.label}`;
+    document.getElementById('detailCompany').textContent = candidate.company || '–';
+    document.getElementById('detailExperience').textContent = candidate.experienceYears + ' yrs';
+    document.getElementById('detailCTC').textContent = candidate.currentCTC || '–';
+    document.getElementById('detailECTC').textContent = candidate.expectedCTC || '–';
+    document.getElementById('detailNotice').textContent = candidate.notice || '–';
+    document.getElementById('detailUpdated').textContent = candidate.updated || '–';
+
+    const cvLabel = document.getElementById('detailCvLabel');
+    if (candidate.cvUrl) {
+      cvLabel.textContent = 'CV: Available (PDF)';
+    } else {
+      cvLabel.textContent = 'CV: Not attached';
+    }
+
+    const tagsContainer = document.getElementById('detailTags');
+    tagsContainer.innerHTML = (candidate.tags || [])
+      .map(t => `<span class="tag">${t}</span>`).join('');
+
+    const timelineContainer = document.getElementById('detailTimeline');
+    timelineContainer.innerHTML = '';
+    (candidate.timeline || []).forEach((entry, idx) => {
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+      item.innerHTML = `
+        <div class="timeline-time">Step ${idx + 1}</div>
+        <div class="timeline-text">${entry}</div>
+      `;
+      timelineContainer.appendChild(item);
+    });
+  }
+
+  function closeDetailPanel() {
+    document.getElementById('detailPanel').classList.remove('open');
+  }
+
+  // MODALS
+  function openModal(type, name) {
+    const backdrop = document.getElementById('modalBackdrop');
+    const titleEl = document.getElementById('modalTitle');
+    const bodyEl = document.getElementById('modalBody');
+    const footerEl = document.getElementById('modalFooter');
+
+    backdrop.classList.add('open');
+    bodyEl.innerHTML = '';
+    footerEl.innerHTML = '';
+
+    const selectedCandidateName =
+      name || document.getElementById('detailName').textContent || 'Candidate';
+
+    if (type === 'schedule') {
+      titleEl.textContent = 'Schedule Interview';
+      bodyEl.innerHTML = `
+        <div class="field-row">
+          <div class="field-label">Candidate</div>
+          <input class="field-input" value="${selectedCandidateName}" readonly />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Round</div>
+          <select class="field-select">
+            <option>Technical Round 1</option>
+            <option>Technical Round 2</option>
+            <option>Hiring Manager</option>
+            <option>Culture Fit</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Date & Time</div>
+          <input type="datetime-local" class="field-input" />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Panel Members</div>
+          <input class="field-input" placeholder="e.g. aarti@client.com, rahul@client.com" />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Meeting Type</div>
+          <select class="field-select">
+            <option>Google Meet</option>
+            <option>Zoom</option>
+            <option>MS Teams</option>
+            <option>In-person</option>
+          </select>
+        </div>
+      `;
+      footerEl.innerHTML = `
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="alert('Static – interview scheduled');closeModal()">Schedule</button>
+      `;
+    } else if (type === 'email') {
+      titleEl.textContent = 'Send Email to Candidate';
+      bodyEl.innerHTML = `
+        <div class="field-row">
+          <div class="field-label">To</div>
+          <input class="field-input" value="${selectedCandidateName} &lt;candidate@example.com&gt;" />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Template</div>
+          <select class="field-select">
+            <option>Interview invite</option>
+            <option>Shortlist update</option>
+            <option>Regret / rejection</option>
+            <option>Offer discussion</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Subject</div>
+          <input class="field-input" value="Next steps for your application" />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Message</div>
+          <textarea class="field-textarea">Hi ${selectedCandidateName},
+
+Thank you for your interest in the role. We would like to...</textarea>
+        </div>
+      `;
+      footerEl.innerHTML = `
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="alert('Static – email sent');closeModal()">Send</button>
+      `;
+    } else if (type === 'stage') {
+      titleEl.textContent = 'Change Stage';
+      bodyEl.innerHTML = `
+        <div class="field-row">
+          <div class="field-label">Candidate</div>
+          <input class="field-input" value="${selectedCandidateName}" readonly />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Move to stage</div>
+          <select class="field-select">
+            <option>Queue</option>
+            <option>Applied</option>
+            <option>Screening</option>
+            <option>Shortlisted</option>
+            <option>Interview</option>
+            <option>Offer</option>
+            <option>Hired</option>
+            <option>Rejected</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Reason / comment</div>
+          <textarea class="field-textarea" placeholder="Add internal comment for this movement"></textarea>
+        </div>
+      `;
+      footerEl.innerHTML = `
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="alert('Static – stage updated');closeModal()">Update</button>
+      `;
+    } else if (type === 'reject') {
+      titleEl.textContent = 'Reject Candidate';
+      bodyEl.innerHTML = `
+        <div class="field-row">
+          <div class="field-label">Candidate</div>
+          <input class="field-input" value="${selectedCandidateName}" readonly />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Internal reason</div>
+          <select class="field-select">
+            <option>Skill mismatch</option>
+            <option>Compensation mismatch</option>
+            <option>Culture fit</option>
+            <option>Location constraints</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Notes</div>
+          <textarea class="field-textarea" placeholder="Add context for future reference"></textarea>
+        </div>
+        <div class="field-row">
+          <label style="font-size:10px;color:var(--muted);">
+            <input type="checkbox" checked /> Send regret email to candidate
+          </label>
+        </div>
+      `;
+      footerEl.innerHTML = `
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="alert('Static – candidate rejected');closeModal()">Reject</button>
+      `;
+    } else if (type === 'quickNote') {
+      titleEl.textContent = 'Quick Note';
+      bodyEl.innerHTML = `
+        <div class="field-row">
+          <div class="field-label">Candidate</div>
+          <input class="field-input" value="${selectedCandidateName}" readonly />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Note</div>
+          <textarea class="field-textarea" placeholder="Add a quick note"></textarea>
+        </div>
+      `;
+      footerEl.innerHTML = `
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="alert('Static – note saved');closeModal()">Save</button>
+      `;
+    } else if (type === 'quickStage') {
+      titleEl.textContent = 'Quick Stage Change';
+      bodyEl.innerHTML = `
+        <div class="field-row">
+          <div class="field-label">Candidate</div>
+          <input class="field-input" value="${selectedCandidateName}" readonly />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Move to</div>
+          <select class="field-select">
+            <option>Screening</option>
+            <option>Shortlisted</option>
+            <option>Interview</option>
+            <option>Offer</option>
+            <option>Rejected</option>
+          </select>
+        </div>
+      `;
+      footerEl.innerHTML = `
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="alert('Static – stage changed');closeModal()">Update</button>
+      `;
+    } else if (type === 'quickSchedule') {
+      titleEl.textContent = 'Quick Schedule';
+      bodyEl.innerHTML = `
+        <div class="field-row">
+          <div class="field-label">Candidate</div>
+          <input class="field-input" value="${selectedCandidateName}" readonly />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Date & Time</div>
+          <input type="datetime-local" class="field-input" />
+        </div>
+      `;
+      footerEl.innerHTML = `
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="alert('Static – interview scheduled');closeModal()">Schedule</button>
+      `;
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('modalBackdrop').classList.remove('open');
+  }
+
+  // INIT
+  function initPage() {
+    const totalRoles = roles.length;
+    const totalOpenings = roles.reduce((sum, r) => sum + r.openings, 0);
+    const totalCandidates = roles.reduce((sum, r) => sum + r.candidates.length, 0);
+    document.getElementById('headerSubtitle').textContent =
+      `${totalRoles} active roles · ${totalOpenings} total openings · ${totalCandidates} candidates in pipeline`;
+
+    renderRolesTable();
+    if (roles[0]) selectRole(roles[0].id);
+
+    document.getElementById('modalBackdrop').addEventListener('click', function (e) {
+      if (e.target === this) closeModal();
+    });
+
+    document.getElementById('roleSearch').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        alert('Static – would filter roles by: ' + this.value);
+      }
+    });
+
+    document.getElementById('stageFilter').addEventListener('change', function () {
+      const role = roles.find(r => r.id === selectedRoleId);
+      if (role) renderCandidateTable(role);
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', initPage);
+</script>
+
+</body>
+</html>

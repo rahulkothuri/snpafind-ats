@@ -1,0 +1,200 @@
+# Implementation Plan
+
+- [x] 1. Update database schema for enhanced company profile
+  - [x] 1.1 Add new fields to Company model in Prisma schema
+    - Add website, companySize, industry, description fields
+    - Add phone, address, city, state, country, postalCode fields
+    - Add linkedinUrl, twitterUrl, facebookUrl, careersPageUrl fields
+    - Add brandColor field with default value
+    - _Requirements: 7.1, 7.2_
+  - [x] 1.2 Create and run database migration
+    - Generate Prisma migration for new Company fields
+    - Run migration against database
+    - _Requirements: 7.1, 7.2_
+  - [x] 1.3 Write property test for company profile round-trip
+    - **Property 4: Company profile round-trip**
+    - **Validates: Requirements 2.7, 7.1, 7.2, 7.3, 7.4**
+
+- [x] 2. Implement admin registration backend
+  - [x] 2.1 Create registration API endpoint
+    - Implement POST /api/auth/register endpoint
+    - Create company record and admin user in single transaction
+    - Hash password with bcrypt
+    - _Requirements: 1.2_
+  - [x] 2.2 Add registration validation
+    - Validate password length (min 8 characters)
+    - Check for duplicate email
+    - Validate required fields
+    - _Requirements: 1.3, 1.4_
+  - [x] 2.3 Write property tests for registration
+    - **Property 1: Registration creates user and company**
+    - **Property 2: Password validation rules**
+    - **Property 3: Duplicate email prevention on registration**
+    - **Validates: Requirements 1.2, 1.3, 1.4**
+
+- [x] 3. Implement admin sign-up page frontend
+  - [x] 3.1 Create SignupPage component
+    - Build form with fullName, email, password, confirmPassword, companyName fields
+    - Add client-side validation matching backend rules
+    - Style with blue and white theme matching login page
+    - _Requirements: 1.1, 1.3_
+  - [x] 3.2 Add sign-up route and navigation
+    - Add /signup route to App.tsx
+    - Add link from login page to sign-up page
+    - Redirect to login on successful registration
+    - _Requirements: 1.5, 1.6_
+
+- [x] 4. Checkpoint - Ensure registration flow works
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Enhance company profile settings page
+  - [x] 5.1 Update company service and hooks
+    - Extend useCompany hook to handle all new fields
+    - Update company service API calls
+    - _Requirements: 2.7_
+  - [x] 5.2 Build Company Details section
+    - Add company name, website URL, company size dropdown, industry dropdown
+    - Add company description textarea
+    - _Requirements: 2.2, 2.3_
+  - [x] 5.3 Build Branding section
+    - Add logo upload/URL input with preview
+    - Add brand color picker
+    - _Requirements: 2.4_
+  - [x] 5.4 Build Contact & Location section
+    - Add contact email, phone number fields
+    - Add address, city, state, country, postal code fields
+    - _Requirements: 2.5_
+  - [x] 5.5 Build Social Media Links section
+    - Add LinkedIn, Twitter, Facebook, careers page URL fields
+    - _Requirements: 2.6_
+  - [x] 5.6 Implement save functionality
+    - Connect form to API with all fields
+    - Display success/error feedback
+    - _Requirements: 2.7, 2.8_
+
+- [x] 6. Redesign sidebar component
+  - [x] 6.1 Install and configure React Icons
+    - Add react-icons package to frontend
+    - Import Material Design icons (MdDashboard, MdWork, MdPeople, etc.)
+    - _Requirements: 3.1_
+  - [x] 6.2 Replace emoji icons with React Icons
+    - Update navSections to use React Icon components
+    - Style icons consistently with navigation items
+    - _Requirements: 3.1_
+  - [x] 6.3 Update hover and active states
+    - Change hover style to full blue background (#0b6cf0) with white text
+    - Change active style to full blue background with white text
+    - Remove left border indicator
+    - _Requirements: 3.2, 3.3_
+  - [x] 6.4 Reposition user profile and logout
+    - Move user profile section to bottom of sidebar (above logout)
+    - Position logout button below user profile
+    - _Requirements: 3.4, 3.5_
+  - [x] 6.5 Add menu toggle icon at top
+    - Add hamburger/menu icon at top of sidebar
+    - Connect to collapse/expand toggle function
+    - Remove bottom collapse arrow
+    - _Requirements: 3.6, 3.7, 3.8_
+  - [x] 6.6 Write property test for sidebar toggle
+    - **Property 5: Sidebar toggle state**
+    - **Validates: Requirements 3.8**
+
+- [x] 7. Checkpoint - Ensure sidebar and company profile work
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [-] 8. Implement public job application backend
+  - [x] 8.1 Create public job endpoint
+    - Implement GET /api/public/jobs/:id (no auth required)
+    - Return job details with company name for application form
+    - _Requirements: 5.1_
+  - [x] 8.2 Create public application endpoint
+    - Implement POST /api/public/applications (no auth required)
+    - Handle multipart form data with resume file
+    - Create or update candidate record
+    - Create JobCandidate association with "Applied" stage
+    - _Requirements: 5.10, 6.1, 6.2_
+  - [x] 8.3 Add resume file validation
+    - Validate file format (PDF, DOC, DOCX only)
+    - Validate file size (max 5MB)
+    - Store file and update candidate resumeUrl
+    - _Requirements: 5.5_
+  - [x] 8.4 Handle existing candidate emails
+    - Check if candidate with email exists
+    - Update existing record instead of creating duplicate
+    - Add new job application to existing candidate
+    - _Requirements: 5.12_
+  - [x] 8.5 Write property tests for application submission
+    - **Property 9: Resume file validation**
+    - **Property 10: Terms agreement required**
+    - **Property 11: Application submission round-trip**
+    - **Property 12: Existing email updates candidate**
+    - **Property 13: Initial pipeline stage is Applied**
+    - **Validates: Requirements 5.5, 5.9, 5.10, 5.12, 6.2**
+
+- [x] 9. Build public job application form frontend
+  - [x] 9.1 Create ApplicationPage component
+    - Create /apply/:jobId route (public, no auth)
+    - Fetch and display job details (title, company, location, type)
+    - _Requirements: 5.1_
+  - [x] 9.2 Build multi-step form structure
+    - Create step indicator showing progress (Step 1 of 4: 25%)
+    - Implement step navigation (Next, Back buttons)
+    - _Requirements: 5.2_
+  - [x] 9.3 Build Step 1: Personal Information
+    - Add full name, email, phone, current location fields (required)
+    - Add LinkedIn profile, portfolio/website URL fields (optional)
+    - _Requirements: 5.3, 5.4_
+  - [x] 9.4 Build Step 2: Resume Upload
+    - Create drag-and-drop file upload area
+    - Show accepted formats (PDF, DOC, DOCX) and max size (5MB)
+    - Display uploaded file name with remove option
+    - _Requirements: 5.5_
+  - [x] 9.5 Build Step 3: Additional Information
+    - Add cover letter textarea (optional)
+    - Add desired salary field (optional)
+    - Add work authorization Yes/No radio buttons
+    - _Requirements: 5.6, 5.7, 5.8_
+  - [x] 9.6 Build Step 4: Review and Submit
+    - Display summary of all entered information
+    - Add privacy policy and terms checkbox (required)
+    - Add Save as Draft and Submit Application buttons
+    - _Requirements: 5.9_
+  - [x] 9.7 Implement form submission
+    - Submit form data with resume file
+    - Display success confirmation message
+    - Handle and display errors
+    - _Requirements: 5.10, 5.11_
+
+- [x] 10. Ensure job creation workflow is complete
+  - [x] 10.1 Verify job creation API works
+    - Test POST /api/jobs creates job with all fields
+    - Verify default pipeline stages are created
+    - _Requirements: 4.3_
+  - [x] 10.2 Add Create Job button to sidebar
+    - Add prominent "Create Job" button in sidebar
+    - Navigate to /jobs/new on click
+    - _Requirements: 4.1_
+  - [x] 10.3 Write property tests for job creation
+    - **Property 6: Job validation rejects missing required fields**
+    - **Property 7: Job creation with pipeline stages**
+    - **Property 8: Unique job application URLs**
+    - **Validates: Requirements 4.2, 4.3, 4.4**
+
+- [x] 11. Integration and final testing
+  - [x] 11.1 Test complete registration flow
+    - Register new admin, verify company created
+    - Login with new credentials
+    - _Requirements: 1.2, 1.5_
+  - [x] 11.2 Test complete application flow
+    - Create job, get application URL
+    - Submit application as candidate
+    - Verify candidate appears in ATS portal
+    - _Requirements: 5.11, 6.3, 6.4_
+  - [x] 11.3 Update seed data if needed
+    - Add sample jobs with application URLs
+    - Add sample candidates from applications
+    - _Requirements: 6.3, 6.4_
+
+- [x] 12. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+

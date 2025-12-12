@@ -1,0 +1,455 @@
+@import "tailwindcss";
+
+/* Theme CSS Variables - Requirements 6.1, 6.2, 6.3, 6.4 */
+:root {
+  /* Primary colors - Requirement 6.1 */
+  --color-primary: #0b6cf0;
+  --color-primary-hover: #0958c7;
+  --color-primary-light: #eff6ff;
+  
+  /* Background colors - Requirement 6.2 */
+  --color-bg-white: #ffffff;
+  --color-bg-gray: #f8fafc;
+  --color-bg-light-gray: #f9fafb;
+  --color-bg-input: #f3f4f6;
+  
+  /* Sidebar colors - Light theme - Requirement 1.1, 1.2 */
+  --color-sidebar: #ffffff;
+  --color-sidebar-border: #e2e8f0;
+  --color-sidebar-text: #374151;
+  --color-sidebar-active-bg: #eff6ff;
+  --color-sidebar-active-text: #0b6cf0;
+  --color-sidebar-hover-bg: #f8fafc;
+  --color-sidebar-user-bg: #f8fafc;
+  
+  /* Text colors - Requirement 6.3 */
+  --color-text-primary: #111827;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #9ca3af;
+  --color-text-placeholder: #9ca3af;
+  
+  /* Badge colors - Requirement 4.3 */
+  --color-badge-green-bg: #dcfce7;
+  --color-badge-green-text: #166534;
+  --color-badge-orange-bg: #fef3c7;
+  --color-badge-orange-text: #92400e;
+  --color-badge-red-bg: #fee2e2;
+  --color-badge-red-text: #991b1b;
+  --color-badge-blue-bg: #dbeafe;
+  --color-badge-blue-text: #1e40af;
+  --color-badge-gray-bg: #f3f4f6;
+  --color-badge-gray-text: #374151;
+  
+  /* Trend colors - Requirement 3.3 */
+  --color-trend-positive: #16a34a;
+  --color-trend-negative: #dc2626;
+  
+  /* Border colors - Requirement 6.4 */
+  --color-border: #e2e8f0;
+  --color-border-light: #f3f4f6;
+  
+  /* Shadow */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-panel: -4px 0 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  
+  /* Spacing */
+  --sidebar-width: 210px;
+  --sidebar-collapsed-width: 60px;
+  --header-height: 64px;
+  --footer-height: 48px;
+  --detail-panel-width: 320px;
+  
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 200ms ease-in-out;
+  --transition-slow: 300ms ease-in-out;
+  
+  /* Responsive breakpoints */
+  --breakpoint-sm: 720px;
+  --breakpoint-md: 900px;
+  --breakpoint-lg: 1200px;
+}
+
+/* Tailwind theme extension via CSS */
+@theme {
+  --color-primary: #0b6cf0;
+  --color-primary-hover: #0958c7;
+  --color-primary-light: #eff6ff;
+  --color-sidebar: #ffffff;
+  --color-sidebar-border: #e2e8f0;
+  --color-sidebar-text: #374151;
+  --color-sidebar-active-bg: #eff6ff;
+  --color-sidebar-active-text: #0b6cf0;
+}
+
+/* Base styles - Requirements 6.2, 6.3 */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8fafc; /* Light gray page background - Requirement 6.2 */
+  color: #111827; /* Dark gray primary text - Requirement 6.3 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+/* Utility classes for theme */
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-primary-hover:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+/* Card styles */
+.card {
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-hover:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-gray);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Responsive Layout Utilities - Requirements 22.1, 22.2, 22.3, 22.4 */
+
+/* Hide sidebar below 900px - Requirement 22.1 */
+@media (max-width: 899px) {
+  .sidebar-desktop {
+    display: none !important;
+  }
+  
+  .hamburger-menu {
+    display: flex !important;
+  }
+  
+  .main-content-with-sidebar {
+    margin-left: 0 !important;
+  }
+}
+
+/* Show sidebar on desktop (900px+) */
+@media (min-width: 900px) {
+  .hamburger-menu {
+    display: none !important;
+  }
+}
+
+/* Grid adjustments at 1200px - Requirement 22.2 */
+@media (max-width: 1199px) {
+  .grid-responsive-xl {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .grid-cols-4-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Stack KPI cards and adjust tables at 720px - Requirement 22.3 */
+@media (max-width: 719px) {
+  .grid-cols-4-responsive,
+  .grid-cols-2-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .table-responsive {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-responsive table {
+    min-width: 600px;
+  }
+  
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
+  .stack-on-mobile {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  
+  .full-width-mobile {
+    width: 100% !important;
+  }
+}
+
+/* Mobile overlay sidebar - Requirement 22.4 */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-normal), visibility var(--transition-normal);
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sidebar-mobile {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+  z-index: 40;
+  transform: translateX(-100%);
+  transition: transform var(--transition-slow);
+}
+
+.sidebar-mobile.active {
+  transform: translateX(0);
+}
+
+/* Form Input Styles - Requirements 5.1, 5.2 */
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); /* 8px */
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-white);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-input::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(11, 108, 240, 0.15);
+}
+
+.form-input:disabled {
+  background-color: var(--color-bg-gray);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.form-input.error {
+  border-color: #dc2626;
+}
+
+.form-input.error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+/* Form Select Styles */
+.form-select {
+  width: 100%;
+  padding: 10px 14px;
+  padding-right: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); /* 8px */
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-white);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(11, 108, 240, 0.15);
+}
+
+.form-select:disabled {
+  background-color: var(--color-bg-gray);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.form-select.error {
+  border-color: #dc2626;
+}
+
+/* Form Textarea Styles */
+.form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); /* 8px */
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-white);
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-textarea::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(11, 108, 240, 0.15);
+}
+
+.form-textarea:disabled {
+  background-color: var(--color-bg-gray);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.form-textarea.error {
+  border-color: #dc2626;
+}
+
+/* Form Label Styles - Requirement 5.2 */
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-sidebar-text);
+  margin-bottom: 0.5rem;
+}
+
+.form-label-required::after {
+  content: ' *';
+  color: #dc2626;
+}
+
+/* Form Helper Text */
+.form-helper {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.form-error {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+/* Form Section Styles - Requirement 5.3 */
+.form-section {
+  background-color: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.form-section-header {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.form-section-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-divider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 1.5rem 0;
+}
+
+/* Form Group - for spacing between form fields */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Form Row - for horizontal layout */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Form Actions - for button groups */
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  margin-top: 1.5rem;
+}
+
+.form-actions-spread {
+  justify-content: space-between;
+}

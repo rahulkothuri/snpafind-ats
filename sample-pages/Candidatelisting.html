@@ -1,0 +1,1474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SnapFind ATS – Master Candidate Database</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --muted: #64748b;
+      --text: #0f172a;
+      --accent: #0b6cf0;
+      --accent-soft: #e0ecff;
+      --danger: #ef4444;
+      --ok: #22c55e;
+      --sidebar-bg: #020617;
+      --sidebar-active: #0b6cf0;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      padding: 10px 16px;
+      background: #020617;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .h-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .page-title {
+      font-size: 17px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-sub {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .h-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill-dark {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.6);
+      color: #e5e7eb;
+    }
+    .btn {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 6px 11px;
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+    .btn-outline {
+      border-color: rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.7);
+      color: #e5e7eb;
+    }
+    .btn-header-icon {
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      padding: 4px 8px;
+      font-size: 11px;
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 6px 11px;
+      font-size: 11px;
+      cursor: pointer;
+      background: #f9fafb;
+      color: #374151;
+    }
+    .btn-mini {
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      font-size: 9px;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+    .btn-mini.primary {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+    .btn-mini.ghost {
+      background: #f3f4f6;
+      color: #111827;
+      border-color: #e5e7eb;
+    }
+
+    /* LAYOUT */
+    .layout {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 210px;
+      background: var(--sidebar-bg);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px;
+      gap: 10px;
+      overflow-y: auto;
+      transition: width 0.18s ease;
+    }
+    .sidebar.collapsed {
+      width: 60px;
+    }
+    .sidebar-logo {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .logo-mark {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: #0b6cf0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .logo-text {
+      color: #e5e7eb;
+    }
+    .sidebar.collapsed .logo-text {
+      display: none;
+    }
+    .nav-section-title {
+      font-size: 10px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 6px 4px 2px;
+    }
+    .sidebar.collapsed .nav-section-title {
+      display: none;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #cbd5f5;
+    }
+    .nav-item span.icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+    .nav-item span.label {
+      white-space: nowrap;
+    }
+    .sidebar.collapsed .nav-item span.label {
+      display: none;
+    }
+    .nav-item.active {
+      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--sidebar-active);
+      color: #f9fafb;
+    }
+    .nav-footer {
+      margin-top: auto;
+      font-size: 10px;
+      color: #9ca3af;
+      padding: 4px 6px;
+      border-top: 1px solid rgba(30,64,175,0.5);
+    }
+    .sidebar.collapsed .nav-footer {
+      display: none;
+    }
+
+    /* MAIN BODY */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 12px;
+      gap: 8px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .search-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 230px;
+    }
+    .search-input {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      padding: 6px 11px;
+      font-size: 11px;
+      width: 100%;
+    }
+    .search-hint {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .filter-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 260px;
+    }
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      align-items: center;
+    }
+    .select {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      padding: 4px 9px;
+      padding-right: 24px;
+      font-size: 11px;
+      color: var(--text);
+    }
+    .chip {
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      padding: 9px 9px 8px;
+      min-width: 0;
+    }
+
+    /* KPI SUMMARY */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .summary-card {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .summary-label {
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .summary-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .summary-sub {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+    }
+    .badge.blue {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .card-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+    th, td {
+      text-align: left;
+      padding: 4px 4px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tbody tr {
+      cursor: pointer;
+    }
+    tbody tr:hover {
+      background: #eff6ff;
+    }
+
+    .tag-soft {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #4b5563;
+    }
+
+    .table-footer {
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--muted);
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* INSIGHTS PANEL */
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .mini-card {
+      border-radius: 10px;
+      border: 1px dashed #e2e8f0;
+      background: #f9fafb;
+      padding: 7px 7px;
+      font-size: 10px;
+    }
+    .mini-title {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .list-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    /* DETAIL PANEL – FIXED SLIDER ON RIGHT */
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: -340px;
+      width: 320px;
+      height: 100vh;
+      background: var(--card);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 14px rgba(15,23,42,0.16);
+      display: flex;
+      flex-direction: column;
+      transition: right 0.18s ease;
+      z-index: 40;
+    }
+    .detail-panel.open {
+      right: 0;
+    }
+    .detail-header {
+      padding: 10px 10px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: #f9fafb;
+    }
+    .detail-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .detail-sub {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .detail-close {
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .detail-body {
+      padding: 8px 10px 10px;
+      overflow-y: auto;
+      font-size: 11px;
+      flex: 1;
+    }
+    .detail-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-top: 8px;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-bottom: 2px;
+      color: var(--muted);
+    }
+    .detail-tags {
+      margin: 3px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .tag {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #e2e8f0;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+    .notes-box {
+      width: 100%;
+      min-height: 55px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 5px 7px;
+      font-size: 10px;
+      resize: vertical;
+    }
+    .detail-actions {
+      margin-top: 7px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip-soft {
+      font-size: 9px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px dashed #e2e8f0;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+
+    footer {
+      padding: 6px 16px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1200px) {
+      .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      .sidebar { display:none; }
+      .mini-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="h-left">
+      <div class="page-title">
+        <button class="btn-header-icon" onclick="toggleSidebar()">☰</button>
+        <span>Master Candidate Database</span>
+      </div>
+      <div class="page-sub">
+        Offline master list of all candidates in your ATS – for internal search & reuse (independent of pipeline stages)
+      </div>
+    </div>
+    <div class="h-right">
+      <span class="pill-dark">Company: Acme Technologies</span>
+      <button class="btn btn-outline" onclick="alert('Static – saved views')">Saved views</button>
+      <button class="btn btn-primary" onclick="alert('Static – export CSV/Excel')">Export candidates</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">SF</div>
+        <div class="logo-text">SnapFind ATS</div>
+      </div>
+      <div class="nav-section-title">Main</div>
+      <div class="nav-item">
+        <span class="icon">D</span>
+        <span class="label">Dashboard</span>
+      </div>
+      <div class="nav-item">
+        <span class="icon">R</span>
+        <span class="label">Roles & Pipelines</span>
+      </div>
+      <div class="nav-item active">
+        <span class="icon">DB</span>
+        <span class="label">Candidate Database</span>
+      </div>
+      <div class="nav-item">
+        <span class="icon">I</span>
+        <span class="label">Interviews</span>
+      </div>
+
+      <div class="nav-section-title">Insights</div>
+      <div class="nav-item">
+        <span class="icon">A</span>
+        <span class="label">Analytics & Reports</span>
+      </div>
+
+      <div class="nav-section-title">Setup</div>
+      <div class="nav-item">
+        <span class="icon">S</span>
+        <span class="label">Settings</span>
+      </div>
+
+      <div class="nav-footer">
+        Logged in as: <strong style="color:#e5e7eb;">Tushar</strong><br/>
+        Role: Client HR – Talent Acquisition
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <!-- SEARCH + FILTERS -->
+      <div class="top-row">
+        <div class="search-bar">
+          <input
+            id="searchInput"
+            class="search-input"
+            placeholder="Search by name, email, phone, skills, company, tags..."
+            oninput="applyFilters()"
+          />
+          <div class="search-hint">
+            Example: “Java Bangalore 5 yrs”, “React remote immediate”, “internal mobility”
+          </div>
+        </div>
+
+        <div class="filter-block">
+          <div class="filters-row">
+            <select id="filterDepartment" class="select" onchange="applyFilters()">
+              <option value="">Department: All</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Product">Product</option>
+              <option value="Sales">Sales</option>
+              <option value="HR">HR</option>
+            </select>
+            <select id="filterLocation" class="select" onchange="applyFilters()">
+              <option value="">Location: All</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Hyderabad">Hyderabad</option>
+              <option value="Chennai">Chennai</option>
+              <option value="Pune">Pune</option>
+              <option value="Remote">Remote</option>
+            </select>
+            <select id="filterExpBand" class="select" onchange="applyFilters()">
+              <option value="">Experience: All</option>
+              <option value="0-3">0–3 yrs</option>
+              <option value="3-6">3–6 yrs</option>
+              <option value="6-10">6–10 yrs</option>
+              <option value="10+">10+ yrs</option>
+            </select>
+          </div>
+          <div class="filters-row">
+            <select id="filterSource" class="select" onchange="applyFilters()">
+              <option value="">Source: All</option>
+              <option value="Job Board">Job board</option>
+              <option value="Referral">Referral</option>
+              <option value="Internal">Internal mobility</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Headhunted">Headhunted</option>
+            </select>
+            <select id="filterAvailability" class="select" onchange="applyFilters()">
+              <option value="">Availability: All</option>
+              <option value="Immediate">Immediate</option>
+              <option value="15 days">15 days</option>
+              <option value="30 days">30 days</option>
+              <option value="60+ days">60+ days</option>
+            </select>
+            <select id="filterTag" class="select" onchange="applyFilters()">
+              <option value="">Tag: All</option>
+              <!-- JS will fill options -->
+            </select>
+            <select id="sortBy" class="select" onchange="applyFilters()">
+              <option value="recent">Sort: Recently updated</option>
+              <option value="name">Name A–Z</option>
+              <option value="expDesc">Experience high → low</option>
+            </select>
+            <span class="chip" onclick="resetFilters()">Clear filters</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI SUMMARY -->
+      <div class="summary-row">
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>Total candidates</span>
+          </div>
+          <div class="summary-value" id="kpiTotal">–</div>
+          <div class="summary-sub">Across all roles & years</div>
+        </div>
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>Unique skills</span>
+          </div>
+          <div class="summary-value" id="kpiSkills">–</div>
+          <div class="summary-sub">Distinct technical/functional skills in database</div>
+        </div>
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>Locations covered</span>
+          </div>
+          <div class="summary-value" id="kpiLocations">–</div>
+          <div class="summary-sub">Cities / remote options available</div>
+        </div>
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>Updated last 30 days</span>
+          </div>
+          <div class="summary-value" id="kpiRecent">–</div>
+          <div class="summary-sub">New or updated profiles in last month</div>
+        </div>
+      </div>
+
+      <!-- FULL-WIDTH TABLE -->
+      <section class="card" style="margin-top:8px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Master list – all ATS candidates</div>
+            <div class="card-sub">
+              Independent of current stages – use this as your offline talent database. Click any row to view full profile & CV summary.
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);">
+            <span id="resultCountLabel">Showing all candidates</span>
+          </div>
+        </div>
+
+        <div style="max-height: 380px; overflow-y: auto;">
+          <table>
+            <thead>
+            <tr>
+              <th>Name & contact</th>
+              <th>Role & department</th>
+              <th>Experience</th>
+              <th>Current company / location</th>
+              <th>Source & availability</th>
+              <th>Skills snapshot & tags</th>
+              <th>Last updated</th>
+              <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="candidateTableBody">
+            <!-- JS rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div>
+            Tip: Use filters + search to find internal profiles. Open profile → “View CV” / “Add to role” without depending on active job postings.
+          </div>
+          <div>
+            <button class="btn-mini ghost" onclick="alert('Static – save current filter as view')">Save current view</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- INSIGHTS BELOW TABLE -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Database insights</div>
+            <div class="card-sub">Top skills, locations, sources & talent tags inside your master list</div>
+          </div>
+        </div>
+        <div class="mini-grid">
+          <div class="mini-card">
+            <div class="mini-title">Top skills</div>
+            <div class="list-inline" id="topSkills"></div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-title">Top locations</div>
+            <div class="list-inline" id="topLocations"></div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-title">Talent pool tags</div>
+            <div class="list-inline" id="talentPoolTags"></div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-title">Sources</div>
+            <div class="list-inline" id="sourcesList"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <div>Master Candidate Database · Offline view of all candidates ever in the ATS (independent of stages).</div>
+    <div>Typical use: internal hiring, backfills, repeat roles, and talent mapping across skills & locations.</div>
+  </footer>
+</div>
+
+<!-- RIGHT-SIDE DETAIL SLIDER -->
+<aside class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <div>
+      <div class="detail-title" id="detailCandidateName">Candidate name</div>
+      <div class="detail-sub" id="detailTitleLine">Role · Experience · Location</div>
+    </div>
+    <button class="detail-close" onclick="closeDetailPanel()">×</button>
+  </div>
+  <div class="detail-body">
+    <div class="detail-section-title">Profile summary</div>
+    <div id="detailSummaryText" style="font-size:11px;color:var(--muted);margin-bottom:4px;">
+      –
+    </div>
+    <div class="detail-row">
+      <span>Primary department</span>
+      <span id="detailDepartment">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Primary role</span>
+      <span id="detailPrimaryRole">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Total experience</span>
+      <span id="detailExperience">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Location preference</span>
+      <span id="detailLocation">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Current company</span>
+      <span id="detailCurrentCompany">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Current CTC / Expected</span>
+      <span id="detailCtc">–</span>
+    </div>
+
+    <div class="detail-section-title">Skills & keywords</div>
+    <div class="detail-tags" id="detailSkills"></div>
+
+    <div class="detail-section-title">ATS roles (high-level)</div>
+    <div id="detailHistory" style="font-size:10px;color:var(--muted);">
+      <!-- roles only, no stages/status shown -->
+    </div>
+
+    <div class="detail-section-title">Contact & flags</div>
+    <div class="detail-row">
+      <span>Email</span>
+      <span id="detailEmail">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Phone</span>
+      <span id="detailPhone">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Source</span>
+      <span id="detailSource">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Internal mobility</span>
+      <span id="detailInternalFlag">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Availability</span>
+      <span id="detailAvailability">–</span>
+    </div>
+
+    <div class="detail-section-title">Notes</div>
+    <textarea class="notes-box" placeholder="Add recruiter notes, internal feedback, etc."></textarea>
+    <div style="text-align:right;margin-top:3px;">
+      <button class="btn-mini ghost" onclick="alert('Static – save draft note')">Save note</button>
+    </div>
+
+    <div class="detail-section-title">Quick actions</div>
+    <div class="detail-actions">
+      <button id="detailViewCvBtn" class="btn-secondary">View CV</button>
+      <button class="btn-secondary" onclick="alert('Static – add candidate to new role')">Add to role</button>
+      <button class="btn-secondary" onclick="alert('Static – share profile via email')">Share profile</button>
+      <button class="btn-secondary" onclick="alert('Static – block candidate')">Block candidate</button>
+      <span class="chip-soft" id="detailMeta">Last updated: –</span>
+    </div>
+  </div>
+</aside>
+
+<script>
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
+
+  // SAMPLE CANDIDATE DATA (master list)
+  const candidates = [
+    {
+      id: 'c1',
+      name: 'Ravi Kumar',
+      email: 'ravi.kumar@example.com',
+      phone: '+91-98765-10001',
+      department: 'Engineering',
+      primaryRole: 'Senior Backend Engineer',
+      rolesApplied: [
+        { role: 'Senior Backend Engineer', year: 2024 }
+      ],
+      experienceYears: 7.2,
+      location: 'Bangalore',
+      locationPref: 'Bangalore / Remote',
+      currentCompany: 'FinEdge Systems',
+      currentCtc: '26',
+      expectedCtc: '32',
+      ctcCurrency: 'LPA',
+      availability: '30 days',
+      source: 'Referral',
+      internalMobility: false,
+      tags: ['Java', 'Spring Boot', 'Microservices', 'REST APIs', 'Distributed systems'],
+      summary: '7+ years in backend development for fintech products, strong in Java, Spring Boot, distributed systems and high-volume APIs. Has led small teams and mentored junior engineers.',
+      lastActivityDate: '2024-12-18',
+      lastActivityText: 'Joined as Senior Backend Engineer',
+      last30Days: false,
+      skillsSnapshot: ['Java', 'Spring Boot', 'Microservices'],
+      talentTags: ['Fintech', 'High priority'],
+      cvUrl: '#cv-ravi'
+    },
+    {
+      id: 'c2',
+      name: 'Ananya Sharma',
+      email: 'ananya.sharma@example.com',
+      phone: '+91-98765-10002',
+      department: 'Engineering',
+      primaryRole: 'Backend Engineer (L2)',
+      rolesApplied: [
+        { role: 'Backend Engineer (L2)', year: 2025 }
+      ],
+      experienceYears: 4.1,
+      location: 'Hyderabad',
+      locationPref: 'Hyderabad / Bangalore',
+      currentCompany: 'CloudNova',
+      currentCtc: '18',
+      expectedCtc: '22',
+      ctcCurrency: 'LPA',
+      availability: '15 days',
+      source: 'Job Board',
+      internalMobility: false,
+      tags: ['Java', 'Microservices', 'SQL', 'Docker'],
+      summary: '4+ years building backend services with Java and microservices architecture. Good fundamentals in databases, performance optimisation, and debugging production issues.',
+      lastActivityDate: '2025-03-08',
+      lastActivityText: 'Tech round 1 completed',
+      last30Days: true,
+      skillsSnapshot: ['Java', 'Microservices'],
+      talentTags: ['Ready to interview'],
+      cvUrl: '#cv-ananya'
+    },
+    {
+      id: 'c3',
+      name: 'Karan Mehta',
+      email: 'karan.mehta@example.com',
+      phone: '+91-98765-10003',
+      department: 'Engineering',
+      primaryRole: 'Senior Backend Engineer',
+      rolesApplied: [
+        { role: 'Senior Backend Engineer', year: 2025 },
+        { role: 'Platform Engineer', year: 2024 }
+      ],
+      experienceYears: 6.0,
+      location: 'Gurgaon',
+      locationPref: 'Gurgaon / Remote',
+      currentCompany: 'NeoPay',
+      currentCtc: '24',
+      expectedCtc: '30',
+      ctcCurrency: 'LPA',
+      availability: '30 days',
+      source: 'LinkedIn',
+      internalMobility: false,
+      tags: ['Java', 'Kafka', 'Event-driven', 'Fintech'],
+      summary: '6 years in fintech backend, strong with Kafka, event-driven design, and payment gateways. Good communication skills and experience with cross-functional teams.',
+      lastActivityDate: '2025-03-10',
+      lastActivityText: 'Profile updated and marked for senior backend pool',
+      last30Days: true,
+      skillsSnapshot: ['Java', 'Kafka', 'Fintech'],
+      talentTags: ['Payments', 'High complexity'],
+      cvUrl: '#cv-karan'
+    },
+    {
+      id: 'c4',
+      name: 'Priya Gupta',
+      email: 'priya.gupta@example.com',
+      phone: '+91-98765-10004',
+      department: 'Engineering',
+      primaryRole: 'Software Engineer',
+      rolesApplied: [
+        { role: 'Software Engineer', year: 2025 }
+      ],
+      experienceYears: 3.2,
+      location: 'Bangalore',
+      locationPref: 'Bangalore only',
+      currentCompany: 'CodeNest',
+      currentCtc: '15',
+      expectedCtc: '19',
+      ctcCurrency: 'LPA',
+      availability: 'Immediate',
+      source: 'Job Board',
+      internalMobility: false,
+      tags: ['REST APIs', 'Node.js', 'PostgreSQL'],
+      summary: 'Full-stack leaning backend engineer with 3+ years experience in Node.js and REST APIs. Strong ownership and has worked closely with product teams.',
+      lastActivityDate: '2025-03-09',
+      lastActivityText: 'Profile added to full-stack talent pool',
+      last30Days: true,
+      skillsSnapshot: ['Node.js', 'REST APIs'],
+      talentTags: ['Full-stack', 'Immediate'],
+      cvUrl: '#cv-priya'
+    },
+    {
+      id: 'c5',
+      name: 'Arjun Patel',
+      email: 'arjun.patel@example.com',
+      phone: '+91-98765-10005',
+      department: 'Engineering',
+      primaryRole: 'Senior Backend Engineer',
+      rolesApplied: [
+        { role: 'Senior Backend Engineer', year: 2025 }
+      ],
+      experienceYears: 8.4,
+      location: 'Remote',
+      locationPref: 'Remote only',
+      currentCompany: 'FinRail',
+      currentCtc: '32',
+      expectedCtc: '38',
+      ctcCurrency: 'LPA',
+      availability: '60+ days',
+      source: 'Headhunted',
+      internalMobility: false,
+      tags: ['Java', 'System design', 'Leadership'],
+      summary: 'Senior engineer with 8+ years across banking and payments, focusing on system design, scaling and mentoring teams. Strong communication and stakeholder handling.',
+      lastActivityDate: '2025-03-07',
+      lastActivityText: 'Marked as leadership pipeline candidate',
+      last30Days: true,
+      skillsSnapshot: ['Java', 'System design'],
+      talentTags: ['Leadership', 'High seniority'],
+      cvUrl: '#cv-arjun'
+    },
+    {
+      id: 'c6',
+      name: 'Sara Iyer',
+      email: 'sara.iyer@example.com',
+      phone: '+91-98765-10006',
+      department: 'Engineering',
+      primaryRole: 'Backend Engineer (L2)',
+      rolesApplied: [
+        { role: 'Backend Engineer (L2)', year: 2025 }
+      ],
+      experienceYears: 3.6,
+      location: 'Chennai',
+      locationPref: 'Chennai / Remote',
+      currentCompany: 'DataLoop',
+      currentCtc: '16',
+      expectedCtc: '20',
+      ctcCurrency: 'LPA',
+      availability: '30 days',
+      source: 'Internal',
+      internalMobility: true,
+      tags: ['Python', 'Django', 'Data pipelines'],
+      summary: 'Internal candidate from DataLoop team, 3.5 years experience with Python, Django and data-heavy applications. Good culture fit feedback from current manager.',
+      lastActivityDate: '2025-03-05',
+      lastActivityText: 'Internal mobility flagged by manager',
+      last30Days: true,
+      skillsSnapshot: ['Python', 'Django'],
+      talentTags: ['Internal mobility', 'Data-heavy'],
+      cvUrl: '#cv-sara'
+    },
+    {
+      id: 'c7',
+      name: 'Vijay N',
+      email: 'vijay.n@example.com',
+      phone: '+91-98765-10007',
+      department: 'Engineering',
+      primaryRole: 'Backend Engineer',
+      rolesApplied: [
+        { role: 'Backend Engineer', year: 2025 }
+      ],
+      experienceYears: 4.5,
+      location: 'Bangalore',
+      locationPref: 'Bangalore / Hyderabad',
+      currentCompany: 'InstaServe',
+      currentCtc: '17',
+      expectedCtc: '22',
+      ctcCurrency: 'LPA',
+      availability: '15 days',
+      source: 'Referral',
+      internalMobility: false,
+      tags: ['Java', 'Spring', 'Communication'],
+      summary: 'Strong communicator with 4.5 years of experience, solid Java + Spring background and very positive HR feedback. Good for client-facing teams.',
+      lastActivityDate: '2025-03-06',
+      lastActivityText: 'HR feedback updated – good client-facing profile',
+      last30Days: true,
+      skillsSnapshot: ['Java', 'Communication'],
+      talentTags: ['Client-facing'],
+      cvUrl: '#cv-vijay'
+    },
+    {
+      id: 'c8',
+      name: 'Rohit Singh',
+      email: 'rohit.singh@example.com',
+      phone: '+91-98765-10008',
+      department: 'Engineering',
+      primaryRole: 'Backend Engineer (L2)',
+      rolesApplied: [
+        { role: 'Backend Engineer (L2)', year: 2025 }
+      ],
+      experienceYears: 2.2,
+      location: 'Hyderabad',
+      locationPref: 'Hyderabad / Remote',
+      currentCompany: 'ByteCraft',
+      currentCtc: '10',
+      expectedCtc: '13',
+      ctcCurrency: 'LPA',
+      availability: '30 days',
+      source: 'Job Board',
+      internalMobility: false,
+      tags: ['Java', 'Spring Boot'],
+      summary: '2+ years experience. Good theoretical knowledge but did not meet expectations for hands-on problem solving in recent interview.',
+      lastActivityDate: '2025-02-20',
+      lastActivityText: 'Profile annotated with “Re-apply after upskilling”',
+      last30Days: false,
+      skillsSnapshot: ['Java'],
+      talentTags: ['Re-apply in 12 months'],
+      cvUrl: '#cv-rohit'
+    },
+    {
+      id: 'c9',
+      name: 'Nitin Rao',
+      email: 'nitin.rao@example.com',
+      phone: '+91-98765-10009',
+      department: 'Engineering',
+      primaryRole: 'SDE II (Platform)',
+      rolesApplied: [
+        { role: 'SDE II (Platform)', year: 2025 }
+      ],
+      experienceYears: 3.0,
+      location: 'Remote',
+      locationPref: 'Remote only',
+      currentCompany: 'ByteLogic',
+      currentCtc: '16',
+      expectedCtc: '20',
+      ctcCurrency: 'LPA',
+      availability: '60+ days',
+      source: 'LinkedIn',
+      internalMobility: false,
+      tags: ['Platform', 'Kubernetes'],
+      summary: '3 years in platform engineering with Kubernetes and microservices. Marked no-show in last interview, follow-up required before re-engagement.',
+      lastActivityDate: '2025-02-10',
+      lastActivityText: 'Flagged as no-show – caution for future',
+      last30Days: false,
+      skillsSnapshot: ['Kubernetes', 'Platform'],
+      talentTags: ['Caution – no-show'],
+      cvUrl: '#cv-nitin'
+    },
+    {
+      id: 'c10',
+      name: 'Aditi Verma',
+      email: 'aditi.verma@example.com',
+      phone: '+91-98765-10010',
+      department: 'Product',
+      primaryRole: 'Product Manager',
+      rolesApplied: [
+        { role: 'Product Manager', year: 2023 }
+      ],
+      experienceYears: 6.5,
+      location: 'Pune',
+      locationPref: 'Pune / Bangalore',
+      currentCompany: 'Acme Technologies',
+      currentCtc: '28',
+      expectedCtc: '',
+      ctcCurrency: 'LPA',
+      availability: 'Internal',
+      source: 'Internal',
+      internalMobility: true,
+      tags: ['Product discovery', 'Roadmapping', 'B2B SaaS'],
+      summary: 'Internal PM with strong domain knowledge of Acme products. Excellent for cross-team initiatives and future leadership roles.',
+      lastActivityDate: '2024-10-01',
+      lastActivityText: 'Internal promotion to Senior PM',
+      last30Days: false,
+      skillsSnapshot: ['Product', 'B2B SaaS'],
+      talentTags: ['Internal mobility', 'Leadership pipeline'],
+      cvUrl: '#cv-aditi'
+    }
+  ];
+
+  // Aggregations
+  const topSkillCounts = {};
+  const locationCounts = {};
+  const sourceCounts = {};
+  const talentTagsSet = new Set();
+
+  candidates.forEach(c => {
+    (c.tags || []).forEach(s => {
+      topSkillCounts[s] = (topSkillCounts[s] || 0) + 1;
+    });
+    const loc = c.location;
+    locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+    const src = c.source;
+    sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+    (c.talentTags || []).forEach(t => talentTagsSet.add(t));
+  });
+
+  function expBand(years) {
+    if (years < 3) return '0-3';
+    if (years < 6) return '3-6';
+    if (years < 10) return '6-10';
+    return '10+';
+  }
+
+  function parseDate(d) {
+    // d in format 'YYYY-MM-DD'
+    if (!d || d.length < 10) return 0;
+    return new Date(d.substring(0, 10)).getTime();
+  }
+
+  function applyFilters() {
+    const search = document.getElementById('searchInput').value.trim().toLowerCase();
+    const dep = document.getElementById('filterDepartment').value;
+    const loc = document.getElementById('filterLocation').value;
+    const band = document.getElementById('filterExpBand').value;
+    const source = document.getElementById('filterSource').value;
+    const availability = document.getElementById('filterAvailability').value;
+    const tag = document.getElementById('filterTag').value;
+    const sortBy = document.getElementById('sortBy').value;
+
+    let filtered = candidates.filter(c => {
+      if (dep && c.department !== dep) return false;
+
+      if (loc) {
+        const combinedLoc = (c.location + ' ' + (c.locationPref || '')).toLowerCase();
+        if (!combinedLoc.includes(loc.toLowerCase())) return false;
+      }
+
+      if (band && expBand(c.experienceYears) !== band) return false;
+
+      if (source && c.source !== source) return false;
+
+      if (availability && c.availability !== availability) return false;
+
+      if (tag) {
+        const tags = c.talentTags || [];
+        if (!tags.includes(tag)) return false;
+      }
+
+      if (search) {
+        const blob = [
+          c.name,
+          c.email,
+          c.phone,
+          c.department,
+          c.primaryRole,
+          c.location,
+          c.currentCompany,
+          c.source,
+          c.availability,
+          (c.tags || []).join(' '),
+          (c.summary || ''),
+          (c.talentTags || []).join(' ')
+        ].join(' ').toLowerCase();
+        if (!blob.includes(search)) return false;
+      }
+
+      return true;
+    });
+
+    // Sort
+    if (sortBy === 'name') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'expDesc') {
+      filtered.sort((a, b) => b.experienceYears - a.experienceYears);
+    } else { // recent
+      filtered.sort((a, b) => parseDate(b.lastActivityDate) - parseDate(a.lastActivityDate));
+    }
+
+    renderTable(filtered);
+  }
+
+  function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterDepartment').value = '';
+    document.getElementById('filterLocation').value = '';
+    document.getElementById('filterExpBand').value = '';
+    document.getElementById('filterSource').value = '';
+    document.getElementById('filterAvailability').value = '';
+    document.getElementById('filterTag').value = '';
+    document.getElementById('sortBy').value = 'recent';
+    applyFilters();
+  }
+
+  function renderTable(list) {
+    const tbody = document.getElementById('candidateTableBody');
+    tbody.innerHTML = '';
+
+    list.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.addEventListener('click', () => openCandidateDetail(c));
+
+      const skills = (c.skillsSnapshot || []).slice(0, 3).map(s => `<span class="tag-soft">${s}</span>`).join(' ');
+      const tagChips = (c.talentTags || []).slice(0, 2).map(t => `<span class="tag-soft">${t}</span>`).join(' ');
+
+      const rolesLine = (c.rolesApplied || [])
+        .map(r => `${r.role} (${r.year})`)
+        .join(', ');
+
+      tr.innerHTML = `
+        <td>
+          <div style="font-size:11px;font-weight:600;">${c.name}</div>
+          <div style="font-size:10px;color:var(--muted);">${c.email}</div>
+          <div style="font-size:9px;color:var(--muted);">${c.phone}</div>
+        </td>
+        <td>
+          <div style="font-size:10px;">${c.primaryRole}</div>
+          <div style="font-size:9px;color:var(--muted);">${c.department}</div>
+        </td>
+        <td>
+          <div style="font-size:10px;">${c.experienceYears.toFixed(1)} yrs</div>
+        </td>
+        <td>
+          <div style="font-size:10px;">${c.currentCompany}</div>
+          <div style="font-size:9px;color:var(--muted);">${c.location}</div>
+        </td>
+        <td>
+          <div style="font-size:10px;">${c.source}</div>
+          <div style="font-size:9px;color:var(--muted);">Availability: ${c.availability}</div>
+        </td>
+        <td>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:2px;">
+            ${skills}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;">
+            ${tagChips}
+          </div>
+        </td>
+        <td>
+          <div style="font-size:10px;">${c.lastActivityDate}</div>
+          <div style="font-size:9px;color:var(--muted);">${c.lastActivityText}</div>
+        </td>
+        <td>
+          <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;">
+            <button class="btn-mini primary"
+              onclick="event.stopPropagation();alert('Static – open CV for ${c.name} (${c.cvUrl})')">View CV</button>
+            <button class="btn-mini ghost"
+              onclick="event.stopPropagation();openCandidateDetail(${JSON.stringify(c).replace(/"/g, '&quot;')})">Open profile</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const label = document.getElementById('resultCountLabel');
+    label.textContent = `Showing ${list.length} candidate(s)`;
+    updateKPIs();
+  }
+
+  function updateKPIs() {
+    document.getElementById('kpiTotal').textContent = candidates.length;
+
+    const uniqueSkills = Object.keys(topSkillCounts).length;
+    document.getElementById('kpiSkills').textContent = uniqueSkills;
+
+    const uniqueLocs = Object.keys(locationCounts).length;
+    document.getElementById('kpiLocations').textContent = uniqueLocs;
+
+    const recent = candidates.filter(c => c.last30Days).length;
+    document.getElementById('kpiRecent').textContent = recent;
+  }
+
+  function openCandidateDetail(c) {
+    const panel = document.getElementById('detailPanel');
+    panel.classList.add('open');
+
+    document.getElementById('detailCandidateName').textContent = c.name;
+    document.getElementById('detailTitleLine').textContent =
+      `${c.primaryRole} · ${c.experienceYears.toFixed(1)} yrs · ${c.location}`;
+    document.getElementById('detailSummaryText').textContent = c.summary || '–';
+    document.getElementById('detailDepartment').textContent = c.department || '–';
+    document.getElementById('detailPrimaryRole').textContent = c.primaryRole || '–';
+    document.getElementById('detailExperience').textContent = (c.experienceYears || 0).toFixed(1) + ' yrs';
+    document.getElementById('detailLocation').textContent = c.locationPref || c.location || '–';
+    document.getElementById('detailCurrentCompany').textContent = c.currentCompany || '–';
+    const ctcPart = c.currentCtc ? c.currentCtc + ' ' + (c.ctcCurrency || '') : '-';
+    const expPart = c.expectedCtc ? c.expectedCtc + ' ' + (c.ctcCurrency || '') : '-';
+    document.getElementById('detailCtc').textContent = ctcPart + ' / ' + expPart;
+
+    document.getElementById('detailEmail').textContent = c.email || '–';
+    document.getElementById('detailPhone').textContent = c.phone || '–';
+    document.getElementById('detailSource').textContent = c.source || '–';
+    document.getElementById('detailInternalFlag').textContent = c.internalMobility ? 'Yes' : 'No';
+    document.getElementById('detailAvailability').textContent = c.availability || '–';
+
+    const skills = document.getElementById('detailSkills');
+    skills.innerHTML = (c.tags || []).map(s => `<span class="tag">${s}</span>`).join('');
+
+    const history = document.getElementById('detailHistory');
+    if (c.rolesApplied && c.rolesApplied.length) {
+      history.innerHTML = c.rolesApplied.map(r =>
+        `<div style="margin-bottom:2px;">
+          <strong>${r.role}</strong> · ${r.year}
+        </div>`
+      ).join('');
+    } else {
+      history.textContent = 'No roles recorded for this candidate.';
+    }
+
+    document.getElementById('detailMeta').textContent =
+      'Last updated: ' + (c.lastActivityDate || '—') + ' · ' + (c.lastActivityText || '');
+
+    const cvBtn = document.getElementById('detailViewCvBtn');
+    cvBtn.onclick = () => alert('Static – open CV viewer for ' + c.name + ' (' + (c.cvUrl || 'no URL set') + ')');
+  }
+
+  function closeDetailPanel() {
+    document.getElementById('detailPanel').classList.remove('open');
+  }
+
+  function renderInsightsPanels() {
+    const topSkills = Object.entries(topSkillCounts)
+      .sort((a,b) => b[1]-a[1])
+      .slice(0,8);
+    document.getElementById('topSkills').innerHTML = topSkills.map(([s,c]) =>
+      `<span class="tag-soft">${s} (${c})</span>`
+    ).join('');
+
+    const locs = Object.entries(locationCounts)
+      .sort((a,b) => b[1]-a[1]);
+    document.getElementById('topLocations').innerHTML = locs.map(([l,c]) =>
+      `<span class="tag-soft">${l} (${c})</span>`
+    ).join('');
+
+    const srcs = Object.entries(sourceCounts)
+      .sort((a,b) => b[1]-a[1]);
+    document.getElementById('sourcesList').innerHTML = srcs.map(([s,c]) =>
+      `<span class="tag-soft">${s} (${c})</span>`
+    ).join('');
+
+    const tpContainer = document.getElementById('talentPoolTags');
+    tpContainer.innerHTML = Array.from(talentTagsSet).map(t =>
+      `<span class="tag-soft">${t}</span>`
+    ).join('');
+
+    // Fill tag filter options
+    const tagSelect = document.getElementById('filterTag');
+    Array.from(talentTagsSet).sort().forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = 'Tag: ' + t;
+      tagSelect.appendChild(opt);
+    });
+  }
+
+  function initPage() {
+    renderInsightsPanels();
+    applyFilters(); // will internally call renderTable and updateKPIs
+  }
+
+  window.addEventListener('DOMContentLoaded', initPage);
+</script>
+
+</body>
+</html>

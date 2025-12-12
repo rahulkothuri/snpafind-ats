@@ -1,0 +1,287 @@
+# Implementation Plan
+
+- [x] 1. Set up project structure and core infrastructure
+  - [x] 1.1 Initialize React frontend with TypeScript and Vite
+    - Create React app with Vite, configure TypeScript, set up folder structure (components, pages, hooks, services, types)
+    - Install dependencies: react-router-dom, axios, tailwindcss, @tanstack/react-query
+    - _Requirements: 13.1, 13.2, 13.3, 13.4_
+  - [x] 1.2 Initialize Node.js backend with Express and TypeScript
+    - Create Express server, configure TypeScript, set up folder structure (routes, controllers, services, middleware, types)
+    - Install dependencies: express, cors, helmet, jsonwebtoken, bcrypt, zod
+    - _Requirements: 14.1, 14.2, 14.3_
+  - [x] 1.3 Set up PostgreSQL database with Prisma ORM
+    - Initialize Prisma, create schema with all tables (Company, User, Job, PipelineStage, Candidate, JobCandidate, CandidateActivity)
+    - Configure database connection, run initial migration
+    - _Requirements: 14.1, 14.2, 14.4, 14.5_
+  - [x] 1.4 Write property test for JSON serialization round-trip
+    - **Property 20: JSON serialization round-trip**
+    - **Validates: Requirements 14.4, 14.5**
+
+- [x] 2. Implement authentication system
+  - [x] 2.1 Create authentication API endpoints
+    - Implement POST /api/auth/login with JWT token generation
+    - Implement POST /api/auth/logout with token invalidation
+    - Create auth middleware for protected routes
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [x] 2.2 Write property tests for authentication
+    - **Property 1: Valid credentials produce valid JWT token**
+    - **Property 2: Invalid credentials produce generic error**
+    - **Validates: Requirements 1.1, 1.2**
+  - [x] 2.3 Create Login page component
+    - Build login form with email/password fields, validation, error display
+    - Implement JWT token storage and redirect on success
+    - Apply blue and white theme styling
+    - _Requirements: 1.1, 1.2, 13.1, 13.2_
+
+- [x] 3. Implement company and user management
+  - [x] 3.1 Create company API endpoints
+    - Implement GET/POST/PUT /api/companies endpoints
+    - Add company validation with Zod schemas
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - [x] 3.2 Write property tests for company management
+    - **Property 3: Company creation round-trip**
+    - **Property 4: Company IDs are unique**
+    - **Validates: Requirements 2.1, 2.2, 2.3**
+  - [x] 3.3 Create user management API endpoints
+    - Implement GET/POST/PUT/DELETE /api/users endpoints
+    - Add password hashing with bcrypt, user validation
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+  - [x] 3.4 Write property tests for user management
+    - **Property 6: User creation round-trip**
+    - **Property 7: Deactivated users cannot login**
+    - **Validates: Requirements 4.1, 4.3**
+  - [x] 3.5 Implement RBAC middleware
+    - Create role-based access control middleware
+    - Define permissions for Admin, Hiring Manager, Recruiter roles
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - [x] 3.6 Write property test for RBAC
+    - **Property 5: Role-based access restriction**
+    - **Validates: Requirements 3.1, 3.5**
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Implement job requisition module
+  - [x] 5.1 Create job API endpoints
+    - Implement GET/POST/PUT/DELETE /api/jobs endpoints
+    - Add job validation with required fields (title, department, location)
+    - _Requirements: 5.1, 5.2, 5.3, 5.4_
+  - [x] 5.2 Write property tests for job requisitions
+    - **Property 8: Job creation round-trip**
+    - **Property 9: Job IDs are unique and status is active**
+    - **Property 10: Job validation rejects missing required fields**
+    - **Validates: Requirements 5.1, 5.2, 5.3**
+  - [x] 5.3 Create pipeline stage API endpoints
+    - Implement default stage initialization on job creation
+    - Implement custom sub-stage insertion and reordering
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+  - [x] 5.4 Write property tests for pipeline stages
+    - **Property 11: Default stages are initialized**
+    - **Property 12: Custom sub-stage insertion preserves order**
+    - **Property 13: Stage reordering maintains candidate associations**
+    - **Validates: Requirements 6.1, 6.2, 6.4**
+
+- [x] 6. Implement candidate database module
+  - [x] 6.1 Create candidate API endpoints
+    - Implement GET/POST/PUT /api/candidates endpoints
+    - Add duplicate email prevention, candidate validation
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+  - [x] 6.2 Write property tests for candidates
+    - **Property 14: Candidate creation round-trip**
+    - **Property 15: Candidate IDs are unique**
+    - **Property 16: Duplicate email prevention**
+    - **Validates: Requirements 8.1, 8.2, 8.4**
+  - [x] 6.3 Implement resume upload functionality
+    - Create POST /api/candidates/:id/resume endpoint
+    - Add file format and size validation (PDF, DOC, DOCX, max 10MB)
+    - _Requirements: 10.1, 10.2, 10.3, 10.4_
+  - [x] 6.4 Write property tests for resume upload
+    - **Property 17: Resume upload association**
+    - **Property 18: Resume format validation**
+    - **Validates: Requirements 10.1, 10.2**
+  - [x] 6.5 Implement candidate search functionality
+    - Create search endpoint with name, email, phone matching
+    - Add filter support for department, location, experience, source
+    - _Requirements: 11.1, 11.2, 11.3, 11.4_
+  - [x] 6.6 Write property test for search
+    - **Property 19: Search returns matching candidates**
+    - **Validates: Requirements 11.1**
+
+- [x] 7. Implement candidate stage movement and scoring
+  - [x] 7.1 Create stage movement API endpoints
+    - Implement PUT /api/candidates/:id/stage endpoint
+    - Add activity timeline logging for stage changes
+    - _Requirements: 24.1, 24.2, 24.3, 24.4_
+  - [x] 7.2 Write property tests for stage movement
+    - **Property 21: Stage change updates timestamp and creates activity**
+    - **Validates: Requirements 24.1, 24.2**
+  - [x] 7.3 Implement candidate scoring
+    - Add score field to candidate, implement score update endpoint
+    - Add score-based sorting and filtering
+    - _Requirements: 25.1, 25.2, 25.3, 25.4_
+  - [x] 7.4 Write property test for scoring
+    - **Property 22: Score persistence**
+    - **Validates: Requirements 25.2**
+
+- [x] 8. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 9. Build shared UI components
+  - [x] 9.1 Create theme configuration and base styles
+    - Configure Tailwind with blue (#0b6cf0) and white theme colors
+    - Set up CSS variables for consistent theming
+    - _Requirements: 13.1, 13.2, 13.3, 13.4_
+  - [x] 9.2 Build Sidebar component
+    - Create collapsible sidebar with logo, navigation sections, user footer
+    - Implement active state highlighting, collapse animation
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8_
+  - [x] 9.3 Build Header component
+    - Create header with page title, global search, user pill, action buttons
+    - Implement hamburger menu toggle for sidebar
+    - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7_
+  - [x] 9.4 Build Footer component
+    - Create footer with contextual text and metrics display
+    - _Requirements: 26.1, 26.2, 26.3, 26.4_
+  - [x] 9.5 Build shared components (Badge, Button, KPICard, Table)
+    - Create Badge component with green/orange/red/blue/gray variants
+    - Create Button component with primary/secondary/outline/mini variants
+    - Create KPICard component with label, value, trend, chip
+    - Create Table component with sorting, selection, hover states
+    - _Requirements: 27.1, 27.2, 27.3, 27.4, 28.1, 28.2, 28.3, 28.4, 29.1, 29.2, 29.3, 29.4_
+  - [x] 9.6 Build DetailPanel component
+    - Create sliding panel with header, sections, notes, actions
+    - Implement open/close animation, shadow overlay
+    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8, 18.9, 18.10_
+
+- [x] 10. Build Dashboard page
+  - [x] 10.1 Create Dashboard page layout
+    - Build two-column layout with main content and right sidebar
+    - Implement responsive grid adjustments
+    - _Requirements: 15.1, 22.1, 22.2, 22.3_
+  - [x] 10.2 Build KPI cards section
+    - Display Open Roles, Active Candidates, Interviews Today, Offers Pending
+    - Add trend indicators and chips
+    - _Requirements: 15.1_
+  - [x] 10.3 Build role-wise pipeline table
+    - Create table with Role, Applicants, Interview, Offer, Age, SLA columns
+    - Add SLA status badges (On track/At risk/Breached)
+    - _Requirements: 15.2_
+  - [x] 10.4 Build hiring funnel visualization
+    - Create horizontal bar chart showing stage conversion
+    - Display candidate counts and percentages
+    - _Requirements: 15.3_
+  - [x] 10.5 Build upcoming interviews list
+    - Display interview cards with time, candidate, role, panel, meeting type
+    - Add Join and Reschedule buttons
+    - _Requirements: 15.4_
+  - [x] 10.6 Build tasks and alerts sections
+    - Create task list with type, description, age, severity badges
+    - Create alerts section with critical/warning/info levels
+    - _Requirements: 15.5, 15.6_
+  - [x] 10.7 Build source performance and recruiter load sections
+    - Create horizontal bar chart for source distribution
+    - Create recruiter load list with roles and candidates per recruiter
+    - _Requirements: 15.7, 15.8_
+  - [x] 10.8 Build activity feed
+    - Display timestamped activity entries
+    - _Requirements: 15.9, 15.10_
+
+- [x] 11. Build Roles & Pipelines page
+  - [x] 11.1 Create Roles page layout
+    - Build three-panel layout (roles list, pipeline view, detail panel)
+    - Implement role selection and view switching
+    - _Requirements: 16.1, 16.2, 16.11_
+  - [x] 11.2 Build roles list panel
+    - Create roles table with Role, Loc, Open, Apps, Interv, SLA, Pri columns
+    - Add selection highlighting and priority pills
+    - _Requirements: 16.1, 16.9, 16.10_
+  - [x] 11.3 Build pipeline KPI cards and stage summary
+    - Display Total candidates, Interviews scheduled, Offers made, Avg time in stage
+    - Create stage summary strip with candidate counts per stage
+    - _Requirements: 16.3, 16.4_
+  - [x] 11.4 Build table view for candidates
+    - Create candidate table with all columns and action buttons
+    - Implement stage filter dropdown
+    - _Requirements: 16.5_
+  - [x] 11.5 Build kanban board view
+    - Create stage columns with candidate cards
+    - Implement drag-and-drop for stage movement (optional)
+    - _Requirements: 16.6, 16.7_
+  - [x] 11.6 Integrate detail panel for candidate selection
+    - Open detail panel on candidate click
+    - Display full candidate information with actions
+    - _Requirements: 16.8_
+
+- [x] 12. Build Candidate Database page
+  - [x] 12.1 Create Candidate Database page layout
+    - Build layout with search, filters, KPIs, table, insights, detail panel
+    - _Requirements: 17.1, 17.10_
+  - [x] 12.2 Build search and filter section
+    - Create search input with hint text
+    - Create filter dropdowns for department, location, experience, source, availability, tag, sort
+    - _Requirements: 17.2, 17.3_
+  - [x] 12.3 Build KPI cards section
+    - Display Total candidates, Unique skills, Locations covered, Updated last 30 days
+    - _Requirements: 17.4_
+  - [x] 12.4 Build candidate master list table
+    - Create table with all columns and action buttons
+    - Implement row click to open detail panel
+    - _Requirements: 17.1, 17.6_
+  - [x] 12.5 Build database insights section
+    - Create mini-cards for Top skills, Top locations, Talent pool tags, Sources
+    - _Requirements: 17.5_
+  - [x] 12.6 Integrate detail panel with candidate actions
+    - Display profile summary, skills, ATS roles, contact info
+    - Add View CV, Add to role, Share profile, Block candidate buttons
+    - _Requirements: 17.7, 17.8, 17.9, 17.11_
+
+- [x] 13. Build Settings page
+  - [x] 13.1 Create Settings page with tabs
+    - Build tabbed layout for Company Profile, User Management, Role Configuration
+    - _Requirements: 19.1_
+  - [x] 13.2 Build Company Profile tab
+    - Create form for company name, logo, contact email, address
+    - Implement save functionality
+    - _Requirements: 19.2_
+  - [x] 13.3 Build User Management tab
+    - Create users table with name, email, role, status, actions
+    - Implement Add User form modal
+    - _Requirements: 19.3, 19.4, 19.5_
+  - [x] 13.4 Build Role Configuration tab
+    - Display Admin, Hiring Manager, Recruiter roles with permission descriptions
+    - _Requirements: 19.6_
+
+- [x] 14. Build Job Creation page
+  - [x] 14.1 Create Job Creation form
+    - Build form with title, department, location, employment type, salary range fields
+    - Add rich text editor for job description
+    - _Requirements: 20.1, 20.2_
+  - [x] 14.2 Implement form validation and submission
+    - Add validation for required fields
+    - Implement create/update job functionality
+    - _Requirements: 20.3, 20.4, 20.5, 20.6_
+
+- [x] 15. Implement responsive layout and loading states
+  - [x] 15.1 Add responsive breakpoints
+    - Hide sidebar below 900px, show hamburger menu
+    - Adjust grid layouts at 1200px and 720px breakpoints
+    - _Requirements: 22.1, 22.2, 22.3, 22.4_
+  - [x] 15.2 Add loading and error states
+    - Create loading indicators for data fetching
+    - Create error messages with retry options
+    - Create empty state messages
+    - _Requirements: 23.1, 23.2, 23.3, 23.4_
+
+- [x] 16. Add sample data and finalize
+  - [x] 16.1 Create sample data seed script
+    - Add sample roles, candidates, recruiters, interview panels
+    - Include all data from sample HTML pages
+    - _Requirements: 30.1, 30.2, 30.3, 30.4, 30.5, 30.6_
+  - [x] 16.2 Wire up all pages with API integration
+    - Connect Dashboard, Roles, Candidates, Settings pages to backend APIs
+    - Implement data fetching with React Query
+    - _Requirements: All page requirements_
+
+- [x] 17. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+

@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SnapFind ATS – Interviews</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --muted: #64748b;
+      --text: #0f172a;
+      --accent: #0b6cf0;
+      --accent-soft: #e0ecff;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --ok: #22c55e;
+      --sidebar-bg: #020617;
+      --sidebar-active: #0b6cf0;
+      --calendar-slot-bg: #f9fafb;
+      --calendar-today: #dbeafe;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      padding: 10px 16px;
+      background: #020617;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .h-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .page-title {
+      font-size: 17px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-sub {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .h-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill-dark {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.6);
+      color: #e5e7eb;
+    }
+    .btn {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 6px 11px;
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+    .btn-outline {
+      border-color: rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.7);
+      color: #e5e7eb;
+    }
+    .btn-header-icon {
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      padding: 4px 8px;
+      font-size: 11px;
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 6px 11px;
+      font-size: 11px;
+      cursor: pointer;
+      background: #f9fafb;
+      color: #374151;
+    }
+    .btn-mini {
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      font-size: 9px;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+    .btn-mini.primary {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+    .btn-mini.ghost {
+      background: #f3f4f6;
+      color: #111827;
+      border-color: #e5e7eb;
+    }
+    .btn-toggle {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+    .btn-toggle.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    /* LAYOUT */
+    .layout {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 210px;
+      background: var(--sidebar-bg);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px;
+      gap: 10px;
+      overflow-y: auto;
+      transition: width 0.18s ease;
+    }
+    .sidebar.collapsed {
+      width: 60px;
+    }
+    .sidebar-logo {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .logo-mark {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: #0b6cf0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .logo-text {
+      color: #e5e7eb;
+    }
+    .sidebar.collapsed .logo-text {
+      display: none;
+    }
+    .nav-section-title {
+      font-size: 10px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 6px 4px 2px;
+    }
+    .sidebar.collapsed .nav-section-title {
+      display: none;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #cbd5f5;
+    }
+    .nav-item span.icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+    .nav-item span.label {
+      white-space: nowrap;
+    }
+    .sidebar.collapsed .nav-item span.label {
+      display: none;
+    }
+    .nav-item.active {
+      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--sidebar-active);
+      color: #f9fafb;
+    }
+    .nav-footer {
+      margin-top: auto;
+      font-size: 10px;
+      color: #9ca3af;
+      padding: 4px 6px;
+      border-top: 1px solid rgba(30,64,175,0.5);
+    }
+    .sidebar.collapsed .nav-footer {
+      display: none;
+    }
+
+    /* MAIN BODY */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 12px;
+      gap: 8px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .select {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      padding: 4px 9px;
+      padding-right: 24px;
+      font-size: 11px;
+      color: var(--text);
+    }
+    .chip {
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .view-toggle-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      padding: 9px 9px 8px;
+      min-width: 0;
+    }
+
+    /* KPI SUMMARY */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .summary-card {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .summary-label {
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .summary-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .summary-sub {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+    }
+    .badge.green {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge.red {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .card-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* LIST VIEW GRID */
+    .list-row {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr;
+      gap: 8px;
+      margin-top: 8px;
+      min-height: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+    th, td {
+      text-align: left;
+      padding: 4px 4px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tbody tr {
+      cursor: pointer;
+    }
+    tbody tr:hover {
+      background: #eff6ff;
+    }
+
+    /* PIPELINE */
+    .pipeline-wrapper {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-top: 4px;
+    }
+    .stage-column {
+      min-width: 170px;
+      max-width: 200px;
+      border-radius: 12px;
+      padding: 6px;
+      background: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      max-height: 330px;
+    }
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .stage-title {
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .stage-count {
+      font-size: 10px;
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .stage-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .stage-body {
+      overflow-y: auto;
+      padding-right: 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .interview-card {
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      padding: 5px 6px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .interview-card:hover {
+      box-shadow: 0 4px 10px rgba(15,23,42,0.16);
+    }
+    .int-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+      align-items: flex-start;
+    }
+    .int-name {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .int-role {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .int-time {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .int-badges {
+      margin-top: 3px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .int-badge {
+      font-size: 9px;
+      border-radius: 999px;
+      padding: 2px 5px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+
+    /* CALENDAR VIEW */
+    .calendar-view {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: 2fr 1.2fr;
+      gap: 8px;
+      min-height: 0;
+    }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .calendar-weekdays div {
+      text-align: center;
+      padding: 2px 0;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 4px;
+      font-size: 10px;
+      max-height: 400px;
+    }
+    .calendar-cell {
+      background: var(--calendar-slot-bg);
+      border-radius: 8px;
+      padding: 4px;
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: box-shadow 0.1s ease, transform 0.1s ease, border-color 0.1s ease;
+    }
+    .calendar-cell.empty {
+      background: transparent;
+      cursor: default;
+      border-color: transparent;
+    }
+    .calendar-cell:hover:not(.empty) {
+      box-shadow: 0 2px 6px rgba(15,23,42,0.15);
+      transform: translateY(-1px);
+      border-color: var(--accent-soft);
+    }
+    .calendar-day {
+      font-size: 11px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .calendar-meta {
+      margin-top: 2px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .calendar-badge {
+      margin-top: 4px;
+      padding: 2px 5px;
+      border-radius: 999px;
+      font-size: 9px;
+      align-self: flex-start;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .calendar-cell.today {
+      background: var(--calendar-today);
+    }
+    .calendar-cell.selected {
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px rgba(37,99,235,0.35);
+    }
+
+    .day-list {
+      margin-top: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 10px;
+    }
+    .day-int-item {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 5px 6px;
+      background: #f9fafb;
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+    .day-int-item:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .day-int-main {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .day-int-sub {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* DETAIL PANEL – FIXED SLIDER ON RIGHT */
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: -340px;
+      width: 320px;
+      height: 100vh;
+      background: var(--card);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 14px rgba(15,23,42,0.16);
+      display: flex;
+      flex-direction: column;
+      transition: right 0.18s ease;
+      z-index: 40;
+    }
+    .detail-panel.open {
+      right: 0;
+    }
+    .detail-header {
+      padding: 10px 10px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: #f9fafb;
+    }
+    .detail-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .detail-sub {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .detail-close {
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .detail-body {
+      padding: 8px 10px 10px;
+      overflow-y: auto;
+      font-size: 11px;
+      flex: 1;
+    }
+    .detail-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-top: 8px;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-bottom: 2px;
+      color: var(--muted);
+    }
+    .detail-tags {
+      margin: 3px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .tag {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #e2e8f0;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+    .notes-box {
+      width: 100%;
+      min-height: 55px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 5px 7px;
+      font-size: 10px;
+      resize: vertical;
+    }
+    .detail-actions {
+      margin-top: 7px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip-soft {
+      font-size: 9px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px dashed #e2e8f0;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 6px 16px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    @media (max-width: 1200px) {
+      .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .list-row { grid-template-columns: 1fr; }
+      .calendar-view { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      .sidebar { display:none; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="h-left">
+      <div class="page-title">
+        <button class="btn-header-icon" onclick="toggleSidebar()">☰</button>
+        <span>Interviews & Screening</span>
+      </div>
+      <div class="page-sub">
+        Central calendar of all interviews, screening calls & panel activity
+      </div>
+    </div>
+    <div class="h-right">
+      <span class="pill-dark">Time zone: IST (GMT+5:30)</span>
+      <button class="btn btn-outline" onclick="alert('Static – interview settings')">Preferences</button>
+      <button class="btn btn-primary" onclick="alert('Static – schedule new interview')">+ Schedule interview</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">SF</div>
+        <div class="logo-text">SnapFind ATS</div>
+      </div>
+      <div class="nav-section-title">Main</div>
+      <div class="nav-item">
+        <span class="icon">D</span>
+        <span class="label">Dashboard</span>
+      </div>
+      <div class="nav-item">
+        <span class="icon">R</span>
+        <span class="label">Roles & Pipelines</span>
+      </div>
+      <div class="nav-item">
+        <span class="icon">C</span>
+        <span class="label">Candidates</span>
+      </div>
+      <div class="nav-item active">
+        <span class="icon">I</span>
+        <span class="label">Interviews</span>
+      </div>
+
+      <div class="nav-section-title">Insights</div>
+      <div class="nav-item">
+        <span class="icon">A</span>
+        <span class="label">Analytics & Reports</span>
+      </div>
+
+      <div class="nav-section-title">Setup</div>
+      <div class="nav-item">
+        <span class="icon">S</span>
+        <span class="label">Settings</span>
+      </div>
+
+      <div class="nav-footer">
+        Logged in as: <strong style="color:#e5e7eb;">Tushar</strong><br/>
+        Role: Client HR / Recruiter
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <!-- TOP: FILTERS + VIEW TOGGLE -->
+      <div class="top-row">
+        <div class="filters">
+          <span>Filters:</span>
+          <select class="select">
+            <option>Month: March 2025</option>
+            <option>February 2025</option>
+            <option>April 2025</option>
+          </select>
+          <select class="select">
+            <option>All recruiters</option>
+            <option>Aarti</option>
+            <option>Rahul</option>
+            <option>Sana</option>
+          </select>
+          <select class="select">
+            <option>All interview types</option>
+            <option>Screening</option>
+            <option>Technical</option>
+            <option>Hiring manager</option>
+            <option>HR / final</option>
+          </select>
+          <span class="chip" onclick="alert('Static – clear filters')">Clear filters</span>
+        </div>
+        <div class="view-toggle-group">
+          <span>View:</span>
+          <button id="btnCalendarView" class="btn-toggle active" onclick="setView('calendar')">Calendar view</button>
+          <button id="btnListView" class="btn-toggle" onclick="setView('list')">List + pipeline</button>
+        </div>
+      </div>
+
+      <!-- KPI SUMMARY -->
+      <div class="summary-row">
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>Interviews today</span>
+          </div>
+          <div class="summary-value">7</div>
+          <div class="summary-sub">Screenings: 3 · Tech: 3 · HR: 1</div>
+        </div>
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>Interviews this week</span>
+          </div>
+          <div class="summary-value">19</div>
+          <div class="summary-sub">Pending scheduling: 5 candidates</div>
+        </div>
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>Feedback pending</span>
+            <span class="badge red">Needs attention</span>
+          </div>
+          <div class="summary-value">6</div>
+          <div class="summary-sub">Overdue: 3 (24+ hours)</div>
+        </div>
+        <div class="card summary-card">
+          <div class="summary-label">
+            <span>No-show rate (30d)</span>
+          </div>
+          <div class="summary-value">7%</div>
+          <div class="summary-sub">4 no-shows out of 57 interviews</div>
+        </div>
+      </div>
+
+      <!-- CALENDAR VIEW (FULL PAGE) -->
+      <div id="calendarViewSection" class="calendar-view">
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Calendar – March 2025</div>
+              <div class="card-sub">Month view · click a date to see all interviews</div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);">
+              <span class="badge green">Today</span>
+            </div>
+          </div>
+          <div class="calendar-weekdays">
+            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Interviews on selected date</div>
+              <div class="card-sub" id="selectedDateLabel">10 March 2025 · Today</div>
+            </div>
+          </div>
+          <div class="day-list" id="dayList"></div>
+        </section>
+      </div>
+
+      <!-- LIST + PIPELINE VIEW -->
+      <div id="listViewSection" class="list-row" style="display:none;">
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Upcoming & recent interviews</div>
+              <div class="card-sub">Click any row for details, join link & feedback</div>
+            </div>
+            <div>
+              <select class="select" style="font-size:10px;padding:3px 8px;">
+                <option>Segment: Today & next 7 days</option>
+                <option>Segment: Feedback pending</option>
+                <option>Segment: Past 7 days</option>
+              </select>
+            </div>
+          </div>
+          <div style="max-height: 360px; overflow-y: auto;">
+            <table>
+              <thead>
+              <tr>
+                <th>Date & time</th>
+                <th>Candidate</th>
+                <th>Role</th>
+                <th>Type</th>
+                <th>Panel</th>
+                <th>Recruiter</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+              </thead>
+              <tbody id="interviewTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Interview pipeline</div>
+              <div class="card-sub">To schedule → Completed / No-show</div>
+            </div>
+          </div>
+          <div class="pipeline-wrapper" id="pipelineWrapper"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <div>Interviews module · Switch between calendar view or list + pipeline · Single place to manage all rounds</div>
+    <div>Goal: Reduce no-shows, close feedback faster, and balance panel load</div>
+  </footer>
+</div>
+
+<!-- RIGHT-SIDE DETAIL SLIDER -->
+<aside class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <div>
+      <div class="detail-title" id="detailCandidateName">Candidate name</div>
+      <div class="detail-sub" id="detailRoleLine">Role · Interview type · Time</div>
+    </div>
+    <button class="detail-close" onclick="closeDetailPanel()">×</button>
+  </div>
+  <div class="detail-body">
+    <div class="detail-section-title">Interview overview</div>
+    <div class="detail-row">
+      <span>Role</span>
+      <span id="detailRole">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Interview type</span>
+      <span id="detailType">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Duration</span>
+      <span id="detailDuration">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Time (IST)</span>
+      <span id="detailTime">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Status</span>
+      <span id="detailStatus">–</span>
+    </div>
+
+    <div class="detail-section-title">Panel & recruiter</div>
+    <div class="detail-row">
+      <span>Panel / Interviewer(s)</span>
+      <span id="detailPanelNames">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Recruiter</span>
+      <span id="detailRecruiter">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Meeting</span>
+      <span id="detailMeetingType">–</span>
+    </div>
+
+    <div class="detail-section-title">Candidate snapshot</div>
+    <div class="detail-row">
+      <span>Experience</span>
+      <span id="detailExperience">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Current company</span>
+      <span id="detailCompany">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Location</span>
+      <span id="detailLocation">–</span>
+    </div>
+    <div class="detail-row">
+      <span>Source</span>
+      <span id="detailSource">–</span>
+    </div>
+    <div class="detail-tags" id="detailTags"></div>
+
+    <div class="detail-section-title">Notes & feedback</div>
+    <textarea class="notes-box" placeholder="Panel notes / observations..."></textarea>
+    <div style="text-align:right;margin-top:3px;">
+      <button class="btn-mini ghost" onclick="alert('Static – save draft note')">Save note</button>
+    </div>
+
+    <div class="detail-section-title">Quick actions</div>
+    <div class="detail-actions">
+      <button class="btn-secondary" onclick="alert('Static – open join meeting link')">Join meeting</button>
+      <button class="btn-secondary" onclick="alert('Static – reschedule flow')">Reschedule</button>
+      <button class="btn-secondary" onclick="alert('Static – mark no-show')">Mark no-show</button>
+      <button class="btn-secondary" onclick="alert('Static – open feedback form')">Submit feedback</button>
+      <span class="chip-soft" id="detailMeta">Last updated: –</span>
+    </div>
+  </div>
+</aside>
+
+<script>
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
+
+  function setView(view) {
+    const cal = document.getElementById('calendarViewSection');
+    const list = document.getElementById('listViewSection');
+    const btnCal = document.getElementById('btnCalendarView');
+    const btnList = document.getElementById('btnListView');
+
+    if (view === 'calendar') {
+      cal.style.display = 'grid';
+      list.style.display = 'none';
+      btnCal.classList.add('active');
+      btnList.classList.remove('active');
+    } else {
+      cal.style.display = 'none';
+      list.style.display = 'grid';
+      btnCal.classList.remove('active');
+      btnList.classList.add('active');
+    }
+  }
+
+  // SAMPLE DATA
+  const interviews = [
+    {
+      id: 'i1',
+      date: '2025-03-10',
+      time: '10:00–10:45',
+      timeShort: '10:00 AM',
+      candidate: 'Ravi Kumar',
+      role: 'Senior Backend Engineer',
+      type: 'Technical',
+      typeShort: 'Tech',
+      panel: 'Panel A (Backend)',
+      recruiter: 'Aarti',
+      status: 'Scheduled',
+      statusStage: 'Scheduled',
+      meetingType: 'Google Meet',
+      duration: '45 mins',
+      exp: '5.2 yrs',
+      company: 'FinEdge Systems',
+      location: 'Bangalore',
+      source: 'Referral',
+      tags: ['Java', 'Spring Boot', 'API design']
+    },
+    {
+      id: 'i2',
+      date: '2025-03-10',
+      time: '11:00–11:30',
+      timeShort: '11:00 AM',
+      candidate: 'Ananya Sharma',
+      role: 'Backend Engineer (L2)',
+      type: 'Screening call',
+      typeShort: 'Screen',
+      panel: 'Recruiter (Aarti)',
+      recruiter: 'Aarti',
+      status: 'Scheduled',
+      statusStage: 'Scheduled',
+      meetingType: 'Phone',
+      duration: '30 mins',
+      exp: '4.0 yrs',
+      company: 'CloudNova',
+      location: 'Hyderabad',
+      source: 'Career page',
+      tags: ['Java', 'Microservices']
+    },
+    {
+      id: 'i3',
+      date: '2025-03-10',
+      time: '14:00–15:00',
+      timeShort: '2:00 PM',
+      candidate: 'Karan Mehta',
+      role: 'Senior Backend Engineer',
+      type: 'Technical Round 1',
+      typeShort: 'Tech',
+      panel: 'Panel A (Backend)',
+      recruiter: 'Aarti',
+      status: 'Scheduled',
+      statusStage: 'Ongoing',
+      meetingType: 'Google Meet',
+      duration: '60 mins',
+      exp: '6.0 yrs',
+      company: 'NeoPay',
+      location: 'Gurgaon',
+      source: 'LinkedIn',
+      tags: ['Java', 'Kafka', 'Fintech']
+    },
+    {
+      id: 'i4',
+      date: '2025-03-10',
+      time: '15:30–16:00',
+      timeShort: '3:30 PM',
+      candidate: 'Priya Gupta',
+      role: 'Software Engineer',
+      type: 'Hiring manager',
+      typeShort: 'HM',
+      panel: 'HM – Product Lead',
+      recruiter: 'Rahul',
+      status: 'Scheduled',
+      statusStage: 'Scheduled',
+      meetingType: 'Zoom',
+      duration: '30 mins',
+      exp: '3.2 yrs',
+      company: 'CodeNest',
+      location: 'Bangalore',
+      source: 'Job Board X',
+      tags: ['REST APIs']
+    },
+    {
+      id: 'i5',
+      date: '2025-03-10',
+      time: '17:00–17:45',
+      timeShort: '5:00 PM',
+      candidate: 'Arjun Patel',
+      role: 'Senior Backend Engineer',
+      type: 'CTO discussion',
+      typeShort: 'Final',
+      panel: 'CTO + HR',
+      recruiter: 'Aarti',
+      status: 'Scheduled',
+      statusStage: 'Scheduled',
+      meetingType: 'Google Meet',
+      duration: '45 mins',
+      exp: '8.4 yrs',
+      company: 'FinRail',
+      location: 'Remote (India)',
+      source: 'Headhunted',
+      tags: ['Offer stage']
+    },
+    {
+      id: 'i6',
+      date: '2025-03-11',
+      time: '11:30–12:00',
+      timeShort: '11:30 AM',
+      candidate: 'Sara Iyer',
+      role: 'Backend Engineer (L2)',
+      type: 'Technical Round 2',
+      typeShort: 'Tech',
+      panel: 'Panel B (Architecture)',
+      recruiter: 'Rahul',
+      status: 'Scheduled',
+      statusStage: 'Scheduled',
+      meetingType: 'MS Teams',
+      duration: '30 mins',
+      exp: '3.6 yrs',
+      company: 'DataLoop',
+      location: 'Chennai',
+      source: 'Internal',
+      tags: ['Internal movement']
+    },
+    {
+      id: 'i7',
+      date: '2025-03-12',
+      time: 'To be scheduled',
+      timeShort: 'TBD',
+      candidate: 'Deepak Raj',
+      role: 'Backend Architect',
+      type: 'Technical Round 1',
+      typeShort: 'Tech',
+      panel: 'To be finalised',
+      recruiter: 'Aarti',
+      status: 'To schedule',
+      statusStage: 'ToSchedule',
+      meetingType: 'Google Meet',
+      duration: '60 mins',
+      exp: '10.1 yrs',
+      company: 'ScaleGrid',
+      location: 'Bangalore',
+      source: 'Referral',
+      tags: ['Must-have']
+    },
+    {
+      id: 'i8',
+      date: '2025-03-09',
+      time: '16:00–16:45',
+      timeShort: '4:00 PM',
+      candidate: 'Vijay N',
+      role: 'Backend Engineer',
+      type: 'HR / Culture',
+      typeShort: 'HR',
+      panel: 'HR – Sana',
+      recruiter: 'Sana',
+      status: 'Awaiting feedback',
+      statusStage: 'FeedbackPending',
+      meetingType: 'Phone',
+      duration: '45 mins',
+      exp: '4.5 yrs',
+      company: 'InstaServe',
+      location: 'Bangalore',
+      source: 'Referral',
+      tags: ['Joining confirmed']
+    },
+    {
+      id: 'i9',
+      date: '2025-03-08',
+      time: '15:00–15:45',
+      timeShort: '3:00 PM',
+      candidate: 'Rohit Singh',
+      role: 'Backend Engineer (L2)',
+      type: 'Technical',
+      typeShort: 'Tech',
+      panel: 'Panel A (Backend)',
+      recruiter: 'Rahul',
+      status: 'Completed',
+      statusStage: 'Completed',
+      meetingType: 'Zoom',
+      duration: '45 mins',
+      exp: '2.2 yrs',
+      company: 'ByteCraft',
+      location: 'Hyderabad',
+      source: 'Job Board X',
+      tags: ['Rejected – skill mismatch']
+    },
+    {
+      id: 'i10',
+      date: '2025-03-07',
+      time: '13:00–13:30',
+      timeShort: '1:00 PM',
+      candidate: 'Nitin Rao',
+      role: 'SDE II (Platform)',
+      type: 'Technical Round 1',
+      typeShort: 'Tech',
+      panel: 'Panel C (Platform)',
+      recruiter: 'Sana',
+      status: 'No-show recorded',
+      statusStage: 'NoShow',
+      meetingType: 'Google Meet',
+      duration: '30 mins',
+      exp: '3.0 yrs',
+      company: 'ByteLogic',
+      location: 'Remote',
+      source: 'LinkedIn',
+      tags: ['No-show']
+    }
+  ];
+
+  const stageDefs = [
+    { id: 'ToSchedule', label: 'To schedule', color: '#e5e7eb', meta: 'Shortlisted, not scheduled yet' },
+    { id: 'Scheduled', label: 'Scheduled', color: '#e0f2fe', meta: 'Confirmed time & panel' },
+    { id: 'Ongoing', label: 'Today / ongoing', color: '#fef3c7', meta: 'Happening today / now' },
+    { id: 'FeedbackPending', label: 'Feedback pending', color: '#fee2e2', meta: 'Interview done, feedback awaited' },
+    { id: 'Completed', label: 'Completed', color: '#dcfce7', meta: 'Feedback submitted' },
+    { id: 'NoShow', label: 'No-show / cancelled', color: '#fee2e2', meta: 'Cancelled / no-show / rescheduled' }
+  ];
+
+  const calendarYear = 2025;
+  const calendarMonth = 2; // March (0-indexed)
+  const calendarToday = '2025-03-10';
+  let selectedDate = calendarToday;
+
+  function renderInterviewTable() {
+    const tbody = document.getElementById('interviewTableBody');
+    tbody.innerHTML = '';
+    const visible = interviews
+      .slice()
+      .sort((a,b) => a.date.localeCompare(b.date) || a.timeShort.localeCompare(b.timeShort));
+
+    visible.forEach(int => {
+      const tr = document.createElement('tr');
+      tr.addEventListener('click', () => openInterviewDetail(int));
+
+      const statusBadge = (() => {
+        if (int.statusStage === 'FeedbackPending') return '<span class="badge red">Feedback pending</span>';
+        if (int.statusStage === 'Ongoing') return '<span class="badge" style="background:#fef9c3;color:#854d0e;">Today</span>';
+        if (int.statusStage === 'ToSchedule') return '<span class="badge" style="background:#e0f2fe;color:#1d4ed8;">To schedule</span>';
+        if (int.statusStage === 'Completed') return '<span class="badge green">Completed</span>';
+        if (int.statusStage === 'NoShow') return '<span class="badge red">No-show</span>';
+        return '<span class="badge" style="background:#e0f2fe;color:#1d4ed8;">Scheduled</span>';
+      })();
+
+      tr.innerHTML = `
+        <td>${int.date}${int.date === calendarToday ? ' · Today' : ''}<br><span style="font-size:10px;color:var(--muted);">${int.time}</span></td>
+        <td>
+          <div style="font-size:11px;font-weight:600;">${int.candidate}</div>
+          <div style="font-size:10px;color:var(--muted);">${int.exp} · ${int.location}</div>
+        </td>
+        <td>${int.role}</td>
+        <td>${int.type}</td>
+        <td>${int.panel}</td>
+        <td>${int.recruiter}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="btn-mini primary" onclick="event.stopPropagation();alert('Static – open join link for ${int.candidate}')">Join</button>
+            <button class="btn-mini ghost" onclick="event.stopPropagation();alert('Static – reschedule ${int.candidate}')">Reschedule</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+    const firstDay = new Date(calendarYear, calendarMonth, 1);
+    const startWeekday = (firstDay.getDay() + 6) % 7; // Monday=0
+    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+
+    const countsByDay = {};
+    interviews.forEach(int => {
+      if (!int.date.startsWith('2025-03')) return;
+      const day = parseInt(int.date.slice(-2),10);
+      countsByDay[day] = (countsByDay[day] || 0) + 1;
+    });
+
+    const totalCells = startWeekday + daysInMonth;
+    for (let i = 0; i < totalCells; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'calendar-cell';
+
+      if (i < startWeekday) {
+        cell.classList.add('empty');
+        grid.appendChild(cell);
+        continue;
+      }
+
+      const day = i - startWeekday + 1;
+      const dateStr = `2025-03-${String(day).padStart(2,'0')}`;
+      const count = countsByDay[day] || 0;
+      if (dateStr === calendarToday) cell.classList.add('today');
+      if (dateStr === selectedDate) cell.classList.add('selected');
+
+      cell.dataset.date = dateStr;
+      cell.innerHTML = `
+        <div class="calendar-day">${day}</div>
+        <div class="calendar-meta">${count ? count + ' interview(s)' : 'No interviews'}</div>
+        ${count ? `<div class="calendar-badge">${count} scheduled</div>` : ''}
+      `;
+      cell.addEventListener('click', () => selectDate(dateStr));
+      grid.appendChild(cell);
+    }
+  }
+
+  function selectDate(dateStr) {
+    selectedDate = dateStr;
+    const cells = document.querySelectorAll('.calendar-cell');
+    cells.forEach(c => c.classList.remove('selected'));
+    const selectedCell = Array.from(cells).find(c => c.dataset.date === dateStr);
+    if (selectedCell) selectedCell.classList.add('selected');
+    renderDayList();
+  }
+
+  function renderDayList() {
+    const container = document.getElementById('dayList');
+    const label = document.getElementById('selectedDateLabel');
+    container.innerHTML = '';
+
+    const list = interviews
+      .filter(int => int.date === selectedDate)
+      .sort((a,b) => a.timeShort.localeCompare(b.timeShort));
+
+    const dayNum = parseInt(selectedDate.slice(-2), 10);
+    label.textContent = `${dayNum} March 2025${selectedDate === calendarToday ? ' · Today' : ''}`;
+
+    if (!list.length) {
+      container.innerHTML = `<div style="font-size:10px;color:var(--muted);margin-top:4px;">No interviews scheduled on this date.</div>`;
+      return;
+    }
+
+    list.forEach(int => {
+      const item = document.createElement('div');
+      item.className = 'day-int-item';
+      item.innerHTML = `
+        <div class="day-int-main">${int.timeShort} · ${int.candidate}</div>
+        <div class="day-int-sub">${int.role} · ${int.type} · ${int.panel}</div>
+      `;
+      item.addEventListener('click', () => openInterviewDetail(int));
+      container.appendChild(item);
+    });
+  }
+
+  function renderPipeline() {
+    const wrapper = document.getElementById('pipelineWrapper');
+    wrapper.innerHTML = '';
+    stageDefs.forEach(stage => {
+      const list = interviews.filter(i => i.statusStage === stage.id);
+      const col = document.createElement('div');
+      col.className = 'stage-column';
+      col.innerHTML = `
+        <div class="stage-header">
+          <div class="stage-title">
+            <span style="width:10px;height:10px;border-radius:999px;background:${stage.color};display:inline-block;"></span>
+            ${stage.label}
+          </div>
+          <span class="stage-count">${list.length}</span>
+        </div>
+        <div class="stage-meta">${stage.meta}</div>
+        <div class="stage-body"></div>
+      `;
+      const body = col.querySelector('.stage-body');
+      list.forEach(int => {
+        const card = document.createElement('div');
+        card.className = 'interview-card';
+        card.innerHTML = `
+          <div class="int-top">
+            <div>
+              <div class="int-name">${int.candidate}</div>
+              <div class="int-role">${int.role}</div>
+            </div>
+            <div class="int-time">${int.timeShort}</div>
+          </div>
+          <div style="margin-top:2px;font-size:10px;color:var(--muted);">
+            ${int.type} · ${int.panel}
+          </div>
+          <div class="int-badges">
+            <span class="int-badge">${int.recruiter}</span>
+            <span class="int-badge">${int.meetingType}</span>
+          </div>
+        `;
+        card.addEventListener('click', () => openInterviewDetail(int));
+        body.appendChild(card);
+      });
+      wrapper.appendChild(col);
+    });
+  }
+
+  function openInterviewDetail(int) {
+    const panel = document.getElementById('detailPanel');
+    panel.classList.add('open');
+
+    document.getElementById('detailCandidateName').textContent = int.candidate;
+    document.getElementById('detailRoleLine').textContent =
+      `${int.role} · ${int.type} · ${int.date} · ${int.time}`;
+    document.getElementById('detailRole').textContent = int.role;
+    document.getElementById('detailType').textContent = int.type;
+    document.getElementById('detailDuration').textContent = int.duration;
+    document.getElementById('detailTime').textContent = `${int.date} · ${int.time}`;
+    document.getElementById('detailStatus').textContent = int.status;
+    document.getElementById('detailPanelNames').textContent = int.panel;
+    document.getElementById('detailRecruiter').textContent = int.recruiter;
+    document.getElementById('detailMeetingType').textContent = int.meetingType;
+    document.getElementById('detailExperience').textContent = int.exp;
+    document.getElementById('detailCompany').textContent = int.company;
+    document.getElementById('detailLocation').textContent = int.location;
+    document.getElementById('detailSource').textContent = int.source;
+    document.getElementById('detailMeta').textContent =
+      `Last updated: Today · 10:05 AM · Status: ${int.status}`;
+
+    const tagsC = document.getElementById('detailTags');
+    tagsC.innerHTML = (int.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  }
+
+  function closeDetailPanel() {
+    document.getElementById('detailPanel').classList.remove('open');
+  }
+
+  function initPage() {
+    renderInterviewTable();
+    renderCalendar();
+    renderDayList();
+    renderPipeline();
+  }
+
+  window.addEventListener('DOMContentLoaded', initPage);
+</script>
+
+</body>
+</html>

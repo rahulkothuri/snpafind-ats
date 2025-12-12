@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "companies" ADD COLUMN     "brand_color" TEXT DEFAULT '#0b6cf0',
+ADD COLUMN     "careers_page_url" TEXT,
+ADD COLUMN     "city" TEXT,
+ADD COLUMN     "company_size" TEXT,
+ADD COLUMN     "country" TEXT,
+ADD COLUMN     "description" TEXT,
+ADD COLUMN     "facebook_url" TEXT,
+ADD COLUMN     "industry" TEXT,
+ADD COLUMN     "linkedin_url" TEXT,
+ADD COLUMN     "phone" TEXT,
+ADD COLUMN     "postal_code" TEXT,
+ADD COLUMN     "state" TEXT,
+ADD COLUMN     "twitter_url" TEXT,
+ADD COLUMN     "website" TEXT;

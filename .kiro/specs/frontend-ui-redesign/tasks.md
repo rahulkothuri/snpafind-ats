@@ -1,0 +1,188 @@
+# Implementation Plan
+
+- [x] 1. Update global CSS theme variables and base styles
+  - [x] 1.1 Update CSS variables in index.css for light theme colors
+    - Change sidebar colors from dark to light theme
+    - Update primary, secondary, and accent color variables
+    - Ensure all color variables match the new design palette
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+  - [x] 1.2 Update base body and root styles
+    - Set page background to light gray (#f8fafc)
+    - Update default text colors
+    - _Requirements: 6.2, 6.3_
+
+- [x] 2. Redesign Sidebar component with light theme
+  - [x] 2.1 Update Sidebar.tsx background and text colors
+    - Change background from #020617 to #ffffff
+    - Add right border (#e2e8f0)
+    - Update text colors to dark (#374151)
+    - _Requirements: 1.1, 1.2_
+  - [x] 2.2 Update navigation item styling
+    - Change active state to blue text (#0b6cf0) with light blue background (#eff6ff)
+    - Update hover states to light gray (#f8fafc)
+    - Add left border indicator for active items
+    - _Requirements: 1.2, 1.4_
+  - [x] 2.3 Update user info section in sidebar header
+    - Style user avatar, name, and email display
+    - Add light gray background section (#f8fafc)
+    - _Requirements: 1.3_
+  - [x] 2.4 Update collapsed sidebar styling
+    - Ensure icons display correctly with light theme
+    - Maintain consistent styling when collapsed
+    - _Requirements: 1.5_
+  - [x] 2.5 Add Logout button at bottom of sidebar
+    - Add logout button with icon at the bottom of sidebar
+    - Style with light theme (text color, hover state)
+    - Connect to logout functionality to clear auth and redirect to login
+    - Show logout icon only when sidebar is collapsed
+    - _Requirements: 1.6, 1.7_
+
+- [x] 3. Redesign Header component with white theme
+  - [x] 3.1 Update Header.tsx background and borders
+    - Change background from #020617 to #ffffff
+    - Add bottom border (#e2e8f0)
+    - Update text colors to dark
+    - _Requirements: 2.1_
+  - [x] 3.2 Update search input styling
+    - Set background to light gray (#f3f4f6)
+    - Add rounded corners and search icon
+    - Update focus states with blue ring
+    - _Requirements: 2.2_
+  - [x] 3.3 Update header action buttons and user profile
+    - Style primary buttons with blue background
+    - Add notification icon styling
+    - Update user avatar display
+    - _Requirements: 2.3, 2.4_
+
+- [x] 4. Update KPICard component styling
+  - [x] 4.1 Update KPICard.tsx card container styles
+    - Ensure white background with subtle shadow
+    - Set border radius to 12px
+    - Add consistent border (#e2e8f0)
+    - _Requirements: 3.1_
+  - [x] 4.2 Update typography and trend indicators
+    - Style large bold values with smaller labels
+    - Ensure green/red trend colors are correct
+    - _Requirements: 3.2, 3.3_
+  - [ ]* 4.3 Write property test for trend indicator color mapping
+    - **Property 1: Trend indicator color mapping**
+    - **Validates: Requirements 3.3**
+
+- [x] 5. Update Table component styling
+  - [x] 5.1 Update Table.tsx header and row styles
+    - Set header background to light gray (#f9fafb)
+    - Update header text to uppercase with gray color
+    - Add clean row borders
+    - _Requirements: 4.1, 4.2_
+  - [x] 5.2 Update row hover and selection states
+    - Set hover background to light gray
+    - Set selected row background to light blue (#eff6ff)
+    - _Requirements: 4.1_
+  - [x] 5.3 Add pagination component styling
+    - Style page number buttons
+    - Add blue highlight for current page
+    - _Requirements: 4.5_
+
+- [x] 6. Update Badge component styling
+  - [x] 6.1 Update Badge.tsx with pill-shaped variants
+    - Ensure all badges have rounded-full styling
+    - Update color variants (green, orange, red, blue, gray)
+    - _Requirements: 4.3_
+  - [ ]* 6.2 Write property test for status badge color mapping
+    - **Property 2: Status badge color mapping**
+    - **Validates: Requirements 4.3**
+
+- [x] 7. Update Button component styling
+  - [x] 7.1 Update Button.tsx variant styles
+    - Update primary variant with blue (#0b6cf0) and pill shape
+    - Update secondary variant with gray/outline style
+    - Ensure consistent hover states
+    - _Requirements: 5.4_
+
+- [x] 8. Update form input styling across components
+  - [x] 8.1 Create consistent input styles
+    - Set light gray borders (#e2e8f0)
+    - Add 8px border radius
+    - Style focus states with blue ring
+    - _Requirements: 5.1, 5.2_
+  - [x] 8.2 Update form section styling
+    - Add section headers and dividers
+    - Ensure consistent label positioning
+    - _Requirements: 5.3_
+
+- [x] 9. Checkpoint - Verify base component styling
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 10. Update DashboardPage styling
+  - [x] 10.1 Update DashboardPage.tsx layout and cards
+    - Apply new KPI card styling
+    - Update chart containers with white backgrounds
+    - _Requirements: 7.1, 7.2_
+  - [x] 10.2 Update company table and chart colors
+    - Apply new table styling with status badges
+    - Update donut chart colors (green/orange)
+    - _Requirements: 7.3, 7.4_
+
+- [x] 11. Update SettingsPage styling
+  - [x] 11.1 Update SettingsPage.tsx tab navigation
+    - Style tabs with blue underline for active state
+    - Update tab hover states
+    - _Requirements: 8.1_
+  - [x] 11.2 Update Company Profile form styling
+    - Apply new input styles to all form fields
+    - Style branding section with logo upload area
+    - _Requirements: 8.2, 8.4_
+  - [x] 11.3 Update User Management table styling
+    - Add avatar display in user rows
+    - Style role badges and action links
+    - _Requirements: 8.3_
+
+- [x] 12. Update CandidateDatabasePage styling
+  - [x] 12.1 Update CandidateDatabasePage.tsx table and filters
+    - Apply new table styling to candidate list
+    - Style filter dropdowns with new input styling
+    - _Requirements: 9.1, 9.3_
+  - [x] 12.2 Update candidate row styling
+    - Add avatar display
+    - Style role and status badges
+    - Update search bar styling
+    - _Requirements: 9.2, 9.4_
+
+- [x] 13. Update RolesPage styling
+  - [x] 13.1 Update RolesPage.tsx role cards and pipeline
+    - Apply new card styling to role cards
+    - Update pipeline stage indicators
+    - _Requirements: 10.1, 10.2_
+  - [x] 13.2 Update candidate cards in pipeline view
+    - Style cards with avatar, name, and score badge
+    - Apply consistent card styling
+    - _Requirements: 10.3_
+
+- [x] 14. Update LoginPage styling
+  - [x] 14.1 Update LoginPage.tsx card and form
+    - Center card with white background and shadow
+    - Apply new input styling to form fields
+    - _Requirements: 11.1, 11.2_
+  - [x] 14.2 Update login button and logo
+    - Style submit button as blue rounded pill
+    - Center logo above form
+    - _Requirements: 11.3, 11.4_
+
+- [x] 15. Update Layout and DetailPanel components
+  - [x] 15.1 Update Layout.tsx for new theme
+    - Ensure proper spacing with light sidebar
+    - Update any remaining dark theme references
+    - _Requirements: 1.1, 2.1_
+  - [x] 15.2 Update DetailPanel.tsx styling
+    - Apply white background with shadow
+    - Update section headers and dividers
+    - _Requirements: 5.3_
+
+- [x] 16. Update Footer component styling
+  - [x] 16.1 Update Footer.tsx with light theme
+    - Change to light background if needed
+    - Update text colors for consistency
+    - _Requirements: 6.2, 6.3_
+
+- [x] 17. Final Checkpoint - Verify all pages
+  - Ensure all tests pass, ask the user if questions arise.
