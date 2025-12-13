@@ -1,4 +1,4 @@
-export { default as api } from './api';
+export { default as api, getResumeUrl } from './api';
 export { default as authService } from './auth.service';
 export { default as jobsService } from './jobs.service';
 export { default as candidatesService } from './candidates.service';

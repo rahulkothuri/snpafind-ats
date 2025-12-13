@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import jobService from '../services/job.service.js';
 import pipelineService from '../services/pipeline.service.js';
+import prisma from '../lib/prisma.js';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 
@@ -80,6 +81,65 @@ router.get(
     try {
       const job = await jobService.getById(req.params.id);
       res.json(job);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/jobs/:id/candidates
+ * Get all candidates who applied to a specific job
+ */
+router.get(
+  '/:id/candidates',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const jobId = req.params.id;
+      
+      // Get all job candidates with their candidate details and current stage
+      const jobCandidates = await prisma.jobCandidate.findMany({
+        where: { jobId },
+        include: {
+          candidate: true,
+          currentStage: true,
+        },
+        orderBy: { appliedAt: 'desc' },
+      });
+
+      // Map to response format
+      const result = jobCandidates.map((jc) => ({
+        id: jc.id,
+        jobId: jc.jobId,
+        candidateId: jc.candidateId,
+        currentStageId: jc.currentStageId,
+        appliedAt: jc.appliedAt,
+        updatedAt: jc.updatedAt,
+        stageName: jc.currentStage?.name || 'Applied',
+        candidate: jc.candidate ? {
+          id: jc.candidate.id,
+          companyId: jc.candidate.companyId,
+          name: jc.candidate.name,
+          email: jc.candidate.email,
+          phone: jc.candidate.phone,
+          experienceYears: jc.candidate.experienceYears,
+          currentCompany: jc.candidate.currentCompany,
+          location: jc.candidate.location,
+          currentCtc: jc.candidate.currentCtc,
+          expectedCtc: jc.candidate.expectedCtc,
+          noticePeriod: jc.candidate.noticePeriod,
+          source: jc.candidate.source,
+          availability: jc.candidate.availability,
+          skills: jc.candidate.skills,
+          resumeUrl: jc.candidate.resumeUrl,
+          score: jc.candidate.score,
+          createdAt: jc.candidate.createdAt,
+          updatedAt: jc.candidate.updatedAt,
+        } : null,
+      }));
+
+      res.json(result);
     } catch (error) {
       next(error);
     }

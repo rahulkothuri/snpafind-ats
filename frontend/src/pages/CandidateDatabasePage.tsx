@@ -3,6 +3,7 @@ import { Layout, KPICard, Badge, Button, Table, DetailPanel, DetailSection, Summ
 import type { Column } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useCandidates } from '../hooks/useCandidates';
+import { getResumeUrl } from '../services';
 import type { Candidate } from '../services';
 
 /**
@@ -490,7 +491,7 @@ function CandidateDetailContent({
   ];
 
   const actions = [
-    { label: 'View CV', onClick: () => {}, variant: 'primary' as const },
+    { label: 'View CV', onClick: () => window.open(getResumeUrl(candidate.resumeUrl), '_blank'), variant: 'primary' as const },
     { label: 'Add to role', onClick: () => {}, variant: 'secondary' as const },
     { label: 'Share profile', onClick: () => {}, variant: 'secondary' as const },
     { label: 'Block candidate', onClick: () => {}, variant: 'danger' as const },
@@ -710,8 +711,8 @@ export function CandidateDatabasePage() {
   // Header actions - Requirement 17.10
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button variant="outline">Saved views</Button>
-      <Button variant="outline">Export candidates</Button>
+      <Button variant="outline" size="sm">Saved views</Button>
+      <Button variant="outline" size="sm">Export candidates</Button>
     </div>
   );
 

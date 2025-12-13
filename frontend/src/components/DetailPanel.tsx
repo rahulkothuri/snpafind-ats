@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
  * 
  * Features:
  * - Slides in from right side (300-320px width)
- * - Header with title, subtitle, and close button
+ * - Header with title, subtitle, and close button - Blue gradient header
  * - Summary section with label-value pairs
  * - CV section with dashed border
  * - Skills & Tags section with rounded pills
@@ -13,7 +13,7 @@ import { useEffect, useRef } from 'react';
  * - Notes section with textarea
  * - Actions section with buttons
  * - Shadow on left edge for overlay effect
- * - White background with subtle shadow (light theme)
+ * - Blue and white theme design
  * - Section headers and dividers styled consistently
  */
 
@@ -63,41 +63,39 @@ export function DetailPanel({
       {/* Backdrop overlay */}
       <div
         className={`
-          fixed inset-0 bg-black/20 z-40 transition-opacity duration-300
+          fixed inset-0 bg-black/30 z-40 transition-opacity duration-300
           ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
         `}
         onClick={onClose}
       />
 
-      {/* Panel - Requirements 5.3, 18.1, 18.9, 18.10 */}
-      {/* White background with shadow - light theme styling */}
+      {/* Panel - Blue and White Theme */}
       <aside
         ref={panelRef}
         className={`
           fixed top-0 right-0 h-full w-[var(--detail-panel-width)] z-50
-          bg-[var(--color-bg-white)]
-          shadow-[var(--shadow-panel)]
+          bg-white
+          shadow-[-8px_0_30px_rgba(11,108,240,0.15)]
           transform transition-transform duration-300 ease-in-out
           flex flex-col
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
-        {/* Header - Requirement 18.1 */}
-        {/* White background with bottom border divider */}
-        <div className="flex items-start justify-between p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-white)]">
+        {/* Header - Blue gradient background */}
+        <div className="flex items-start justify-between p-4 bg-gradient-to-r from-[#0b6cf0] to-[#3b82f6] text-white">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] truncate">
+            <h2 className="text-lg font-semibold text-white truncate">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm text-[var(--color-text-secondary)] truncate mt-0.5">
+              <p className="text-sm text-blue-100 truncate mt-0.5">
                 {subtitle}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="ml-3 p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-gray)] rounded-md transition-colors"
+            className="ml-3 p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
             aria-label="Close panel"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,8 +104,8 @@ export function DetailPanel({
           </button>
         </div>
 
-        {/* Content - Light background for scrollable area */}
-        <div className="flex-1 overflow-y-auto bg-[var(--color-bg-white)]">
+        {/* Content - White background with subtle blue accents */}
+        <div className="flex-1 overflow-y-auto bg-[#f8fafc]">
           {children}
         </div>
       </aside>
@@ -126,11 +124,13 @@ interface SectionProps {
 /**
  * DetailSection - Section container with header and divider
  * Requirement 5.3: Form sections with section headers and subtle dividers
+ * Blue and white theme styling
  */
 export function DetailSection({ title, children, className = '' }: SectionProps) {
   return (
-    <div className={`p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-white)] ${className}`}>
-      <h3 className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+    <div className={`p-4 border-b border-[#e2e8f0] bg-white ${className}`}>
+      <h3 className="text-xs font-semibold text-[#0b6cf0] uppercase tracking-wider mb-3 flex items-center gap-2">
+        <span className="w-1 h-4 bg-[#0b6cf0] rounded-full"></span>
         {title}
       </h3>
       {children}
@@ -138,7 +138,7 @@ export function DetailSection({ title, children, className = '' }: SectionProps)
   );
 }
 
-// Summary row - Requirement 18.2
+// Summary row - Requirement 18.2 - Blue/white theme
 interface SummaryRowProps {
   label: string;
   value: string | React.ReactNode;
@@ -146,14 +146,14 @@ interface SummaryRowProps {
 
 export function SummaryRow({ label, value }: SummaryRowProps) {
   return (
-    <div className="flex justify-between py-1.5 text-sm">
-      <span className="text-[var(--color-text-secondary)]">{label}</span>
-      <span className="text-[var(--color-text-primary)] font-medium">{value}</span>
+    <div className="flex justify-between py-2 text-sm border-b border-[#f1f5f9] last:border-b-0">
+      <span className="text-[#64748b]">{label}</span>
+      <span className="text-[#1e293b] font-medium">{value}</span>
     </div>
   );
 }
 
-// CV Section - Requirement 18.3
+// CV Section - Requirement 18.3 - Blue/white theme
 interface CVSectionProps {
   filename: string;
   onView: () => void;
@@ -161,16 +161,18 @@ interface CVSectionProps {
 
 export function CVSection({ filename, onView }: CVSectionProps) {
   return (
-    <div className="border-2 border-dashed border-[var(--color-border)] rounded-[var(--radius-md)] p-4 flex items-center justify-between bg-[var(--color-bg-white)]">
-      <div className="flex items-center gap-2 min-w-0">
-        <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <span className="text-sm text-[var(--color-text-primary)] truncate">{filename}</span>
+    <div className="border-2 border-dashed border-[#bfdbfe] rounded-lg p-4 flex items-center justify-between bg-[#eff6ff]">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-10 h-10 rounded-lg bg-[#0b6cf0] flex items-center justify-center">
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <span className="text-sm text-[#1e293b] font-medium truncate">{filename}</span>
       </div>
       <button
         onClick={onView}
-        className="px-3 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-[var(--radius-md)] transition-colors"
+        className="px-4 py-2 text-xs font-semibold text-white bg-[#0b6cf0] hover:bg-[#0956c4] rounded-lg transition-colors shadow-sm"
       >
         View CV
       </button>
@@ -178,18 +180,18 @@ export function CVSection({ filename, onView }: CVSectionProps) {
   );
 }
 
-// Skills Tags - Requirement 18.4
+// Skills Tags - Requirement 18.4 - Blue/white theme
 interface SkillsTagsProps {
   skills: string[];
 }
 
 export function SkillsTags({ skills }: SkillsTagsProps) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-2">
       {skills.map((skill) => (
         <span
           key={skill}
-          className="px-2.5 py-1 bg-[var(--color-bg-gray)] text-[var(--color-sidebar-text)] text-xs rounded-full border border-[var(--color-border)]"
+          className="px-3 py-1.5 bg-[#dbeafe] text-[#1d4ed8] text-xs font-medium rounded-full border border-[#bfdbfe]"
         >
           {skill}
         </span>
@@ -198,7 +200,7 @@ export function SkillsTags({ skills }: SkillsTagsProps) {
   );
 }
 
-// Timeline - Requirement 18.5
+// Timeline - Requirement 18.5 - Blue/white theme
 interface TimelineEntry {
   id: string;
   date: string;
@@ -211,19 +213,19 @@ interface TimelineProps {
 
 export function Timeline({ entries }: TimelineProps) {
   return (
-    <div className="relative pl-4">
-      {/* Vertical line */}
-      <div className="absolute left-1.5 top-2 bottom-2 w-0.5 bg-[var(--color-border)]" />
+    <div className="relative pl-5">
+      {/* Vertical line - Blue gradient */}
+      <div className="absolute left-1.5 top-2 bottom-2 w-0.5 bg-gradient-to-b from-[#0b6cf0] to-[#93c5fd]" />
       
-      <div className="space-y-3">
+      <div className="space-y-4">
         {entries.map((entry) => (
           <div key={entry.id} className="relative">
-            {/* Dot - Primary blue color */}
-            <div className="absolute -left-2.5 top-1.5 w-2 h-2 rounded-full bg-[var(--color-primary)]" />
+            {/* Dot - Blue with white border */}
+            <div className="absolute -left-3.5 top-1 w-3 h-3 rounded-full bg-[#0b6cf0] border-2 border-white shadow-sm" />
             
-            <div className="text-xs">
-              <span className="text-[var(--color-text-muted)]">{entry.date}</span>
-              <p className="text-[var(--color-text-primary)] mt-0.5">{entry.description}</p>
+            <div className="text-xs bg-[#f8fafc] rounded-lg p-2 border border-[#e2e8f0]">
+              <span className="text-[#0b6cf0] font-medium">{entry.date}</span>
+              <p className="text-[#374151] mt-1">{entry.description}</p>
             </div>
           </div>
         ))}
@@ -232,7 +234,7 @@ export function Timeline({ entries }: TimelineProps) {
   );
 }
 
-// Notes Section - Requirement 18.6, 18.8
+// Notes Section - Requirement 18.6, 18.8 - Blue/white theme
 interface NotesSectionProps {
   value: string;
   onChange: (value: string) => void;
@@ -242,17 +244,17 @@ interface NotesSectionProps {
 
 export function NotesSection({ value, onChange, onSave, saving = false }: NotesSectionProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Add a note for this candidate..."
-        className="form-textarea h-24 resize-none"
+        className="w-full h-24 resize-none px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:border-[#0b6cf0] focus:ring-2 focus:ring-[#0b6cf0]/20 bg-white placeholder-[#94a3b8]"
       />
       <button
         onClick={onSave}
         disabled={saving}
-        className="px-3 py-1.5 text-xs font-medium bg-[var(--color-primary)] text-white rounded-[var(--radius-md)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
+        className="px-4 py-2 text-xs font-semibold bg-[#0b6cf0] text-white rounded-lg hover:bg-[#0956c4] disabled:opacity-50 transition-colors shadow-sm"
       >
         {saving ? 'Saving...' : 'Save note'}
       </button>
@@ -260,7 +262,7 @@ export function NotesSection({ value, onChange, onSave, saving = false }: NotesS
   );
 }
 
-// Actions Section - Requirement 18.7
+// Actions Section - Requirement 18.7 - Blue/white theme
 interface ActionButton {
   label: string;
   onClick: () => void;
@@ -276,31 +278,34 @@ export function ActionsSection({ actions, lastUpdated }: ActionsSectionProps) {
   const getButtonStyle = (variant: ActionButton['variant'] = 'secondary') => {
     switch (variant) {
       case 'primary':
-        return 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]';
+        return 'bg-[#0b6cf0] text-white hover:bg-[#0956c4] shadow-sm';
       case 'danger':
-        return 'bg-[var(--color-badge-red-bg)] text-[var(--color-badge-red-text)] hover:opacity-90 border border-[var(--color-badge-red-bg)]';
+        return 'bg-[#fef2f2] text-[#dc2626] hover:bg-[#fee2e2] border border-[#fecaca]';
       default:
-        return 'bg-[var(--color-bg-gray)] text-[var(--color-sidebar-text)] hover:bg-[var(--color-bg-input)] border border-[var(--color-border)]';
+        return 'bg-white text-[#374151] hover:bg-[#f1f5f9] border border-[#e2e8f0]';
     }
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {actions.map((action) => (
           <button
             key={action.label}
             onClick={action.onClick}
-            className={`px-3 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-colors ${getButtonStyle(action.variant)}`}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors ${getButtonStyle(action.variant)}`}
           >
             {action.label}
           </button>
         ))}
       </div>
       {lastUpdated && (
-        <span className="inline-block px-2 py-1 text-[10px] text-[var(--color-text-secondary)] bg-[var(--color-bg-gray)] rounded-full">
+        <div className="flex items-center gap-2 text-[10px] text-[#64748b]">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           Last updated: {lastUpdated}
-        </span>
+        </div>
       )}
     </div>
   );

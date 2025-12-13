@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout, KPICard, Badge, Button, Table, DetailPanel, DetailSection, SummaryRow, CVSection, SkillsTags, Timeline, NotesSection, ActionsSection, LoadingSpinner, ErrorMessage } from '../components';
 import type { Column } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useJobs } from '../hooks/useJobs';
-import { useCandidates } from '../hooks/useCandidates';
-import type { Job, Candidate } from '../services';
+import { getResumeUrl, candidatesService } from '../services';
+import type { Job, JobCandidate } from '../services';
 
 /**
  * Roles & Pipelines Page - Requirements 16.1-16.11
@@ -543,7 +543,7 @@ function CandidateDetailContent({
       <DetailSection title="CV">
         <CVSection 
           filename={`${candidate.name.replace(' ', '_')}_Resume.pdf`}
-          onView={() => window.open(candidate.resumeUrl || '#', '_blank')}
+          onView={() => window.open(getResumeUrl(candidate.resumeUrl), '_blank')}
         />
       </DetailSection>
 
@@ -579,88 +579,119 @@ function CandidateDetailContent({
 export function RolesPage() {
   const { user, logout } = useAuth();
   const { data: apiJobs, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useJobs();
-  const { data: apiCandidates } = useCandidates();
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [selectedCandidate, setSelectedCandidate] = useState<PipelineCandidate | null>(null);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
+  const [jobCandidates, setJobCandidates] = useState<PipelineCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
 
-  // Map API jobs to local format
+  // Map API jobs to local format - show 0 candidates for new jobs until real applications come in
   const rolesFromApi: Role[] = useMemo(() => {
     if (!apiJobs) return [];
-    return apiJobs.map((job: Job, index: number) => ({
-      id: job.id,
-      title: job.title,
-      department: job.department,
-      location: job.location,
-      openings: job.openings,
-      applicants: Math.floor(Math.random() * 50) + 20,
-      interviews: Math.floor(Math.random() * 15) + 5,
-      sla: index % 3 === 0 ? 'At risk' : index % 3 === 1 ? 'Breached' : 'On track',
-      priority: index % 3 === 0 ? 'High' : index % 3 === 1 ? 'Medium' : 'Low',
-      recruiter: ['Aarti', 'Rahul', 'Vikram', 'Sana'][index % 4],
-    })) as Role[];
+    return apiJobs.map((job: Job, index: number) => {
+      // Use candidateCount from job if available, otherwise 0 for new jobs
+      const applicantCount = job.candidateCount ?? 0;
+      const interviewCount = job.interviewCount ?? 0;
+      
+      return {
+        id: job.id,
+        title: job.title,
+        department: job.department,
+        location: job.location,
+        openings: job.openings,
+        applicants: applicantCount, // Actual count from database (0 for new jobs)
+        interviews: interviewCount, // Actual interview count (0 for new jobs)
+        sla: applicantCount === 0 ? 'On track' : index % 3 === 0 ? 'At risk' : index % 3 === 1 ? 'Breached' : 'On track',
+        priority: index % 3 === 0 ? 'High' : index % 3 === 1 ? 'Medium' : 'Low',
+        recruiter: ['Aarti', 'Rahul', 'Vikram', 'Sana'][index % 4],
+      };
+    }) as Role[];
   }, [apiJobs]);
-
-  // Map API candidates to pipeline candidates
-  const candidatesFromApi: PipelineCandidate[] = useMemo(() => {
-    if (!apiCandidates) return [];
-    return apiCandidates.map((c: Candidate, index: number) => ({
-      id: c.id,
-      name: c.name,
-      title: c.currentCompany || 'Candidate',
-      stage: defaultStages[index % defaultStages.length],
-      score: c.score || Math.floor(Math.random() * 40) + 60,
-      experience: c.experienceYears,
-      location: c.location,
-      source: c.source,
-      updatedAt: new Date(c.updatedAt).toLocaleDateString(),
-      skills: Array.isArray(c.skills) ? c.skills : [],
-      email: c.email,
-      phone: c.phone || '',
-      currentCompany: c.currentCompany || '',
-      currentCtc: c.currentCtc || '',
-      expectedCtc: c.expectedCtc || '',
-      noticePeriod: c.noticePeriod || '',
-      resumeUrl: c.resumeUrl,
-    }));
-  }, [apiCandidates]);
 
   // Use API data if available, otherwise fall back to sample data
   const roles = rolesFromApi.length > 0 ? rolesFromApi : sampleRoles;
-  const allCandidates = candidatesFromApi.length > 0 ? candidatesFromApi : sampleCandidates;
 
   // Set initial selected role
-  useMemo(() => {
+  useEffect(() => {
     if (!selectedRole && roles.length > 0) {
       setSelectedRole(roles[0]);
     }
   }, [roles, selectedRole]);
 
-  // Calculate stage counts for the selected role
+  // Fetch candidates for the selected job
+  useEffect(() => {
+    async function fetchJobCandidates() {
+      if (!selectedRole) {
+        setJobCandidates([]);
+        return;
+      }
+
+      // If using sample data (no API jobs), use sample candidates for demo
+      if (rolesFromApi.length === 0) {
+        setJobCandidates(sampleCandidates);
+        return;
+      }
+
+      setCandidatesLoading(true);
+      try {
+        const candidates = await candidatesService.getByJob(selectedRole.id);
+        // Map JobCandidate to PipelineCandidate
+        const mappedCandidates: PipelineCandidate[] = candidates.map((jc: JobCandidate) => ({
+          id: jc.candidateId,
+          name: jc.candidate?.name || 'Unknown',
+          title: jc.candidate?.currentCompany || 'Candidate',
+          stage: jc.stageName || 'Applied',
+          score: jc.candidate?.score || 0,
+          experience: jc.candidate?.experienceYears || 0,
+          location: jc.candidate?.location || '',
+          source: jc.candidate?.source || '',
+          updatedAt: new Date(jc.updatedAt).toLocaleDateString(),
+          skills: Array.isArray(jc.candidate?.skills) ? jc.candidate.skills : [],
+          email: jc.candidate?.email || '',
+          phone: jc.candidate?.phone || '',
+          currentCompany: jc.candidate?.currentCompany || '',
+          currentCtc: jc.candidate?.currentCtc || '',
+          expectedCtc: jc.candidate?.expectedCtc || '',
+          noticePeriod: jc.candidate?.noticePeriod || '',
+          resumeUrl: jc.candidate?.resumeUrl,
+        }));
+        setJobCandidates(mappedCandidates);
+      } catch (error) {
+        console.error('Failed to fetch job candidates:', error);
+        setJobCandidates([]);
+      } finally {
+        setCandidatesLoading(false);
+      }
+    }
+
+    fetchJobCandidates();
+  }, [selectedRole, rolesFromApi.length]);
+
+  // Calculate stage counts for the selected role's candidates
   const stageCounts: StageCount[] = defaultStages.map((stage) => ({
     name: stage,
-    count: allCandidates.filter((c) => c.stage === stage).length,
+    count: jobCandidates.filter((c) => c.stage === stage).length,
   }));
 
   // Filter candidates by stage if filter is active
   const filteredCandidates = stageFilter
-    ? allCandidates.filter((c) => c.stage === stageFilter)
-    : allCandidates;
+    ? jobCandidates.filter((c) => c.stage === stageFilter)
+    : jobCandidates;
 
   // Calculate KPI metrics for selected role
-  const totalCandidates = allCandidates.length;
-  const newThisWeek = 3;
-  const interviewsScheduled = allCandidates.filter((c) => c.stage === 'Interview').length;
-  const pendingFeedback = 2;
-  const offersMade = allCandidates.filter((c) => c.stage === 'Offer').length;
+  const totalCandidates = jobCandidates.length;
+  const newThisWeek = jobCandidates.length > 0 ? Math.min(3, jobCandidates.length) : 0;
+  const interviewsScheduled = jobCandidates.filter((c) => c.stage === 'Interview').length;
+  const pendingFeedback = interviewsScheduled > 0 ? Math.min(2, interviewsScheduled) : 0;
+  const offersMade = jobCandidates.filter((c) => c.stage === 'Offer').length;
   const acceptanceRate = 75;
   const avgTimeInStage = 4.2;
 
   // Header actions - Requirement 16.11
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button variant="outline">Export pipeline</Button>
+      <Button variant="outline" size="sm">Export pipeline</Button>
     </div>
   );
 
@@ -775,7 +806,16 @@ export function RolesPage() {
             </div>
 
             {/* Candidates View - Requirements 16.5, 16.6, 16.7 */}
-            {viewMode === 'table' ? (
+            {candidatesLoading ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : filteredCandidates.length === 0 ? (
+              <div className="bg-white rounded-xl border border-[#e2e8f0] p-8 text-center">
+                <p className="text-[#64748b]">No candidates have applied to this role yet.</p>
+                <p className="text-sm text-[#94a3b8] mt-1">Candidates will appear here when they apply.</p>
+              </div>
+            ) : viewMode === 'table' ? (
               <CandidateTableView
                 candidates={filteredCandidates}
                 onCandidateClick={setSelectedCandidate}

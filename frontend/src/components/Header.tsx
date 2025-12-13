@@ -65,22 +65,8 @@ export function Header({
         </div>
       </div>
 
-      {/* Center Section: Search - Requirement 21.3, 2.2 */}
-      <div className="hidden md:flex flex-1 max-w-md mx-4">
-        <div className="relative w-full">
-          <input
-            type="text"
-            placeholder="Search candidates, roles, tags..."
-            className="w-full px-4 py-2 pl-10 bg-[#f3f4f6] border border-[#e2e8f0] rounded-full text-sm text-[#111827] placeholder-[#9ca3af] focus:outline-none focus:border-[#0b6cf0] focus:ring-2 focus:ring-[rgba(11,108,240,0.2)]"
-          />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]">
-            🔍
-          </span>
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9ca3af] hidden lg:block">
-            Ctrl + K
-          </span>
-        </div>
-      </div>
+      {/* Spacer for layout balance */}
+      <div className="flex-1" />
 
       {/* Right Section: Filters, Context Pills, User, Actions */}
       <div className="flex items-center gap-3">

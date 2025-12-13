@@ -7,13 +7,19 @@
  * - outline: transparent background, accent color text, colored border
  * - text: no background, just text styling
  * - mini: smaller padding, 9px font, contextual colors
+ * 
+ * Sizes:
+ * - sm: smaller padding for header buttons
+ * - md: default size
  */
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text' | 'mini';
+type ButtonSize = 'sm' | 'md';
 type MiniColor = 'note' | 'move' | 'schedule' | 'cv' | 'default';
 
 interface ButtonProps {
   variant?: ButtonVariant;
+  size?: ButtonSize;
   miniColor?: MiniColor;
   children: React.ReactNode;
   onClick?: () => void;
@@ -24,11 +30,16 @@ interface ButtonProps {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-[#0b6cf0] hover:bg-[#0958c7] text-white rounded-full px-4 py-2',
-  secondary: 'bg-white hover:bg-[#f9fafb] text-[#374151] border border-[#e2e8f0] rounded-full px-4 py-2',
-  outline: 'bg-transparent hover:bg-[#eff6ff] text-[#0b6cf0] border border-[#0b6cf0] rounded-full px-4 py-2',
-  text: 'bg-transparent hover:bg-gray-100 text-[#374151] px-3 py-1.5 rounded-lg',
-  mini: 'px-1.5 py-0.5 text-[9px] rounded',
+  primary: 'bg-[#0b6cf0] hover:bg-[#0958c7] text-white rounded-full',
+  secondary: 'bg-white hover:bg-[#f9fafb] text-[#374151] border border-[#e2e8f0] rounded-full',
+  outline: 'bg-transparent hover:bg-[#eff6ff] text-[#0b6cf0] border border-[#0b6cf0] rounded-full',
+  text: 'bg-transparent hover:bg-gray-100 text-[#374151] rounded-lg',
+  mini: 'rounded',
+};
+
+const sizeStyles: Record<ButtonSize, string> = {
+  sm: 'px-3 py-1.5 text-xs',
+  md: 'px-4 py-2 text-sm',
 };
 
 const miniColorStyles: Record<MiniColor, string> = {
@@ -41,6 +52,7 @@ const miniColorStyles: Record<MiniColor, string> = {
 
 export function Button({
   variant = 'primary',
+  size = 'md',
   miniColor = 'default',
   children,
   onClick,
@@ -51,16 +63,23 @@ export function Button({
 }: ButtonProps) {
   const baseStyles = 'inline-flex items-center justify-center gap-1.5 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
-  const variantStyle = variant === 'mini' 
-    ? `${variantStyles.mini} ${miniColorStyles[miniColor]}`
-    : variantStyles[variant];
+  let variantStyle: string;
+  let sizeStyle: string;
+  
+  if (variant === 'mini') {
+    variantStyle = `${variantStyles.mini} ${miniColorStyles[miniColor]}`;
+    sizeStyle = 'px-1.5 py-0.5 text-[9px]';
+  } else {
+    variantStyle = variantStyles[variant];
+    sizeStyle = sizeStyles[size];
+  }
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`${baseStyles} ${variantStyle} ${className}`}
+      className={`${baseStyles} ${variantStyle} ${sizeStyle} ${className}`}
     >
       {icon && <span className="flex-shrink-0">{icon}</span>}
       {children}

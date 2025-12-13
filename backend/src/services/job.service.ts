@@ -141,19 +141,29 @@ export const jobService = {
   },
 
   /**
-   * Get all jobs for a company
+   * Get all jobs for a company with candidate counts
    */
   async getByCompanyId(companyId: string): Promise<Job[]> {
     const jobs = await prisma.job.findMany({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { jobCandidates: true }
+        },
+        jobCandidates: {
+          include: {
+            currentStage: true
+          }
+        }
+      }
     });
 
-    return jobs.map((j: PrismaJobResult) => this.mapToJob(j));
+    return jobs.map((j) => this.mapToJobWithCounts(j));
   },
 
   /**
-   * Get all jobs (with optional filters)
+   * Get all jobs (with optional filters) with candidate counts
    */
   async getAll(filters?: { companyId?: string; status?: string }): Promise<Job[]> {
     const where: Record<string, unknown> = {};
@@ -167,9 +177,19 @@ export const jobService = {
     const jobs = await prisma.job.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { jobCandidates: true }
+        },
+        jobCandidates: {
+          include: {
+            currentStage: true
+          }
+        }
+      }
     });
 
-    return jobs.map((j: PrismaJobResult) => this.mapToJob(j));
+    return jobs.map((j) => this.mapToJobWithCounts(j));
   },
 
   /**
@@ -267,6 +287,59 @@ export const jobService = {
     }
 
     return result;
+  },
+
+  /**
+   * Map Prisma job with counts to Job type with candidateCount and interviewCount
+   */
+  mapToJobWithCounts(job: {
+    id: string;
+    companyId: string;
+    title: string;
+    department: string;
+    location: string;
+    employmentType: string | null;
+    salaryRange: string | null;
+    description: string | null;
+    status: string;
+    openings: number;
+    createdAt: Date;
+    updatedAt: Date;
+    _count?: { jobCandidates: number };
+    jobCandidates?: Array<{
+      currentStage?: { name: string } | null;
+    }>;
+  }): Job & { candidateCount: number; interviewCount: number; offerCount: number } {
+    const candidateCount = job._count?.jobCandidates ?? 0;
+    
+    // Count candidates in interview stages
+    const interviewStages = ['Interview', 'Selected'];
+    const interviewCount = job.jobCandidates?.filter(
+      jc => jc.currentStage && interviewStages.includes(jc.currentStage.name)
+    ).length ?? 0;
+    
+    // Count candidates in offer stage
+    const offerCount = job.jobCandidates?.filter(
+      jc => jc.currentStage && jc.currentStage.name === 'Offer'
+    ).length ?? 0;
+
+    return {
+      id: job.id,
+      companyId: job.companyId,
+      title: job.title,
+      department: job.department,
+      location: job.location,
+      employmentType: job.employmentType ?? '',
+      salaryRange: job.salaryRange ?? undefined,
+      description: job.description ?? '',
+      status: job.status as 'active' | 'paused' | 'closed',
+      openings: job.openings,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      candidateCount,
+      interviewCount,
+      offerCount,
+    };
   },
 };
 

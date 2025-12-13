@@ -437,9 +437,9 @@ export function DashboardPage() {
   // Header actions for the dashboard
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button variant="outline">Saved views</Button>
-      <Button variant="outline">Export</Button>
-      <Button variant="primary">+ New Role</Button>
+      <Button variant="outline" size="sm">Saved views</Button>
+      <Button variant="outline" size="sm">Export</Button>
+      <Button variant="primary" size="sm">+ New Role</Button>
     </div>
   );
 
