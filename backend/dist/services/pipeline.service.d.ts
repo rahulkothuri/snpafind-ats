@@ -5,6 +5,8 @@ interface PrismaStageResult {
     name: string;
     position: number;
     isDefault: boolean;
+    isMandatory: boolean;
+    parentId: string | null;
     createdAt: Date;
 }
 export interface CreateStageData {

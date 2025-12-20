@@ -43,20 +43,52 @@ export interface Company {
 
 // Job types
 export type JobStatus = 'active' | 'paused' | 'closed';
+export type WorkMode = 'Onsite' | 'WFH' | 'Hybrid' | 'C2C' | 'C2H';
+export type JobPriority = 'Low' | 'Medium' | 'High';
 
 export interface Job {
   id: string;
   companyId: string;
   title: string;
   department: string;
-  location: string;
-  employmentType: string;
-  salaryRange?: string;
+  
+  // Experience range (Requirements 1.1, 1.2)
+  experienceMin?: number;
+  experienceMax?: number;
+  
+  // Salary range (Requirements 1.1, 1.3)
+  salaryMin?: number;
+  salaryMax?: number;
+  variables?: string;
+  
+  // Requirements (Requirements 1.1)
+  educationQualification?: string;
+  ageUpTo?: number;
+  skills: string[];
+  preferredIndustry?: string;
+  
+  // Work details (Requirements 1.1, 1.4, 1.5, 1.6)
+  workMode?: WorkMode;
+  locations: string[];
+  priority?: JobPriority;
+  jobDomain?: string;
+  
+  // Assignment (Requirements 1.1)
+  assignedRecruiterId?: string;
+  
+  // Content
   description: string;
+  
+  // Existing fields
   status: JobStatus;
   openings: number;
   createdAt: Date;
   updatedAt: Date;
+  
+  // Legacy fields (kept for compatibility)
+  location?: string;
+  employmentType?: string;
+  salaryRange?: string;
 }
 
 // Pipeline types
@@ -66,6 +98,24 @@ export interface PipelineStage {
   name: string;
   position: number;
   isDefault: boolean;
+  isMandatory: boolean;
+  parentId?: string;
+  subStages?: PipelineStage[];
+}
+
+// Pipeline stage configuration for job creation
+export interface PipelineStageConfig {
+  id?: string;
+  name: string;
+  position: number;
+  isMandatory: boolean;
+  subStages?: SubStageConfig[];
+}
+
+export interface SubStageConfig {
+  id?: string;
+  name: string;
+  position: number;
 }
 
 // Candidate types

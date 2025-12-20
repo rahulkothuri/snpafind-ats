@@ -85,7 +85,8 @@ export const validatePublicResumeFile = (file) => {
 /**
  * GET /api/public/jobs/:id
  * Get a job by ID for public application form (no auth required)
- * Requirements: 5.1
+ * Returns all job details including company info for the application page
+ * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
  */
 router.get('/jobs/:id', async (req, res, next) => {
     try {
@@ -97,6 +98,12 @@ router.get('/jobs/:id', async (req, res, next) => {
                         id: true,
                         name: true,
                         logoUrl: true,
+                        website: true,
+                        industry: true,
+                        description: true,
+                        city: true,
+                        state: true,
+                        country: true,
                     },
                 },
             },
@@ -108,17 +115,44 @@ router.get('/jobs/:id', async (req, res, next) => {
         if (job.status !== 'active') {
             throw new NotFoundError('Job');
         }
-        // Return job details with company name for application form
+        // Return all job details with company info for application page (Requirements 5.2, 5.3, 5.4, 5.5)
         res.json({
             id: job.id,
             title: job.title,
             companyId: job.companyId,
+            department: job.department,
+            // Company info (Requirements 5.2)
             companyName: job.company.name,
             companyLogo: job.company.logoUrl,
+            companyWebsite: job.company.website,
+            companyIndustry: job.company.industry,
+            companyDescription: job.company.description,
+            companyCity: job.company.city,
+            companyState: job.company.state,
+            companyCountry: job.company.country,
+            // Experience range (Requirements 5.3)
+            experienceMin: job.experienceMin,
+            experienceMax: job.experienceMax,
+            // Salary range (Requirements 5.3)
+            salaryMin: job.salaryMin,
+            salaryMax: job.salaryMax,
+            variables: job.variables,
+            // Requirements (Requirements 5.3)
+            educationQualification: job.educationQualification,
+            ageUpTo: job.ageUpTo,
+            skills: job.skills,
+            preferredIndustry: job.preferredIndustry,
+            // Work details (Requirements 5.3)
+            workMode: job.workMode,
+            locations: job.locations,
+            priority: job.priority,
+            jobDomain: job.jobDomain,
+            // Content (Requirements 5.4)
+            description: job.description,
+            openings: job.openings,
+            // Legacy fields (kept for compatibility)
             location: job.location,
             employmentType: job.employmentType,
-            department: job.department,
-            description: job.description,
             salaryRange: job.salaryRange,
         });
     }

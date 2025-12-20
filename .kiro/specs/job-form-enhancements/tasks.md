@@ -1,0 +1,183 @@
+# Implementation Plan
+
+- [x] 1. Update database schema and backend for enhanced job fields
+  - [x] 1.1 Update Prisma schema with new Job model fields
+    - Add experienceMin, experienceMax, salaryMin, salaryMax, variables fields
+    - Add educationQualification, ageUpTo, skills (Json), preferredIndustry fields
+    - Add workMode, locations (Json), priority, jobDomain, assignedRecruiterId fields
+    - Update PipelineStage model with isMandatory and parentId for sub-stages
+    - _Requirements: 1.1, 4.1, 4.2, 4.3_
+  - [x] 1.2 Create and run database migration
+    - Generate migration for new fields
+    - Run migration against development database
+    - _Requirements: 1.1_
+  - [x] 1.3 Update job service and controller for new fields
+    - Update createJob to handle all new fields
+    - Update updateJob to handle all new fields
+    - Update getJob to return all new fields including pipeline stages
+    - _Requirements: 1.1, 7.3, 8.3_
+  - [ ]* 1.4 Write property test for job data round-trip persistence
+    - **Property 5: Job Data Round-Trip Persistence**
+    - **Validates: Requirements 2.3, 4.5, 8.3, 8.4, 8.5**
+
+- [x] 2. Create frontend types and constants
+  - [x] 2.1 Update TypeScript types for enhanced job data
+    - Add JobFormData interface with all new fields
+    - Add WorkMode and JobPriority types
+    - Add PipelineStageConfig and SubStageConfig interfaces
+    - _Requirements: 1.1, 4.1_
+  - [x] 2.2 Create constants for dropdown options
+    - Define workModes array (Onsite, WFH, Hybrid, C2C, C2H)
+    - Define priorities array (Low, Medium, High)
+    - Define educationQualifications array
+    - Define industries array
+    - Define jobDomains array
+    - Define cities array for locations
+    - Define skills array
+    - _Requirements: 1.5, 1.6_
+
+- [x] 3. Create MandatoryCriteriaSection component
+  - [x] 3.1 Implement static mandatory criteria display component
+    - Create read-only section with predefined criteria text
+    - Style with appropriate visual hierarchy
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [ ]* 3.2 Write property test for mandatory criteria inclusion
+    - **Property 6: Mandatory Criteria Inclusion**
+    - **Validates: Requirements 3.2**
+
+- [x] 4. Create PipelineStageConfigurator component
+  - [x] 4.1 Implement pipeline stage configuration UI
+    - Display mandatory stages (Screening, Shortlisted, Offer) as locked
+    - Allow adding/removing optional stages
+    - Support adding sub-stages under Interview stage
+    - Implement drag-and-drop reordering for non-mandatory stages
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+  - [ ]* 4.2 Write property test for mandatory stages preservation
+    - **Property 7: Mandatory Pipeline Stages Preservation**
+    - **Validates: Requirements 4.2**
+  - [ ]* 4.3 Write property test for stage reordering
+    - **Property 8: Stage Reordering Consistency**
+    - **Validates: Requirements 4.4**
+
+- [ ] 5. Enhance JobCreationPage with new form fields
+  - [x] 5.1 Add experience range inputs (min/max)
+    - Create two number inputs for min and max experience
+    - Add validation for min <= max
+    - _Requirements: 1.2_
+  - [x] 5.2 Add salary range inputs (min/max) with currency formatting
+    - Create two number inputs for min and max salary
+    - Add validation for min <= max
+    - _Requirements: 1.3_
+  - [x] 5.3 Add variables/incentives text input
+    - Create text input for incentives description
+    - _Requirements: 1.1_
+  - [x] 5.4 Add education qualification dropdown
+    - Create select dropdown with education options
+    - _Requirements: 1.1_
+  - [x] 5.5 Add age limit input
+    - Create number input for age up to
+    - _Requirements: 1.1_
+  - [x] 5.6 Add multi-select skills component
+    - Create searchable multi-select with tag display
+    - _Requirements: 1.1_
+  - [x] 5.7 Add preferred industry dropdown
+    - Create select dropdown with industry options
+    - _Requirements: 1.1_
+  - [x] 5.8 Add work mode dropdown
+    - Create select dropdown with Onsite, WFH, Hybrid, C2C, C2H options
+    - _Requirements: 1.5_
+  - [x] 5.9 Add multi-select locations component
+    - Create searchable multi-select for cities
+    - _Requirements: 1.4_
+  - [x] 5.10 Add job priority dropdown
+    - Create select dropdown with Low, Medium, High options
+    - _Requirements: 1.6_
+  - [x] 5.11 Add job domain dropdown
+    - Create select dropdown with domain options
+    - _Requirements: 1.1_
+  - [x] 5.12 Add assign recruiter dropdown
+    - Create select dropdown populated with company recruiters
+    - _Requirements: 1.1_
+  - [x] 5.13 Integrate MandatoryCriteriaSection into form
+    - Add read-only mandatory criteria section to form
+    - _Requirements: 3.1_
+  - [x] 5.14 Integrate PipelineStageConfigurator into form
+    - Add pipeline configuration section to form
+    - _Requirements: 4.1_
+  - [x] 5.15 Update form validation for required fields
+    - Add validation for all required fields
+    - Display inline error messages
+    - _Requirements: 1.7_
+  - [ ]* 5.16 Write property tests for form validation
+    - **Property 1: Experience Range Validation**
+    - **Validates: Requirements 1.2**
+    - **Property 2: Salary Range Validation**
+    - **Validates: Requirements 1.3**
+    - **Property 4: Required Field Validation**
+    - **Validates: Requirements 1.7**
+  - [x] 5.17 Write property test for multi-select locations
+    - **Property 3: Multi-Select Locations Persistence**
+    - **Validates: Requirements 1.4**
+
+- [ ] 6. Checkpoint - Make sure all tests are passing
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 7. Create JobShareModal component
+  - [x] 7.1 Implement job share modal UI
+    - Create modal with success message
+    - Add "Copy Link" button with clipboard integration
+    - Add "Share to WhatsApp" button with wa.me link
+    - Add "Go to Roles" navigation button
+    - _Requirements: 7.1, 7.2, 7.3, 7.5, 7.6_
+  - [x] 7.2 Integrate JobShareModal into JobCreationPage
+    - Show modal after successful job creation
+    - Pass job ID and title to modal
+    - Handle navigation after modal close
+    - _Requirements: 7.1_
+  - [ ]* 7.3 Write property test for share link generation
+    - **Property 11: Job Share Link Generation**
+    - **Validates: Requirements 7.2, 7.4**
+
+- [ ] 8. Create JobDetailsPanel component for application page
+  - [x] 8.1 Implement job details panel component
+    - Display company info (name, logo)
+    - Display all job posting details
+    - Display job description content
+    - Display mandatory criteria section
+    - _Requirements: 5.2, 5.3, 5.4, 5.5_
+  - [ ]* 8.2 Write property test for job details display completeness
+    - **Property 9: Job Details Display Completeness**
+    - **Validates: Requirements 5.2, 5.3, 5.4, 5.5, 6.3**
+
+- [ ] 9. Enhance ApplicationPage with two-column layout
+  - [x] 9.1 Implement two-column responsive layout
+    - Left column (40%): JobDetailsPanel
+    - Right column (60%): ApplicationForm
+    - Stack vertically on mobile
+    - _Requirements: 5.1, 5.6_
+  - [x] 9.2 Update public job API to return all new fields
+    - Ensure /public/jobs/:id returns all job details including company info
+    - _Requirements: 5.2, 5.3_
+
+- [ ] 10. Create JobDescriptionModal for Roles page
+  - [x] 10.1 Implement read-only job description modal
+    - Display all job fields in read-only format
+    - Include job description and mandatory criteria
+    - _Requirements: 6.2, 6.3_
+  - [x] 10.2 Update RolesPage to use "View Job Description"
+    - Change "Edit JD" button to "View Job Description"
+    - Open JobDescriptionModal on click
+    - _Requirements: 6.1_
+
+- [ ] 11. Update job edit functionality
+  - [x] 11.1 Ensure edit form pre-populates all new fields
+    - Load existing job data into all form fields
+    - Handle array fields (skills, locations) correctly
+    - Load existing pipeline stages configuration
+    - _Requirements: 8.1, 8.2_
+  - [ ]* 11.2 Write property test for edit form pre-population
+    - **Property 10: Edit Form Pre-Population**
+    - **Validates: Requirements 8.1**
+
+- [ ] 12. Final Checkpoint - Make sure all tests are passing
+  - Ensure all tests pass, ask the user if questions arise.

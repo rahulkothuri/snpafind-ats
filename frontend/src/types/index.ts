@@ -40,6 +40,8 @@ export interface Company {
 
 // Job types
 export type JobStatus = 'active' | 'paused' | 'closed';
+export type WorkMode = 'Onsite' | 'WFH' | 'Hybrid' | 'C2C' | 'C2H';
+export type JobPriority = 'Low' | 'Medium' | 'High';
 
 export interface Job {
   id: string;
@@ -56,6 +58,71 @@ export interface Job {
   updatedAt: Date;
   stages?: PipelineStage[];
   candidateCount?: number;
+  // Enhanced job fields
+  experienceMin?: number;
+  experienceMax?: number;
+  salaryMin?: number;
+  salaryMax?: number;
+  variables?: string;
+  educationQualification?: string;
+  ageUpTo?: number;
+  skills?: string[];
+  preferredIndustry?: string;
+  workMode?: WorkMode;
+  locations?: string[];
+  priority?: JobPriority;
+  jobDomain?: string;
+  assignedRecruiterId?: string;
+}
+
+// Job form data for creating/editing jobs
+export interface JobFormData {
+  title: string;
+  department: string;
+  experienceMin: number;
+  experienceMax: number;
+  salaryMin: number;
+  salaryMax: number;
+  variables: string;
+  educationQualification: string;
+  openings: number;
+  ageUpTo: number;
+  skills: string[];
+  preferredIndustry: string;
+  workMode: WorkMode;
+  locations: string[];
+  priority: JobPriority;
+  jobDomain: string;
+  assignedRecruiterId: string;
+  description: string;
+  pipelineStages: PipelineStageConfig[];
+}
+
+// Job details with company info for display
+export interface JobDetails extends JobFormData {
+  id: string;
+  companyId: string;
+  companyName: string;
+  companyLogo?: string;
+  status: JobStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Pipeline stage configuration for job creation
+export interface PipelineStageConfig {
+  id?: string;
+  name: string;
+  position: number;
+  isMandatory: boolean;
+  subStages: SubStageConfig[];
+}
+
+// Sub-stage configuration for pipeline stages
+export interface SubStageConfig {
+  id?: string;
+  name: string;
+  position: number;
 }
 
 // Pipeline types
@@ -65,6 +132,9 @@ export interface PipelineStage {
   name: string;
   position: number;
   isDefault: boolean;
+  isMandatory?: boolean;
+  parentId?: string;
+  subStages?: PipelineStage[];
   candidateCount?: number;
 }
 

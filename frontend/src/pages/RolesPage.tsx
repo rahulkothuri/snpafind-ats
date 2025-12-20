@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Layout, KPICard, Badge, Button, Table, DetailPanel, DetailSection, SummaryRow, CVSection, SkillsTags, Timeline, NotesSection, ActionsSection, LoadingSpinner, ErrorMessage } from '../components';
+import { Layout, KPICard, Badge, Button, Table, DetailPanel, DetailSection, SummaryRow, CVSection, SkillsTags, Timeline, NotesSection, ActionsSection, LoadingSpinner, ErrorMessage, JobDescriptionModal } from '../components';
 import type { Column } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useJobs } from '../hooks/useJobs';
-import { getResumeUrl, candidatesService } from '../services';
+import { getResumeUrl, candidatesService, jobsService } from '../services';
 import type { Job, JobCandidate } from '../services';
+import type { Job as JobType } from '../types';
 
 /**
  * Roles & Pipelines Page - Requirements 16.1-16.11
@@ -585,6 +586,25 @@ export function RolesPage() {
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [jobCandidates, setJobCandidates] = useState<PipelineCandidate[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
+  
+  // State for Job Description Modal - Requirements 6.1, 6.2
+  const [isJobDescriptionModalOpen, setIsJobDescriptionModalOpen] = useState(false);
+  const [selectedJobForDescription, setSelectedJobForDescription] = useState<JobType | null>(null);
+  const [jobDescriptionLoading, setJobDescriptionLoading] = useState(false);
+
+  // Handler to open Job Description Modal - Requirements 6.1, 6.2
+  const handleViewJobDescription = async (jobId: string) => {
+    setJobDescriptionLoading(true);
+    try {
+      const jobDetails = await jobsService.getById(jobId);
+      setSelectedJobForDescription(jobDetails as unknown as JobType);
+      setIsJobDescriptionModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch job details:', error);
+    } finally {
+      setJobDescriptionLoading(false);
+    }
+  };
 
   // Map API jobs to local format - show 0 candidates for new jobs until real applications come in
   const rolesFromApi: Role[] = useMemo(() => {
@@ -746,7 +766,13 @@ export function RolesPage() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline">Edit JD</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleViewJobDescription(selectedRole.id)}
+                  disabled={jobDescriptionLoading}
+                >
+                  {jobDescriptionLoading ? 'Loading...' : 'View Job Description'}
+                </Button>
                 <Button variant="primary">+ Add candidate</Button>
               </div>
             </div>
@@ -844,6 +870,16 @@ export function RolesPage() {
           />
         )}
       </DetailPanel>
+
+      {/* Job Description Modal - Requirements 6.1, 6.2, 6.3 */}
+      <JobDescriptionModal
+        isOpen={isJobDescriptionModalOpen}
+        onClose={() => {
+          setIsJobDescriptionModalOpen(false);
+          setSelectedJobForDescription(null);
+        }}
+        job={selectedJobForDescription}
+      />
     </Layout>
   );
 }

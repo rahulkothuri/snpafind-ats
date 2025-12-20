@@ -15,11 +15,18 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fc from 'fast-check';
-// Default pipeline stages
+// Default pipeline stages with mandatory flag
 const DEFAULT_STAGES = [
-    'Queue', 'Applied', 'Screening', 'Shortlisted',
-    'Interview', 'Selected', 'Offer', 'Hired'
+    { name: 'Queue', isMandatory: false },
+    { name: 'Applied', isMandatory: false },
+    { name: 'Screening', isMandatory: true },
+    { name: 'Shortlisted', isMandatory: true },
+    { name: 'Interview', isMandatory: false },
+    { name: 'Selected', isMandatory: false },
+    { name: 'Offer', isMandatory: true },
+    { name: 'Hired', isMandatory: false },
 ];
+const DEFAULT_STAGE_NAMES = DEFAULT_STAGES.map(s => s.name);
 // Mock Prisma client - must be before imports
 vi.mock('../../lib/prisma.js', () => {
     const mockPrismaJob = {
@@ -84,22 +91,39 @@ describe('Property 11: Default stages are initialized', () => {
                 title: title.trim(),
                 department: department.trim(),
                 location: location.trim(),
+                experienceMin: null,
+                experienceMax: null,
+                salaryMin: null,
+                salaryMax: null,
+                variables: null,
+                educationQualification: null,
+                ageUpTo: null,
+                skills: [],
+                preferredIndustry: null,
+                workMode: null,
+                locations: [],
+                priority: 'Medium',
+                jobDomain: null,
+                assignedRecruiterId: null,
+                description: null,
                 employmentType: null,
                 salaryRange: null,
-                description: null,
                 status: 'active',
                 openings: 1,
                 createdAt: now,
                 updatedAt: now,
             };
             // Create mock stages with correct order
-            const mockStages = DEFAULT_STAGES.map((name, index) => ({
+            const mockStages = DEFAULT_STAGES.map((stage, index) => ({
                 id: `stage-${jobId}-${index}`,
                 jobId,
-                name,
+                name: stage.name,
                 position: index,
                 isDefault: true,
+                isMandatory: stage.isMandatory,
+                parentId: null,
                 createdAt: now,
+                subStages: [],
             }));
             // Mock transaction
             mockTransaction.mockImplementationOnce(async (callback) => {
@@ -108,7 +132,10 @@ describe('Property 11: Default stages are initialized', () => {
                         create: vi.fn().mockResolvedValue(mockDbJob),
                     },
                     pipelineStage: {
-                        createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                        create: vi.fn().mockImplementation((args) => {
+                            const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                            return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                        }),
                         findMany: vi.fn().mockResolvedValue(mockStages),
                     },
                 };
@@ -125,7 +152,7 @@ describe('Property 11: Default stages are initialized', () => {
             expect(job.stages.length).toBe(DEFAULT_STAGES.length);
             // Verify stages are in correct order
             for (let i = 0; i < DEFAULT_STAGES.length; i++) {
-                expect(job.stages[i].name).toBe(DEFAULT_STAGES[i]);
+                expect(job.stages[i].name).toBe(DEFAULT_STAGES[i].name);
                 expect(job.stages[i].position).toBe(i);
                 expect(job.stages[i].isDefault).toBe(true);
             }
@@ -140,21 +167,38 @@ describe('Property 11: Default stages are initialized', () => {
                 title: title.trim(),
                 department: department.trim(),
                 location: location.trim(),
+                experienceMin: null,
+                experienceMax: null,
+                salaryMin: null,
+                salaryMax: null,
+                variables: null,
+                educationQualification: null,
+                ageUpTo: null,
+                skills: [],
+                preferredIndustry: null,
+                workMode: null,
+                locations: [],
+                priority: 'Medium',
+                jobDomain: null,
+                assignedRecruiterId: null,
+                description: null,
                 employmentType: null,
                 salaryRange: null,
-                description: null,
                 status: 'active',
                 openings: 1,
                 createdAt: now,
                 updatedAt: now,
             };
-            const mockStages = DEFAULT_STAGES.map((name, index) => ({
+            const mockStages = DEFAULT_STAGES.map((stage, index) => ({
                 id: `stage-${jobId}-${index}`,
                 jobId,
-                name,
+                name: stage.name,
                 position: index,
                 isDefault: true,
+                isMandatory: stage.isMandatory,
+                parentId: null,
                 createdAt: now,
+                subStages: [],
             }));
             mockTransaction.mockImplementationOnce(async (callback) => {
                 const txMock = {
@@ -162,7 +206,10 @@ describe('Property 11: Default stages are initialized', () => {
                         create: vi.fn().mockResolvedValue(mockDbJob),
                     },
                     pipelineStage: {
-                        createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                        create: vi.fn().mockImplementation((args) => {
+                            const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                            return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                        }),
                         findMany: vi.fn().mockResolvedValue(mockStages),
                     },
                 };
@@ -191,12 +238,14 @@ describe('Property 12: Custom sub-stage insertion preserves order', () => {
         async (jobId, newStageId, stageName, insertPosition) => {
             const now = new Date();
             // Create initial stages
-            const initialStages = DEFAULT_STAGES.map((name, index) => ({
+            const initialStages = DEFAULT_STAGES.map((stage, index) => ({
                 id: `stage-${jobId}-${index}`,
                 jobId,
-                name,
+                name: stage.name,
                 position: index,
                 isDefault: true,
+                isMandatory: stage.isMandatory,
+                parentId: null,
                 createdAt: now,
             }));
             // Mock job exists
@@ -223,6 +272,8 @@ describe('Property 12: Custom sub-stage insertion preserves order', () => {
                 name: stageName.trim(),
                 position: insertPosition,
                 isDefault: false,
+                isMandatory: false,
+                parentId: null,
                 createdAt: now,
             };
             expectedStages.splice(insertPosition, 0, newStage);
@@ -250,12 +301,14 @@ describe('Property 12: Custom sub-stage insertion preserves order', () => {
     it('should mark custom stages as isDefault=false', async () => {
         await fc.assert(fc.asyncProperty(uuidArbitrary, uuidArbitrary, stageNameArbitrary, fc.integer({ min: 0, max: 7 }), async (jobId, newStageId, stageName, insertPosition) => {
             const now = new Date();
-            const initialStages = DEFAULT_STAGES.map((name, index) => ({
+            const initialStages = DEFAULT_STAGES.map((stage, index) => ({
                 id: `stage-${jobId}-${index}`,
                 jobId,
-                name,
+                name: stage.name,
                 position: index,
                 isDefault: true,
+                isMandatory: stage.isMandatory,
+                parentId: null,
                 createdAt: now,
             }));
             mockPrismaJob.findUnique.mockResolvedValueOnce({
@@ -273,6 +326,8 @@ describe('Property 12: Custom sub-stage insertion preserves order', () => {
                 name: stageName.trim(),
                 position: insertPosition,
                 isDefault: false,
+                isMandatory: false,
+                parentId: null,
                 createdAt: now,
             };
             mockTransaction.mockImplementationOnce(async (callback) => {
@@ -309,12 +364,14 @@ describe('Property 13: Stage reordering maintains candidate associations', () =>
                 return; // Skip invalid positions
             const now = new Date();
             const stageId = `stage-${jobId}-${oldPosition}`;
-            const initialStages = DEFAULT_STAGES.map((name, index) => ({
+            const initialStages = DEFAULT_STAGES.map((stage, index) => ({
                 id: `stage-${jobId}-${index}`,
                 jobId,
-                name,
+                name: stage.name,
                 position: index,
                 isDefault: true,
+                isMandatory: stage.isMandatory,
+                parentId: null,
                 createdAt: now,
             }));
             // Mock stage to move
@@ -357,12 +414,14 @@ describe('Property 13: Stage reordering maintains candidate associations', () =>
                 return; // Skip invalid positions
             const now = new Date();
             const stageId = `stage-${jobId}-${oldPosition}`;
-            const initialStages = DEFAULT_STAGES.map((name, index) => ({
+            const initialStages = DEFAULT_STAGES.map((stage, index) => ({
                 id: `stage-${jobId}-${index}`,
                 jobId,
-                name,
+                name: stage.name,
                 position: index,
                 isDefault: true,
+                isMandatory: stage.isMandatory,
+                parentId: null,
                 createdAt: now,
             }));
             mockPrismaStage.findUnique.mockResolvedValueOnce(initialStages[oldPosition]);
@@ -396,12 +455,14 @@ describe('Property 13: Stage reordering maintains candidate associations', () =>
         await fc.assert(fc.asyncProperty(uuidArbitrary, fc.integer({ min: 0, max: 7 }), async (jobId, position) => {
             const now = new Date();
             const stageId = `stage-${jobId}-${position}`;
-            const initialStages = DEFAULT_STAGES.map((name, index) => ({
+            const initialStages = DEFAULT_STAGES.map((stage, index) => ({
                 id: `stage-${jobId}-${index}`,
                 jobId,
-                name,
+                name: stage.name,
                 position: index,
                 isDefault: true,
+                isMandatory: stage.isMandatory,
+                parentId: null,
                 createdAt: now,
             }));
             mockPrismaStage.findUnique.mockResolvedValueOnce(initialStages[position]);
@@ -414,7 +475,7 @@ describe('Property 13: Stage reordering maintains candidate associations', () =>
             expect(stages.length).toBe(DEFAULT_STAGES.length);
             for (let i = 0; i < stages.length; i++) {
                 expect(stages[i].position).toBe(i);
-                expect(stages[i].name).toBe(DEFAULT_STAGES[i]);
+                expect(stages[i].name).toBe(DEFAULT_STAGES[i].name);
             }
         }), { numRuns: 50 });
     });

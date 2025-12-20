@@ -1,6 +1,7 @@
 import { Layout, KPICard, Badge, Button, Table, LoadingSpinner, ErrorMessage } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboard } from '../hooks/useDashboard';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Dashboard Page - Requirements 15.1-15.10, 22.1-22.3
@@ -96,7 +97,43 @@ const sampleRolePipeline: RolePipeline[] = [
   { id: '4', role: 'UX Designer', location: 'Remote', applicants: 52, interview: 15, offer: 4, age: 14, sla: 'On track', priority: 'Medium' },
   { id: '5', role: 'Data Analyst', location: 'Chennai', applicants: 38, interview: 10, offer: 2, age: 21, sla: 'On track', priority: 'Low' },
   { id: '6', role: 'Backend Engineer (L2)', location: 'Pune', applicants: 41, interview: 9, offer: 2, age: 28, sla: 'At risk', priority: 'High' },
+  { id: '7', role: 'Frontend Developer', location: 'Mumbai', applicants: 35, interview: 7, offer: 1, age: 15, sla: 'On track', priority: 'Medium' },
+  { id: '8', role: 'DevOps Engineer', location: 'Bangalore', applicants: 29, interview: 5, offer: 1, age: 22, sla: 'At risk', priority: 'High' },
+  { id: '9', role: 'QA Engineer', location: 'Hyderabad', applicants: 31, interview: 8, offer: 2, age: 19, sla: 'On track', priority: 'Low' },
+  { id: '10', role: 'Marketing Manager', location: 'Delhi', applicants: 26, interview: 4, offer: 0, age: 35, sla: 'Breached', priority: 'Medium' },
 ];
+
+// Role relevance/activity scoring function - Requirements 2.1, 2.4
+function calculateRoleRelevance(role: RolePipeline): number {
+  let score = 0;
+  
+  // Priority scoring (High = 3, Medium = 2, Low = 1)
+  const priorityScore = role.priority === 'High' ? 3 : role.priority === 'Medium' ? 2 : 1;
+  score += priorityScore * 10;
+  
+  // SLA status scoring (Breached = 3, At risk = 2, On track = 1)
+  const slaScore = role.sla === 'Breached' ? 3 : role.sla === 'At risk' ? 2 : 1;
+  score += slaScore * 8;
+  
+  // Activity scoring based on pipeline activity (interviews + offers)
+  const activityScore = role.interview + role.offer;
+  score += activityScore * 2;
+  
+  // Recency scoring (newer roles get higher score, age is in days)
+  const recencyScore = Math.max(0, 30 - role.age);
+  score += recencyScore;
+  
+  return score;
+}
+
+// Function to get limited and sorted roles - Requirements 2.1, 2.4
+function getLimitedRoles(roles: RolePipeline[], maxCount: number = 7): RolePipeline[] {
+  return roles
+    .map(role => ({ ...role, relevanceScore: calculateRoleRelevance(role) }))
+    .sort((a, b) => b.relevanceScore - a.relevanceScore)
+    .slice(0, maxCount)
+    .map(({ relevanceScore, ...role }) => role);
+}
 
 const sampleFunnel: FunnelStage[] = [
   { name: 'Applied', count: 236, percentage: 100 },
@@ -112,7 +149,33 @@ const sampleInterviews: Interview[] = [
   { id: '2', time: '11:30 AM', candidate: 'Rahul Verma', role: 'Product Manager', panel: 'Panel C (Hiring Mgr)', meetingType: 'Zoom' },
   { id: '3', time: '2:00 PM', candidate: 'Ankit Patel', role: 'Backend Architect', panel: 'Panel B (Architecture)', meetingType: 'In-office' },
   { id: '4', time: '3:30 PM', candidate: 'Sneha Reddy', role: 'UX Designer', panel: 'Panel A (Backend)', meetingType: 'Google Meet' },
+  { id: '5', time: '4:00 PM', candidate: 'Amit Kumar', role: 'Frontend Developer', panel: 'Panel D (Frontend)', meetingType: 'Google Meet' },
+  { id: '6', time: '5:00 PM', candidate: 'Neha Singh', role: 'Data Analyst', panel: 'Panel E (Data)', meetingType: 'Zoom' },
+  { id: '7', time: '9:00 AM', candidate: 'Rajesh Gupta', role: 'DevOps Engineer', panel: 'Panel F (DevOps)', meetingType: 'In-office' },
 ];
+
+// Function to parse time string to comparable format - Requirements 3.1, 3.4
+function parseInterviewTime(timeStr: string): number {
+  const [time, period] = timeStr.split(' ');
+  const [hours, minutes] = time.split(':').map(Number);
+  let hour24 = hours;
+  
+  if (period === 'PM' && hours !== 12) {
+    hour24 = hours + 12;
+  } else if (period === 'AM' && hours === 12) {
+    hour24 = 0;
+  }
+  
+  return hour24 * 60 + minutes;
+}
+
+// Function to get limited and chronologically sorted interviews - Requirements 3.1, 3.4
+function getLimitedInterviews(interviews: Interview[], maxCount: number = 5): Interview[] {
+  return interviews
+    .slice()
+    .sort((a, b) => parseInterviewTime(a.time) - parseInterviewTime(b.time))
+    .slice(0, maxCount);
+}
 
 const sampleTasks: Task[] = [
   { id: '1', type: 'Feedback', text: 'Submit feedback for Priya Sharma - Backend round', age: '2h', severity: 'high' },
@@ -220,10 +283,29 @@ function HiringFunnel({ stages }: { stages: FunnelStage[] }) {
 }
 
 // Upcoming Interviews Component
-function UpcomingInterviews({ interviews }: { interviews: Interview[] }) {
+function UpcomingInterviews({ 
+  interviews, 
+  showViewAll = false, 
+  onViewAll 
+}: { 
+  interviews: Interview[]; 
+  showViewAll?: boolean;
+  onViewAll?: () => void;
+}) {
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#111827] mb-4">Upcoming Interviews</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-[#111827]">Upcoming Interviews</h3>
+        {showViewAll && onViewAll && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onViewAll}
+          >
+            View All
+          </Button>
+        )}
+      </div>
       <div className="space-y-3">
         {interviews.map((interview) => (
           <div
@@ -268,36 +350,73 @@ function TasksSection({ tasks }: { tasks: Task[] }) {
     }
   };
 
+  // Professional emoji icons mapping - Requirements 4.1
   const typeIcon = (type: Task['type']) => {
     switch (type) {
-      case 'Feedback': return '💬';
-      case 'Approval': return '✅';
-      case 'Reminder': return '🔔';
-      case 'Pipeline': return '📋';
+      case 'Feedback': return '💭';
+      case 'Approval': return '✓';
+      case 'Reminder': return '⏰';
+      case 'Pipeline': return '📊';
       default: return '📌';
+    }
+  };
+
+  // Icon background colors for better visual hierarchy
+  const typeIconBg = (type: Task['type']) => {
+    switch (type) {
+      case 'Feedback': return 'bg-blue-100 text-blue-600';
+      case 'Approval': return 'bg-green-100 text-green-600';
+      case 'Reminder': return 'bg-orange-100 text-orange-600';
+      case 'Pipeline': return 'bg-purple-100 text-purple-600';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  // Handle keyboard navigation - Requirements 4.4
+  const handleKeyDown = (event: React.KeyboardEvent, taskId: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      console.log('Task selected:', taskId);
     }
   };
 
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#111827] mb-4">Open Tasks</h3>
-      <div className="space-y-2">
+      <h3 
+        className="text-sm font-semibold text-[#111827] mb-4"
+        id="tasks-section-heading"
+      >
+        Open Tasks
+      </h3>
+      <div 
+        className="space-y-2"
+        role="list"
+        aria-labelledby="tasks-section-heading"
+      >
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="flex items-center justify-between p-2 hover:bg-[#f8fafc] rounded-lg transition-colors"
+            className="group flex items-start gap-3 p-3 bg-[#f8fafc] border border-[#e2e8f0] hover:border-[#cbd5e1] rounded-lg transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+            role="listitem"
+            tabIndex={0}
+            aria-label={`${task.type} task: ${task.text}, severity: ${task.severity}, age: ${task.age}`}
+            onKeyDown={(e) => handleKeyDown(e, task.id)}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{typeIcon(task.type)}</span>
-              <div>
-                <div className="text-xs font-medium text-[#374151]">{task.text}</div>
-                <div className="text-[10px] text-[#94a3b8]">{task.type} · {task.age}</div>
+            <div 
+              className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${typeIconBg(task.type)}`}
+              aria-hidden="true"
+            >
+              {typeIcon(task.type)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium text-[#111827] leading-tight mb-1 line-clamp-2">
+                {task.text}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-[#64748b]">{task.type} • {task.age}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge text={task.severity} variant={severityVariant(task.severity)} />
-              <Button variant="mini" miniColor="default">Mark done</Button>
-            </div>
+            <Badge text={task.severity} variant={severityVariant(task.severity)} />
           </div>
         ))}
       </div>
@@ -307,30 +426,83 @@ function TasksSection({ tasks }: { tasks: Task[] }) {
 
 // Alerts Section Component
 function AlertsSection({ alerts }: { alerts: Alert[] }) {
+  // Professional emoji icons and enhanced styling - Requirements 4.1, 4.2, 4.3
   const levelStyles = {
-    critical: { bg: 'bg-red-50', border: 'border-red-200', icon: '🔴', text: 'text-red-700' },
-    warning: { bg: 'bg-orange-50', border: 'border-orange-200', icon: '🟠', text: 'text-orange-700' },
-    info: { bg: 'bg-blue-50', border: 'border-blue-200', icon: '🔵', text: 'text-blue-700' },
+    critical: { 
+      bg: 'bg-red-50', 
+      border: 'border-red-100', 
+      icon: '🚨',
+      text: 'text-red-700',
+      iconBg: 'bg-red-100 text-red-600',
+      actionHover: 'hover:bg-red-100'
+    },
+    warning: { 
+      bg: 'bg-amber-50', 
+      border: 'border-amber-100', 
+      icon: '⚠️',
+      text: 'text-amber-700',
+      iconBg: 'bg-amber-100 text-amber-600',
+      actionHover: 'hover:bg-amber-100'
+    },
+    info: { 
+      bg: 'bg-blue-50', 
+      border: 'border-blue-100', 
+      icon: 'ℹ️',
+      text: 'text-blue-700',
+      iconBg: 'bg-blue-100 text-blue-600',
+      actionHover: 'hover:bg-blue-100'
+    },
+  };
+
+  // Handle keyboard navigation for alerts - Requirements 4.4
+  const handleKeyDown = (event: React.KeyboardEvent, alertId: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      console.log('Alert action triggered:', alertId);
+    }
   };
 
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#111827] mb-4">Alerts</h3>
-      <div className="space-y-2">
+      <h3 
+        className="text-sm font-semibold text-[#111827] mb-4"
+        id="alerts-section-heading"
+      >
+        Alerts
+      </h3>
+      <div 
+        className="space-y-2"
+        role="list"
+        aria-labelledby="alerts-section-heading"
+      >
         {alerts.map((alert) => {
           const style = levelStyles[alert.level];
           return (
             <div
               key={alert.id}
-              className={`flex items-center justify-between p-2 rounded-lg border ${style.bg} ${style.border}`}
+              className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 ${style.bg} ${style.border} cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
+              role="listitem"
+              tabIndex={0}
+              aria-label={`${alert.level} alert: ${alert.message}`}
+              onKeyDown={(e) => handleKeyDown(e, alert.id)}
             >
-              <div className="flex items-center gap-2">
-                <span>{style.icon}</span>
-                <span className={`text-xs ${style.text}`}>{alert.message}</span>
+              <div 
+                className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${style.iconBg}`}
+                aria-hidden="true"
+              >
+                {style.icon}
               </div>
-              <button className={`text-xs font-medium ${style.text} hover:underline`}>
-                {alert.action}
-              </button>
+              <div className="flex-1 min-w-0">
+                <span className={`text-xs font-medium leading-tight ${style.text} line-clamp-2`}>
+                  {alert.message}
+                </span>
+                <button 
+                  className={`text-[10px] font-semibold ${style.text} mt-1 block ${style.actionHover} rounded px-1 -ml-1 transition-colors`}
+                  aria-label={`${alert.action} for ${alert.level} alert`}
+                >
+                  {alert.action} →
+                </button>
+              </div>
             </div>
           );
         })}
@@ -418,6 +590,7 @@ function ActivityFeed({ activities }: { activities: ActivityEntry[] }) {
 export function DashboardPage() {
   const { user, logout } = useAuth();
   const { data: dashboardData, isLoading, error, refetch } = useDashboard();
+  const navigate = useNavigate();
 
   // Use API data if available, otherwise fall back to sample data
   const metrics = dashboardData?.metrics || {
@@ -429,17 +602,32 @@ export function DashboardPage() {
     offerAcceptanceRate: 78,
   };
 
-  const rolePipeline = dashboardData?.rolePipeline || sampleRolePipeline;
+  const allRolePipeline = dashboardData?.rolePipeline || sampleRolePipeline;
+  const rolePipeline = getLimitedRoles(allRolePipeline, 7);
+  const showViewAllRoles = allRolePipeline.length > 7;
+  
+  const allInterviews = sampleInterviews;
+  const interviews = getLimitedInterviews(allInterviews, 5);
+  const showViewAllInterviews = allInterviews.length > 5;
+  
   const funnel = dashboardData?.funnel || sampleFunnel;
   const sources = dashboardData?.sources || sampleSources;
   const recruiters = dashboardData?.recruiterLoad || sampleRecruiters;
+
+  // Navigation handlers - Requirements 2.2, 2.3, 3.2, 3.3
+  const handleViewAllRoles = () => {
+    navigate('/roles');
+  };
+
+  const handleViewAllInterviews = () => {
+    navigate('/interviews');
+  };
 
   // Header actions for the dashboard
   const headerActions = (
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm">Saved views</Button>
       <Button variant="outline" size="sm">Export</Button>
-      <Button variant="primary" size="sm">+ New Role</Button>
     </div>
   );
 
@@ -468,8 +656,8 @@ export function DashboardPage() {
         />
       )}
 
-      {/* Two-column responsive layout - Requirements 15.1, 22.1, 22.2, 22.3 */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 grid-responsive-xl">
+      {/* Two-column responsive layout - Requirements 1.1, 1.2, 1.3, 1.4 */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6 grid-responsive-xl">
         {/* Main Content Column */}
         <div className="space-y-6">
           {/* KPI Cards Section - Requirement 15.1, 22.3 */}
@@ -498,9 +686,18 @@ export function DashboardPage() {
             />
           </div>
 
-          {/* Role-wise Pipeline Table - Requirement 15.2 */}
+          {/* Role-wise Pipeline Table - Requirement 15.2, 2.1, 2.2, 2.3, 2.4 */}
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-[#111827] mb-4">Role-wise Pipeline</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-[#111827]">Role-wise Pipeline</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleViewAllRoles}
+              >
+                View All
+              </Button>
+            </div>
             <Table
               columns={pipelineColumns}
               data={rolePipeline}
@@ -512,26 +709,30 @@ export function DashboardPage() {
           {/* Hiring Funnel - Requirement 15.3 */}
           <HiringFunnel stages={funnel} />
 
-          {/* Upcoming Interviews - Requirement 15.4 */}
-          <UpcomingInterviews interviews={sampleInterviews} />
+          {/* Upcoming Interviews - Requirement 15.4, 3.1, 3.2, 3.3, 3.4 */}
+          <UpcomingInterviews 
+            interviews={interviews} 
+            showViewAll={showViewAllInterviews}
+            onViewAll={handleViewAllInterviews}
+          />
+        </div>
 
-          {/* Tasks and Alerts Row - Requirements 15.5, 15.6, 22.2 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 grid-cols-2-responsive">
+        {/* Right Sidebar Column - Reorganized per Requirements 1.1, 1.2 */}
+        <div className="space-y-6">
+          {/* Tasks and Alerts Section - Moved to top right position per Requirement 1.1 */}
+          <div className="grid grid-cols-1 gap-4">
             <TasksSection tasks={sampleTasks} />
             <AlertsSection alerts={sampleAlerts} />
           </div>
-        </div>
-
-        {/* Right Sidebar Column */}
-        <div className="space-y-6">
-          {/* Source Performance - Requirement 15.7 */}
-          <SourcePerformanceChart sources={sources} />
 
           {/* Recruiter Load - Requirement 15.8 */}
           <RecruiterLoadSection recruiters={recruiters} />
 
           {/* Activity Feed - Requirements 15.9, 15.10 */}
           <ActivityFeed activities={sampleActivities} />
+
+          {/* Source Performance - Moved to bottom per Requirement 1.2 */}
+          <SourcePerformanceChart sources={sources} />
         </div>
       </div>
     </Layout>

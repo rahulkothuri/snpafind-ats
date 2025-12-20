@@ -29,3 +29,14 @@ export {
   NotesSection,
   ActionsSection,
 } from './DetailPanel';
+
+// Job Form Components
+export { MandatoryCriteriaSection, MANDATORY_CRITERIA_CONTENT } from './MandatoryCriteriaSection';
+export { PipelineStageConfigurator, DEFAULT_PIPELINE_STAGES } from './PipelineStageConfigurator';
+export { MultiSelect } from './MultiSelect';
+export type { MultiSelectOption, MultiSelectProps } from './MultiSelect';
+export { JobShareModal } from './JobShareModal';
+export { JobDetailsPanel } from './JobDetailsPanel';
+export type { JobDetailsPanelProps } from './JobDetailsPanel';
+export { JobDescriptionModal } from './JobDescriptionModal';
+export type { JobDescriptionModalProps } from './JobDescriptionModal';

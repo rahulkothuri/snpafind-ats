@@ -36,8 +36,10 @@ export function Header({
   companyName = 'Acme Technologies',
   showHamburger = false,
 }: HeaderProps) {
+  // Note: user and companyName are currently not used in the UI but are kept for future features
+  void user; // Suppress unused variable warning
+  void companyName; // Suppress unused variable warning
   const contextPills: ContextPill[] = [
-    { label: 'Company', value: companyName },
     { label: 'Time zone', value: 'IST' },
   ];
 
@@ -49,10 +51,10 @@ export function Header({
         {showHamburger && (
           <button
             onClick={onMenuToggle}
-            className="hamburger-menu p-2 rounded-lg hover:bg-[#f8fafc] transition-colors flex items-center justify-center text-[#374151]"
+            className="hamburger-menu px-3 py-1.5 rounded-full hover:bg-[#f8fafc] transition-colors flex items-center justify-center text-[#374151] text-xs"
             aria-label="Toggle menu"
           >
-            <span className="text-xl">☰</span>
+            <span className="text-lg">☰</span>
           </button>
         )}
 
@@ -71,18 +73,25 @@ export function Header({
       {/* Right Section: Filters, Context Pills, User, Actions */}
       <div className="flex items-center gap-3">
         {/* Time Range Filter - Requirement 21.4 */}
-        <select className="hidden sm:block px-3 py-1.5 bg-[#f3f4f6] border border-[#e2e8f0] rounded-lg text-sm text-[#374151] focus:outline-none focus:border-[#0b6cf0] focus:ring-2 focus:ring-[rgba(11,108,240,0.2)]">
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
+        <div className="hidden sm:block relative">
+          <select className="appearance-none bg-[#f1f5f9] border border-[#e2e8f0] rounded-full px-3 py-1.5 pr-8 text-xs text-[#374151] font-medium focus:outline-none focus:border-[#0b6cf0] focus:ring-2 focus:ring-[rgba(11,108,240,0.2)] cursor-pointer min-w-[120px] text-center">
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+            <svg className="w-3 h-3 text-[#64748b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
 
         {/* Context Pills - Requirement 21.6 */}
         <div className="hidden lg:flex items-center gap-2">
           {contextPills.map((pill) => (
             <span
               key={pill.label}
-              className="px-2.5 py-1 bg-[#f3f4f6] border border-[#e2e8f0] rounded-full text-xs text-[#64748b]"
+              className="px-3 py-1.5 bg-[#f3f4f6] border border-[#e2e8f0] rounded-full text-xs text-[#64748b]"
             >
               {pill.label}: <span className="text-[#111827] font-medium">{pill.value}</span>
             </span>
@@ -90,24 +99,13 @@ export function Header({
         </div>
 
         {/* Notification Icon - Requirement 2.4 */}
-        <button className="p-2 rounded-full hover:bg-[#f3f4f6] transition-colors text-[#64748b] hover:text-[#374151]">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button className="px-3 py-1.5 rounded-full hover:bg-[#f3f4f6] transition-colors text-[#64748b] hover:text-[#374151]">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
         </button>
 
-        {/* User Pill - Requirement 21.5, 2.4 */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f3f4f6] border border-[#e2e8f0] rounded-full">
-          <div className="w-7 h-7 rounded-full bg-[#0b6cf0] flex items-center justify-center text-white text-xs font-bold">
-            {user?.name?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <div className="hidden sm:block text-xs">
-            <div className="font-medium text-[#111827]">{user?.name || 'User'}</div>
-            <div className="text-[#64748b] capitalize">
-              {user?.role?.replace('_', ' ') || 'Role'}
-            </div>
-          </div>
-        </div>
+
 
         {/* Action Buttons - Requirement 21.7, 2.3 */}
         {actions && (

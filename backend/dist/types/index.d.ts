@@ -33,19 +33,35 @@ export interface Company {
     brandColor?: string;
 }
 export type JobStatus = 'active' | 'paused' | 'closed';
+export type WorkMode = 'Onsite' | 'WFH' | 'Hybrid' | 'C2C' | 'C2H';
+export type JobPriority = 'Low' | 'Medium' | 'High';
 export interface Job {
     id: string;
     companyId: string;
     title: string;
     department: string;
-    location: string;
-    employmentType: string;
-    salaryRange?: string;
+    experienceMin?: number;
+    experienceMax?: number;
+    salaryMin?: number;
+    salaryMax?: number;
+    variables?: string;
+    educationQualification?: string;
+    ageUpTo?: number;
+    skills: string[];
+    preferredIndustry?: string;
+    workMode?: WorkMode;
+    locations: string[];
+    priority?: JobPriority;
+    jobDomain?: string;
+    assignedRecruiterId?: string;
     description: string;
     status: JobStatus;
     openings: number;
     createdAt: Date;
     updatedAt: Date;
+    location?: string;
+    employmentType?: string;
+    salaryRange?: string;
 }
 export interface PipelineStage {
     id: string;
@@ -53,6 +69,21 @@ export interface PipelineStage {
     name: string;
     position: number;
     isDefault: boolean;
+    isMandatory: boolean;
+    parentId?: string;
+    subStages?: PipelineStage[];
+}
+export interface PipelineStageConfig {
+    id?: string;
+    name: string;
+    position: number;
+    isMandatory: boolean;
+    subStages?: SubStageConfig[];
+}
+export interface SubStageConfig {
+    id?: string;
+    name: string;
+    position: number;
 }
 export interface Candidate {
     id: string;

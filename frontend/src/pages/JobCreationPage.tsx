@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout, Button } from '../components';
+import { Layout, Button, MultiSelect, MandatoryCriteriaSection, PipelineStageConfigurator, DEFAULT_PIPELINE_STAGES, JobShareModal } from '../components';
 import { useAuth } from '../hooks/useAuth';
+import { useUsers } from '../hooks/useUsers';
 import api from '../services/api';
-import type { Job } from '../types';
+import type { Job, WorkMode, JobPriority, PipelineStageConfig } from '../types';
+import { EDUCATION_QUALIFICATIONS, SKILLS, INDUSTRIES, WORK_MODES, CITIES, JOB_PRIORITIES, JOB_DOMAINS } from '../constants/jobFormOptions';
 
 /**
- * Job Creation/Edit Page - Requirements 20.1-20.6
+ * Job Creation/Edit Page - Requirements 20.1-20.6, 1.1-1.7
  * 
  * Features:
  * - Form with title, department, location, employment type, salary range
+ * - Experience range inputs (min/max) with validation - Requirement 1.2
+ * - Salary range inputs (min/max) with currency formatting - Requirement 1.3
  * - Rich text editor for job description
  * - Validation for required fields
  * - Create/update job functionality
@@ -17,27 +21,62 @@ import type { Job } from '../types';
 
 interface JobFormData {
   title: string;
-  department: string;
-  location: string;
-  employmentType: string;
-  salaryRange: string;
   description: string;
   openings: number;
+  experienceMin: number | '';
+  experienceMax: number | '';
+  salaryMin: number | '';
+  salaryMax: number | '';
+  variables: string;
+  educationQualification: string;
+  ageUpTo: number | '';
+  skills: string[];
+  preferredIndustry: string;
+  workMode: WorkMode | '';
+  locations: string[];
+  priority: JobPriority | '';
+  jobDomain: string;
+  assignedRecruiterId: string;
+  pipelineStages: PipelineStageConfig[];
 }
 
 const initialFormData: JobFormData = {
   title: '',
-  department: '',
-  location: '',
-  employmentType: 'Full-time',
-  salaryRange: '',
   description: '',
   openings: 1,
+  experienceMin: '',
+  experienceMax: '',
+  salaryMin: '',
+  salaryMax: '',
+  variables: '',
+  educationQualification: '',
+  ageUpTo: '',
+  skills: [],
+  preferredIndustry: '',
+  workMode: '',
+  locations: [],
+  priority: '',
+  jobDomain: '',
+  assignedRecruiterId: '',
+  pipelineStages: DEFAULT_PIPELINE_STAGES,
 };
 
-const employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote'];
-const departments = ['Engineering', 'Product', 'Design', 'Sales', 'Marketing', 'HR', 'Finance', 'Operations'];
-const locations = ['Bangalore', 'Hyderabad', 'Chennai', 'Pune', 'Gurgaon', 'Mumbai', 'Remote'];
+/**
+ * Format a number as Indian currency (₹) with lakhs notation
+ * Requirement 1.3: Currency formatting for salary inputs
+ */
+const formatCurrency = (value: number | ''): string => {
+  if (value === '' || value === null || value === undefined) return '';
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '';
+  
+  // Format in Indian numbering system (lakhs)
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(num);
+};
 
 export function JobCreationPage() {
   const { user, logout } = useAuth();
@@ -50,6 +89,19 @@ export function JobCreationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  
+  // State for JobShareModal - Requirement 7.1
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [createdJobId, setCreatedJobId] = useState<string>('');
+  const [createdJobTitle, setCreatedJobTitle] = useState<string>('');
+
+  // Fetch company users for recruiter assignment - Requirement 1.1
+  const { data: users = [], isLoading: isLoadingUsers } = useUsers();
+  
+  // Filter to get only recruiters and hiring managers who can be assigned to jobs
+  const recruiters = users.filter(
+    (u) => (u.role === 'recruiter' || u.role === 'hiring_manager') && u.isActive
+  );
 
 
   // Load existing job data for edit mode - Requirement 20.5
@@ -59,14 +111,45 @@ export function JobCreationPage() {
       api.get<Job>(`/jobs/${id}`)
         .then((response) => {
           const job = response.data;
+          // Convert pipeline stages from API format to form format
+          const pipelineStages: PipelineStageConfig[] = job.stages && job.stages.length > 0
+            ? job.stages
+                .filter(stage => !stage.parentId) // Only top-level stages
+                .sort((a, b) => a.position - b.position)
+                .map(stage => ({
+                  id: stage.id,
+                  name: stage.name,
+                  position: stage.position,
+                  isMandatory: stage.isMandatory || false,
+                  subStages: (stage.subStages || [])
+                    .sort((a, b) => a.position - b.position)
+                    .map(sub => ({
+                      id: sub.id,
+                      name: sub.name,
+                      position: sub.position,
+                    })),
+                }))
+            : DEFAULT_PIPELINE_STAGES;
+
           setFormData({
             title: job.title,
-            department: job.department,
-            location: job.location,
-            employmentType: job.employmentType || 'Full-time',
-            salaryRange: job.salaryRange || '',
             description: job.description || '',
             openings: job.openings,
+            experienceMin: job.experienceMin ?? '',
+            experienceMax: job.experienceMax ?? '',
+            salaryMin: job.salaryMin ?? '',
+            salaryMax: job.salaryMax ?? '',
+            variables: job.variables || '',
+            educationQualification: job.educationQualification || '',
+            ageUpTo: job.ageUpTo ?? '',
+            skills: job.skills || [],
+            preferredIndustry: job.preferredIndustry || '',
+            workMode: job.workMode || '',
+            locations: job.locations || [],
+            priority: job.priority || '',
+            jobDomain: job.jobDomain || '',
+            assignedRecruiterId: job.assignedRecruiterId || '',
+            pipelineStages,
           });
         })
         .catch((err) => {
@@ -77,27 +160,67 @@ export function JobCreationPage() {
     }
   }, [isEditMode, id]);
 
-  const handleChange = (field: keyof JobFormData, value: string | number) => {
+  const handleChange = (field: keyof JobFormData, value: string | number | '' | string[] | WorkMode | JobPriority | PipelineStageConfig[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: '' }));
     setSubmitError(null);
   };
 
-  // Validate form - Requirement 20.3
+  // Validate form - Requirement 20.3, 1.2 (Experience Range Validation), 1.3 (Salary Range Validation), 1.7 (Required Field Validation)
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    // Required field validation - Requirement 1.7
     if (!formData.title.trim()) {
       newErrors.title = 'Job title is required';
     }
-    if (!formData.department.trim()) {
-      newErrors.department = 'Department is required';
-    }
-    if (!formData.location.trim()) {
-      newErrors.location = 'Location is required';
-    }
     if (formData.openings < 1) {
       newErrors.openings = 'At least 1 opening is required';
+    }
+
+    // Experience range required validation - Requirement 1.7
+    const expMin = formData.experienceMin;
+    const expMax = formData.experienceMax;
+    
+    if (expMin === '' || expMin === null || expMin === undefined) {
+      newErrors.experienceMin = 'Minimum experience is required';
+    } else if (expMin < 0) {
+      newErrors.experienceMin = 'Minimum experience cannot be negative';
+    }
+    
+    if (expMax === '' || expMax === null || expMax === undefined) {
+      newErrors.experienceMax = 'Maximum experience is required';
+    } else if (expMax < 0) {
+      newErrors.experienceMax = 'Maximum experience cannot be negative';
+    }
+    
+    // Experience range validation - Requirement 1.2
+    if (expMin !== '' && expMax !== '' && typeof expMin === 'number' && typeof expMax === 'number' && expMin > expMax) {
+      newErrors.experienceMax = 'Maximum experience must be greater than or equal to minimum';
+    }
+
+    // Salary range validation - Requirement 1.3
+    const salMin = formData.salaryMin;
+    const salMax = formData.salaryMax;
+    
+    if (salMin !== '' && salMin < 0) {
+      newErrors.salaryMin = 'Minimum salary cannot be negative';
+    }
+    if (salMax !== '' && salMax < 0) {
+      newErrors.salaryMax = 'Maximum salary cannot be negative';
+    }
+    if (salMin !== '' && salMax !== '' && salMin > salMax) {
+      newErrors.salaryMax = 'Maximum salary must be greater than or equal to minimum';
+    }
+
+    // Work mode required validation - Requirement 1.7
+    if (!formData.workMode) {
+      newErrors.workMode = 'Work mode is required';
+    }
+
+    // Locations required validation - Requirement 1.7
+    if (!formData.locations || formData.locations.length === 0) {
+      newErrors.locations = 'At least one job location is required';
     }
 
     setErrors(newErrors);
@@ -117,16 +240,48 @@ export function JobCreationPage() {
       const payload = {
         ...formData,
         companyId: user?.companyId || 'default-company-id',
+        // Convert empty strings to undefined for experience range
+        experienceMin: formData.experienceMin === '' ? undefined : formData.experienceMin,
+        experienceMax: formData.experienceMax === '' ? undefined : formData.experienceMax,
+        // Convert empty strings to undefined for salary range - Requirement 1.3
+        salaryMin: formData.salaryMin === '' ? undefined : formData.salaryMin,
+        salaryMax: formData.salaryMax === '' ? undefined : formData.salaryMax,
+        // Convert empty string to undefined for variables - Requirement 1.1
+        variables: formData.variables.trim() || undefined,
+        // Convert empty string to undefined for education qualification - Requirement 1.1
+        educationQualification: formData.educationQualification || undefined,
+        // Convert empty string to undefined for age limit - Requirement 1.1
+        ageUpTo: formData.ageUpTo === '' ? undefined : formData.ageUpTo,
+        // Skills array - Requirement 1.1
+        skills: formData.skills.length > 0 ? formData.skills : undefined,
+        // Convert empty string to undefined for preferred industry - Requirement 1.1
+        preferredIndustry: formData.preferredIndustry || undefined,
+        // Convert empty string to undefined for work mode - Requirement 1.5
+        workMode: formData.workMode || undefined,
+        // Locations array - Requirement 1.4
+        locations: formData.locations.length > 0 ? formData.locations : undefined,
+        // Convert empty string to undefined for priority - Requirement 1.6
+        priority: formData.priority || undefined,
+        // Convert empty string to undefined for job domain - Requirement 1.1
+        jobDomain: formData.jobDomain || undefined,
+        // Convert empty string to undefined for assigned recruiter - Requirement 1.1
+        assignedRecruiterId: formData.assignedRecruiterId || undefined,
+        // Pipeline stages configuration - Requirement 4.1
+        pipelineStages: formData.pipelineStages,
       };
 
       if (isEditMode && id) {
         await api.put(`/jobs/${id}`, payload);
+        // For edit mode, navigate directly to roles page
+        navigate('/roles');
       } else {
-        await api.post('/jobs', payload);
+        // For create mode, show the share modal - Requirement 7.1
+        const response = await api.post<Job>('/jobs', payload);
+        const createdJob = response.data;
+        setCreatedJobId(createdJob.id);
+        setCreatedJobTitle(createdJob.title);
+        setShowShareModal(true);
       }
-
-      // Redirect to roles page on success - Requirement 20.4
-      navigate('/roles');
     } catch (err: unknown) {
       console.error('Failed to save job:', err);
       const error = err as { response?: { data?: { message?: string } } };
@@ -139,6 +294,15 @@ export function JobCreationPage() {
   // Handle cancel - Requirement 20.6
   const handleCancel = () => {
     navigate(-1);
+  };
+
+  // Handle share modal close - Requirement 7.1
+  const handleShareModalClose = () => {
+    setShowShareModal(false);
+    // Reset form after closing modal
+    setFormData(initialFormData);
+    setCreatedJobId('');
+    setCreatedJobTitle('');
   };
 
 
@@ -204,77 +368,296 @@ export function JobCreationPage() {
                 {errors.title && <p className="form-error">{errors.title}</p>}
               </div>
 
-
-              {/* Department - Required */}
+              {/* Experience Range - Requirement 1.2, 1.7 */}
               <div className="form-group">
-                <label htmlFor="department" className="form-label form-label-required">
-                  Department
+                <label className="form-label form-label-required">
+                  Experience Range (Years)
                 </label>
-                <select
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => handleChange('department', e.target.value)}
-                  className={`form-select ${errors.department ? 'error' : ''}`}
-                >
-                  <option value="">Select department</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-                {errors.department && <p className="form-error">{errors.department}</p>}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <input
+                      id="experienceMin"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={formData.experienceMin}
+                      onChange={(e) => handleChange('experienceMin', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className={`form-input ${errors.experienceMin ? 'error' : ''}`}
+                      placeholder="Min"
+                    />
+                  </div>
+                  <span className="text-[#64748b] text-sm">to</span>
+                  <div className="flex-1">
+                    <input
+                      id="experienceMax"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={formData.experienceMax}
+                      onChange={(e) => handleChange('experienceMax', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className={`form-input ${errors.experienceMax ? 'error' : ''}`}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+                {errors.experienceMin && <p className="form-error">{errors.experienceMin}</p>}
+                {errors.experienceMax && <p className="form-error">{errors.experienceMax}</p>}
               </div>
 
-              {/* Location - Required */}
+              {/* Salary Range - Requirement 1.3 */}
               <div className="form-group">
-                <label htmlFor="location" className="form-label form-label-required">
-                  Location
+                <label className="form-label">
+                  Salary Range (₹ per annum)
                 </label>
-                <select
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
-                  className={`form-select ${errors.location ? 'error' : ''}`}
-                >
-                  <option value="">Select location</option>
-                  {locations.map((loc) => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
-                {errors.location && <p className="form-error">{errors.location}</p>}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b] text-sm">₹</span>
+                    <input
+                      id="salaryMin"
+                      type="number"
+                      min="0"
+                      step="10000"
+                      value={formData.salaryMin}
+                      onChange={(e) => handleChange('salaryMin', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className={`form-input pl-7 ${errors.salaryMin ? 'error' : ''}`}
+                      placeholder="Min"
+                    />
+                  </div>
+                  <span className="text-[#64748b] text-sm">to</span>
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b] text-sm">₹</span>
+                    <input
+                      id="salaryMax"
+                      type="number"
+                      min="0"
+                      step="10000"
+                      value={formData.salaryMax}
+                      onChange={(e) => handleChange('salaryMax', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className={`form-input pl-7 ${errors.salaryMax ? 'error' : ''}`}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+                {/* Display formatted currency preview */}
+                {(formData.salaryMin !== '' || formData.salaryMax !== '') && (
+                  <p className="mt-1 text-xs text-[#64748b]">
+                    {formData.salaryMin !== '' && formData.salaryMax !== '' 
+                      ? `${formatCurrency(formData.salaryMin)} - ${formatCurrency(formData.salaryMax)}`
+                      : formData.salaryMin !== '' 
+                        ? `From ${formatCurrency(formData.salaryMin)}`
+                        : `Up to ${formatCurrency(formData.salaryMax)}`
+                    }
+                  </p>
+                )}
+                {errors.salaryMin && <p className="form-error">{errors.salaryMin}</p>}
+                {errors.salaryMax && <p className="form-error">{errors.salaryMax}</p>}
               </div>
 
-              {/* Employment Type */}
-              <div className="form-group">
-                <label htmlFor="employmentType" className="form-label">
-                  Employment Type
-                </label>
-                <select
-                  id="employmentType"
-                  value={formData.employmentType}
-                  onChange={(e) => handleChange('employmentType', e.target.value)}
-                  className="form-select"
-                >
-                  {employmentTypes.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-
-              {/* Salary Range */}
-              <div className="form-group">
-                <label htmlFor="salaryRange" className="form-label">
-                  Salary Range
+              {/* Variables/Incentives - Requirement 1.1 */}
+              <div className="md:col-span-2 form-group">
+                <label htmlFor="variables" className="form-label">
+                  Variables / Incentives
                 </label>
                 <input
-                  id="salaryRange"
+                  id="variables"
                   type="text"
-                  value={formData.salaryRange}
-                  onChange={(e) => handleChange('salaryRange', e.target.value)}
+                  value={formData.variables}
+                  onChange={(e) => handleChange('variables', e.target.value)}
                   className="form-input"
-                  placeholder="e.g., ₹15-25 LPA"
+                  placeholder="e.g., Performance bonus, Stock options, Annual bonus up to 20%"
                 />
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Describe any variable pay, bonuses, or incentives associated with this role
+                </p>
               </div>
+
+              {/* Education Qualification - Requirement 1.1 */}
+              <div className="form-group">
+                <label htmlFor="educationQualification" className="form-label">
+                  Education Qualification
+                </label>
+                <select
+                  id="educationQualification"
+                  value={formData.educationQualification}
+                  onChange={(e) => handleChange('educationQualification', e.target.value)}
+                  className="form-select"
+                >
+                  <option value="">Select qualification</option>
+                  {EDUCATION_QUALIFICATIONS.map((qual) => (
+                    <option key={qual.value} value={qual.value}>{qual.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Age Limit - Requirement 1.1 */}
+              <div className="form-group">
+                <label htmlFor="ageUpTo" className="form-label">
+                  Age Up To
+                </label>
+                <input
+                  id="ageUpTo"
+                  type="number"
+                  min="18"
+                  max="70"
+                  value={formData.ageUpTo}
+                  onChange={(e) => handleChange('ageUpTo', e.target.value === '' ? '' : parseInt(e.target.value))}
+                  className="form-input"
+                  placeholder="e.g., 35"
+                />
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Maximum age limit for candidates (optional)
+                </p>
+              </div>
+
+              {/* Skills Multi-Select - Requirement 1.1 */}
+              <div className="md:col-span-2 form-group">
+                <label htmlFor="skills" className="form-label">
+                  Skills
+                </label>
+                <MultiSelect
+                  id="skills"
+                  options={SKILLS}
+                  value={formData.skills}
+                  onChange={(skills) => handleChange('skills', skills)}
+                  placeholder="Select required skills..."
+                  searchPlaceholder="Search skills..."
+                  maxDisplayTags={8}
+                />
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Select the skills required for this position
+                </p>
+              </div>
+
+              {/* Preferred Industry - Requirement 1.1 */}
+              <div className="form-group">
+                <label htmlFor="preferredIndustry" className="form-label">
+                  Preferred Industry
+                </label>
+                <select
+                  id="preferredIndustry"
+                  value={formData.preferredIndustry}
+                  onChange={(e) => handleChange('preferredIndustry', e.target.value)}
+                  className="form-select"
+                >
+                  <option value="">Select industry</option>
+                  {INDUSTRIES.map((industry) => (
+                    <option key={industry.value} value={industry.value}>{industry.label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Preferred industry background for candidates
+                </p>
+              </div>
+
+              {/* Work Mode - Requirement 1.5, 1.7 */}
+              <div className="form-group">
+                <label htmlFor="workMode" className="form-label form-label-required">
+                  Work Mode
+                </label>
+                <select
+                  id="workMode"
+                  value={formData.workMode}
+                  onChange={(e) => handleChange('workMode', e.target.value as WorkMode | '')}
+                  className={`form-select ${errors.workMode ? 'error' : ''}`}
+                >
+                  <option value="">Select work mode</option>
+                  {WORK_MODES.map((mode) => (
+                    <option key={mode.value} value={mode.value}>{mode.label}</option>
+                  ))}
+                </select>
+                {errors.workMode && <p className="form-error">{errors.workMode}</p>}
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Employment arrangement type for this position
+                </p>
+              </div>
+
+              {/* Job Locations Multi-Select - Requirement 1.4, 1.7 */}
+              <div className="form-group">
+                <label htmlFor="locations" className="form-label form-label-required">
+                  Job Locations
+                </label>
+                <MultiSelect
+                  id="locations"
+                  options={CITIES}
+                  value={formData.locations}
+                  onChange={(locations) => handleChange('locations', locations)}
+                  placeholder="Select job locations..."
+                  searchPlaceholder="Search cities..."
+                  maxDisplayTags={5}
+                  error={!!errors.locations}
+                />
+                {errors.locations && <p className="form-error">{errors.locations}</p>}
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Select one or more cities where this position is available
+                </p>
+              </div>
+
+              {/* Job Priority - Requirement 1.6 */}
+              <div className="form-group">
+                <label htmlFor="priority" className="form-label">
+                  Job Priority
+                </label>
+                <select
+                  id="priority"
+                  value={formData.priority}
+                  onChange={(e) => handleChange('priority', e.target.value as JobPriority | '')}
+                  className="form-select"
+                >
+                  <option value="">Select priority</option>
+                  {JOB_PRIORITIES.map((priority) => (
+                    <option key={priority.value} value={priority.value}>{priority.label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Urgency level for filling this position
+                </p>
+              </div>
+
+              {/* Job Domain - Requirement 1.1 */}
+              <div className="form-group">
+                <label htmlFor="jobDomain" className="form-label">
+                  Job Domain
+                </label>
+                <select
+                  id="jobDomain"
+                  value={formData.jobDomain}
+                  onChange={(e) => handleChange('jobDomain', e.target.value)}
+                  className="form-select"
+                >
+                  <option value="">Select domain</option>
+                  {JOB_DOMAINS.map((domain) => (
+                    <option key={domain.value} value={domain.value}>{domain.label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-[#64748b]">
+                  Functional area or category of the job role
+                </p>
+              </div>
+
+              {/* Assign Recruiter - Requirement 1.1 */}
+              <div className="form-group">
+                <label htmlFor="assignedRecruiterId" className="form-label">
+                  Assign Recruiter
+                </label>
+                <select
+                  id="assignedRecruiterId"
+                  value={formData.assignedRecruiterId}
+                  onChange={(e) => handleChange('assignedRecruiterId', e.target.value)}
+                  className="form-select"
+                  disabled={isLoadingUsers}
+                >
+                  <option value="">Select recruiter</option>
+                  {recruiters.map((recruiter) => (
+                    <option key={recruiter.id} value={recruiter.id}>
+                      {recruiter.name} ({recruiter.role === 'hiring_manager' ? 'Hiring Manager' : 'Recruiter'})
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-[#64748b]">
+                  {isLoadingUsers ? 'Loading recruiters...' : 'Assign a recruiter to manage this job posting'}
+                </p>
+              </div>
+
 
               {/* Number of Openings */}
               <div className="form-group">
@@ -414,6 +797,15 @@ Describe the position and its importance to the team...
             </p>
           </div>
 
+          {/* Mandatory Criteria Section - Requirement 3.1 */}
+          <MandatoryCriteriaSection />
+
+          {/* Pipeline Stage Configuration - Requirement 4.1 */}
+          <PipelineStageConfigurator
+            stages={formData.pipelineStages}
+            onChange={(stages) => handleChange('pipelineStages', stages)}
+          />
+
           {/* Action Buttons */}
           <div className="flex items-center justify-between pt-4">
             <Button variant="secondary" onClick={handleCancel} type="button">
@@ -440,6 +832,14 @@ Describe the position and its importance to the team...
           </div>
         </form>
       </div>
+
+      {/* Job Share Modal - Requirement 7.1 */}
+      <JobShareModal
+        isOpen={showShareModal}
+        onClose={handleShareModalClose}
+        jobId={createdJobId}
+        jobTitle={createdJobTitle}
+      />
     </Layout>
   );
 }

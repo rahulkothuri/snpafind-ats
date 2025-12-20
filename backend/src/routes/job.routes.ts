@@ -8,26 +8,104 @@ import { ValidationError } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-// Validation schemas
+// Sub-stage schema for pipeline configuration
+const subStageSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Sub-stage name is required'),
+  position: z.number().int().min(0),
+});
+
+// Pipeline stage schema for job creation/update
+const pipelineStageSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Stage name is required'),
+  position: z.number().int().min(0),
+  isMandatory: z.boolean().default(false),
+  subStages: z.array(subStageSchema).optional(),
+});
+
+// Validation schemas with all new fields (Requirements 1.1)
 const createJobSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   department: z.string().min(1, 'Department is required'),
-  location: z.string().min(1, 'Location is required'),
-  employmentType: z.string().optional(),
-  salaryRange: z.string().optional(),
+  
+  // Experience range (Requirements 1.2)
+  experienceMin: z.number().min(0).optional(),
+  experienceMax: z.number().min(0).optional(),
+  
+  // Salary range (Requirements 1.3)
+  salaryMin: z.number().min(0).optional(),
+  salaryMax: z.number().min(0).optional(),
+  variables: z.string().optional(),
+  
+  // Requirements (Requirements 1.1)
+  educationQualification: z.string().optional(),
+  ageUpTo: z.number().int().min(18).max(100).optional(),
+  skills: z.array(z.string()).optional(),
+  preferredIndustry: z.string().optional(),
+  
+  // Work details (Requirements 1.4, 1.5, 1.6)
+  workMode: z.enum(['Onsite', 'WFH', 'Hybrid', 'C2C', 'C2H']).optional(),
+  locations: z.array(z.string()).optional(),
+  priority: z.enum(['Low', 'Medium', 'High']).optional(),
+  jobDomain: z.string().optional(),
+  
+  // Assignment (Requirements 1.1)
+  assignedRecruiterId: z.string().optional(),
+  
+  // Content
   description: z.string().optional(),
   openings: z.number().int().positive().optional(),
+  
+  // Pipeline stages (Requirements 4.1)
+  pipelineStages: z.array(pipelineStageSchema).optional(),
+  
+  // Legacy fields (kept for compatibility)
+  location: z.string().optional(),
+  employmentType: z.string().optional(),
+  salaryRange: z.string().optional(),
 });
 
 const updateJobSchema = z.object({
   title: z.string().min(1, 'Title is required').optional(),
   department: z.string().min(1, 'Department is required').optional(),
-  location: z.string().min(1, 'Location is required').optional(),
-  employmentType: z.string().optional().nullable(),
-  salaryRange: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
+  
+  // Experience range
+  experienceMin: z.number().min(0).nullable().optional(),
+  experienceMax: z.number().min(0).nullable().optional(),
+  
+  // Salary range
+  salaryMin: z.number().min(0).nullable().optional(),
+  salaryMax: z.number().min(0).nullable().optional(),
+  variables: z.string().nullable().optional(),
+  
+  // Requirements
+  educationQualification: z.string().nullable().optional(),
+  ageUpTo: z.number().int().min(18).max(100).nullable().optional(),
+  skills: z.array(z.string()).optional(),
+  preferredIndustry: z.string().nullable().optional(),
+  
+  // Work details
+  workMode: z.enum(['Onsite', 'WFH', 'Hybrid', 'C2C', 'C2H']).nullable().optional(),
+  locations: z.array(z.string()).optional(),
+  priority: z.enum(['Low', 'Medium', 'High']).nullable().optional(),
+  jobDomain: z.string().nullable().optional(),
+  
+  // Assignment
+  assignedRecruiterId: z.string().nullable().optional(),
+  
+  // Content
+  description: z.string().nullable().optional(),
   status: z.enum(['active', 'paused', 'closed']).optional(),
   openings: z.number().int().positive().optional(),
+  
+  // Pipeline stages
+  pipelineStages: z.array(pipelineStageSchema).optional(),
+  
+  // Legacy fields
+  location: z.string().nullable().optional(),
+  employmentType: z.string().nullable().optional(),
+  salaryRange: z.string().nullable().optional(),
 });
 
 /**
@@ -72,7 +150,8 @@ router.get(
 
 /**
  * GET /api/jobs/:id
- * Get a job by ID
+ * Get a job by ID with all fields and pipeline stages
+ * Requirements: 7.3, 8.3
  */
 router.get(
   '/:id',
@@ -148,8 +227,8 @@ router.get(
 
 /**
  * POST /api/jobs
- * Create a new job
- * Requirements: 5.1, 5.2, 5.3, 5.4
+ * Create a new job with all enhanced fields
+ * Requirements: 1.1, 4.1, 5.1, 5.2, 5.3, 5.4
  */
 router.post(
   '/',
@@ -175,7 +254,8 @@ router.post(
 
 /**
  * PUT /api/jobs/:id
- * Update a job
+ * Update a job with all enhanced fields
+ * Requirements: 8.3
  */
 router.put(
   '/:id',

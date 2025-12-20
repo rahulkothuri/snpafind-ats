@@ -27,8 +27,10 @@ vi.mock('../../lib/prisma.js', () => {
   };
   
   const mockPrismaStage = {
+    create: vi.fn(),
     createMany: vi.fn(),
     findMany: vi.fn(),
+    deleteMany: vi.fn(),
   };
   
   return {
@@ -60,11 +62,6 @@ const mockPrismaJob = (prisma as any).job as {
   delete: ReturnType<typeof vi.fn>;
 };
 
-const mockPrismaStage = (prisma as any).pipelineStage as {
-  createMany: ReturnType<typeof vi.fn>;
-  findMany: ReturnType<typeof vi.fn>;
-};
-
 const mockTransaction = (prisma as any).$transaction as ReturnType<typeof vi.fn>;
 
 // Arbitraries for generating test data
@@ -78,7 +75,7 @@ const employmentTypeArbitrary = fc.constantFrom('Full-time', 'Part-time', 'Contr
 const salaryRangeArbitrary = fc.tuple(
   fc.integer({ min: 30000, max: 100000 }),
   fc.integer({ min: 100001, max: 300000 })
-).map(([min, max]) => `$${min} - $${max}`);
+).map(([min, max]) => `${min} - ${max}`);
 
 const descriptionArbitrary = fc.string({ minLength: 10, maxLength: 500 });
 const openingsArbitrary = fc.integer({ min: 1, max: 10 });
@@ -86,13 +83,69 @@ const uuidArbitrary = fc.uuid();
 
 // Default pipeline stages
 const DEFAULT_STAGES = [
-  'Queue', 'Applied', 'Screening', 'Shortlisted',
-  'Interview', 'Selected', 'Offer', 'Hired'
+  { name: 'Queue', isMandatory: false },
+  { name: 'Applied', isMandatory: false },
+  { name: 'Screening', isMandatory: true },
+  { name: 'Shortlisted', isMandatory: true },
+  { name: 'Interview', isMandatory: false },
+  { name: 'Selected', isMandatory: false },
+  { name: 'Offer', isMandatory: true },
+  { name: 'Hired', isMandatory: false },
 ];
+
+// Helper to create mock job data with all new fields
+function createMockDbJob(jobId: string, companyId: string, title: string, department: string, location: string, options: any = {}) {
+  const now = new Date();
+  return {
+    id: jobId,
+    companyId,
+    title: title.trim(),
+    department: department.trim(),
+    location: location?.trim() || '',
+    experienceMin: options.experienceMin ?? null,
+    experienceMax: options.experienceMax ?? null,
+    salaryMin: options.salaryMin ?? null,
+    salaryMax: options.salaryMax ?? null,
+    variables: options.variables ?? null,
+    educationQualification: options.educationQualification ?? null,
+    ageUpTo: options.ageUpTo ?? null,
+    skills: options.skills ?? [],
+    preferredIndustry: options.preferredIndustry ?? null,
+    workMode: options.workMode ?? null,
+    locations: options.locations ?? [],
+    priority: options.priority ?? 'Medium',
+    jobDomain: options.jobDomain ?? null,
+    assignedRecruiterId: options.assignedRecruiterId ?? null,
+    description: options.description ?? null,
+    status: 'active',
+    openings: options.openings ?? 1,
+    employmentType: options.employmentType ?? null,
+    salaryRange: options.salaryRange ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+// Helper to create mock stages
+function createMockStages(jobId: string) {
+  const now = new Date();
+  return DEFAULT_STAGES.map((stage, index) => ({
+    id: `stage-${jobId}-${index}`,
+    jobId,
+    name: stage.name,
+    position: index,
+    isDefault: true,
+    isMandatory: stage.isMandatory,
+    parentId: null,
+    createdAt: now,
+    subStages: [],
+  }));
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
+
 
 describe('Property 8: Job creation round-trip', () => {
   /**
@@ -112,32 +165,14 @@ describe('Property 8: Job creation round-trip', () => {
         fc.option(descriptionArbitrary, { nil: undefined }),
         fc.option(openingsArbitrary, { nil: undefined }),
         async (jobId, companyId, title, department, location, employmentType, salaryRange, description, openings) => {
-          const now = new Date();
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, location, {
+            employmentType,
+            salaryRange,
+            description,
+            openings,
+          });
           
-          // Mock the Prisma transaction response
-          const mockDbJob = {
-            id: jobId,
-            companyId,
-            title: title.trim(),
-            department: department.trim(),
-            location: location.trim(),
-            employmentType: employmentType ?? null,
-            salaryRange: salaryRange ?? null,
-            description: description ?? null,
-            status: 'active',
-            openings: openings ?? 1,
-            createdAt: now,
-            updatedAt: now,
-          };
-          
-          const mockStages = DEFAULT_STAGES.map((name, index) => ({
-            id: `stage-${index}`,
-            jobId,
-            name,
-            position: index,
-            isDefault: true,
-            createdAt: now,
-          }));
+          const mockStages = createMockStages(jobId);
           
           // Mock transaction to execute the callback
           mockTransaction.mockImplementationOnce(async (callback: any) => {
@@ -146,7 +181,10 @@ describe('Property 8: Job creation round-trip', () => {
                 create: vi.fn().mockResolvedValue(mockDbJob),
               },
               pipelineStage: {
-                createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
                 findMany: vi.fn().mockResolvedValue(mockStages),
               },
             };
@@ -157,6 +195,8 @@ describe('Property 8: Job creation round-trip', () => {
           mockPrismaJob.findUnique.mockResolvedValueOnce({
             ...mockDbJob,
             pipelineStages: mockStages,
+            company: { name: 'Test Company', logoUrl: null },
+            assignedRecruiter: null,
           });
 
           // Create job
@@ -178,7 +218,6 @@ describe('Property 8: Job creation round-trip', () => {
           expect(retrieved.id).toBe(created.id);
           expect(retrieved.title).toBe(title.trim());
           expect(retrieved.department).toBe(department.trim());
-          expect(retrieved.location).toBe(location.trim());
           expect(retrieved.companyId).toBe(companyId);
           expect(retrieved.status).toBe('active');
         }
@@ -203,32 +242,10 @@ describe('Property 9: Job IDs are unique and status is active', () => {
         ),
         async (jobDataList) => {
           const createdIds: string[] = [];
-          const now = new Date();
 
           for (const [jobId, companyId, title, department, location] of jobDataList) {
-            const mockDbJob = {
-              id: jobId,
-              companyId,
-              title: title.trim(),
-              department: department.trim(),
-              location: location.trim(),
-              employmentType: null,
-              salaryRange: null,
-              description: null,
-              status: 'active',
-              openings: 1,
-              createdAt: now,
-              updatedAt: now,
-            };
-            
-            const mockStages = DEFAULT_STAGES.map((name, index) => ({
-              id: `stage-${jobId}-${index}`,
-              jobId,
-              name,
-              position: index,
-              isDefault: true,
-              createdAt: now,
-            }));
+            const mockDbJob = createMockDbJob(jobId, companyId, title, department, location);
+            const mockStages = createMockStages(jobId);
             
             // Mock transaction
             mockTransaction.mockImplementationOnce(async (callback: any) => {
@@ -237,7 +254,10 @@ describe('Property 9: Job IDs are unique and status is active', () => {
                   create: vi.fn().mockResolvedValue(mockDbJob),
                 },
                 pipelineStage: {
-                  createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                  create: vi.fn().mockImplementation((args: any) => {
+                    const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                    return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                  }),
                   findMany: vi.fn().mockResolvedValue(mockStages),
                 },
               };
@@ -284,31 +304,12 @@ describe('Property 9: Job IDs are unique and status is active', () => {
         fc.option(salaryRangeArbitrary, { nil: undefined }),
         fc.option(descriptionArbitrary, { nil: undefined }),
         async (jobId, companyId, title, department, location, employmentType, salaryRange, description) => {
-          const now = new Date();
-          
-          const mockDbJob = {
-            id: jobId,
-            companyId,
-            title: title.trim(),
-            department: department.trim(),
-            location: location.trim(),
-            employmentType: employmentType ?? null,
-            salaryRange: salaryRange ?? null,
-            description: description ?? null,
-            status: 'active',
-            openings: 1,
-            createdAt: now,
-            updatedAt: now,
-          };
-          
-          const mockStages = DEFAULT_STAGES.map((name, index) => ({
-            id: `stage-${index}`,
-            jobId,
-            name,
-            position: index,
-            isDefault: true,
-            createdAt: now,
-          }));
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, location, {
+            employmentType,
+            salaryRange,
+            description,
+          });
+          const mockStages = createMockStages(jobId);
           
           mockTransaction.mockImplementationOnce(async (callback: any) => {
             const txMock = {
@@ -316,7 +317,10 @@ describe('Property 9: Job IDs are unique and status is active', () => {
                 create: vi.fn().mockResolvedValue(mockDbJob),
               },
               pipelineStage: {
-                createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
                 findMany: vi.fn().mockResolvedValue(mockStages),
               },
             };
@@ -392,42 +396,18 @@ describe('Property 10: Job validation rejects missing required fields', () => {
     );
   });
 
-  it('should reject job creation when location is missing or empty', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        uuidArbitrary,
-        jobTitleArbitrary,
-        departmentArbitrary,
-        fc.constantFrom('', '   ', '\t', '\n'), // Empty or whitespace-only strings
-        async (companyId, title, department, emptyLocation) => {
-          await expect(
-            jobService.create({
-              companyId,
-              title,
-              department,
-              location: emptyLocation,
-            })
-          ).rejects.toThrow(ValidationError);
-        }
-      ),
-      { numRuns: 50 }
-    );
-  });
-
   it('should reject job creation when multiple required fields are missing', async () => {
     await fc.assert(
       fc.asyncProperty(
         uuidArbitrary,
         fc.constantFrom('', '   '),
         fc.constantFrom('', '   '),
-        fc.constantFrom('', '   '),
-        async (companyId, emptyTitle, emptyDepartment, emptyLocation) => {
+        async (companyId, emptyTitle, emptyDepartment) => {
           await expect(
             jobService.create({
               companyId,
               title: emptyTitle,
               department: emptyDepartment,
-              location: emptyLocation,
             })
           ).rejects.toThrow(ValidationError);
         }
@@ -445,31 +425,8 @@ describe('Property 10: Job validation rejects missing required fields', () => {
         departmentArbitrary,
         locationArbitrary,
         async (jobId, companyId, title, department, location) => {
-          const now = new Date();
-          
-          const mockDbJob = {
-            id: jobId,
-            companyId,
-            title: title.trim(),
-            department: department.trim(),
-            location: location.trim(),
-            employmentType: null,
-            salaryRange: null,
-            description: null,
-            status: 'active',
-            openings: 1,
-            createdAt: now,
-            updatedAt: now,
-          };
-          
-          const mockStages = DEFAULT_STAGES.map((name, index) => ({
-            id: `stage-${index}`,
-            jobId,
-            name,
-            position: index,
-            isDefault: true,
-            createdAt: now,
-          }));
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, location);
+          const mockStages = createMockStages(jobId);
           
           mockTransaction.mockImplementationOnce(async (callback: any) => {
             const txMock = {
@@ -477,7 +434,10 @@ describe('Property 10: Job validation rejects missing required fields', () => {
                 create: vi.fn().mockResolvedValue(mockDbJob),
               },
               pipelineStage: {
-                createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
                 findMany: vi.fn().mockResolvedValue(mockStages),
               },
             };
@@ -496,7 +456,6 @@ describe('Property 10: Job validation rejects missing required fields', () => {
           expect(job.id).toBe(jobId);
           expect(job.title).toBe(title.trim());
           expect(job.department).toBe(department.trim());
-          expect(job.location).toBe(location.trim());
         }
       ),
       { numRuns: 100 }
@@ -517,9 +476,6 @@ describe('Property 6: Job validation rejects missing required fields (Phase 2)',
   /**
    * **Feature: ats-enhancements-phase2, Property 6: Job validation rejects missing required fields**
    * **Validates: Requirements 4.2**
-   * 
-   * For any job data missing a required field (title, department, or location),
-   * the job creation validation should fail with appropriate error message.
    */
   it('should reject job with missing title and return validation error', async () => {
     await fc.assert(
@@ -536,7 +492,6 @@ describe('Property 6: Job validation rejects missing required fields (Phase 2)',
               department,
               location,
             });
-            // Should not reach here
             return false;
           } catch (error) {
             expect(error).toBeInstanceOf(ValidationError);
@@ -579,35 +534,6 @@ describe('Property 6: Job validation rejects missing required fields (Phase 2)',
       { numRuns: 50 }
     );
   });
-
-  it('should reject job with missing location and return validation error', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        uuidArbitrary,
-        jobTitleArbitrary,
-        departmentArbitrary,
-        fc.constantFrom('', '   ', '\t', '\n', undefined as unknown as string),
-        async (companyId, title, department, invalidLocation) => {
-          try {
-            await jobService.create({
-              companyId,
-              title,
-              department,
-              location: invalidLocation || '',
-            });
-            return false;
-          } catch (error) {
-            expect(error).toBeInstanceOf(ValidationError);
-            const validationError = error as ValidationError;
-            expect(validationError.details).toBeDefined();
-            expect(validationError.details?.location).toBeDefined();
-            return true;
-          }
-        }
-      ),
-      { numRuns: 50 }
-    );
-  });
 });
 
 
@@ -615,10 +541,6 @@ describe('Property 7: Job creation with pipeline stages', () => {
   /**
    * **Feature: ats-enhancements-phase2, Property 7: Job creation with pipeline stages**
    * **Validates: Requirements 4.3**
-   * 
-   * For any valid job data, creating a job should store it in the database with all 
-   * provided details and automatically create default pipeline stages 
-   * (Queue, Applied, Screening, Shortlisted, Interview, Selected, Offer, Hired).
    */
   it('should create job with all 8 default pipeline stages', async () => {
     await fc.assert(
@@ -632,33 +554,12 @@ describe('Property 7: Job creation with pipeline stages', () => {
         fc.option(salaryRangeArbitrary, { nil: undefined }),
         fc.option(descriptionArbitrary, { nil: undefined }),
         async (jobId, companyId, title, department, location, employmentType, salaryRange, description) => {
-          const now = new Date();
-          
-          const mockDbJob = {
-            id: jobId,
-            companyId,
-            title: title.trim(),
-            department: department.trim(),
-            location: location.trim(),
-            employmentType: employmentType ?? null,
-            salaryRange: salaryRange ?? null,
-            description: description ?? null,
-            status: 'active',
-            openings: 1,
-            createdAt: now,
-            updatedAt: now,
-          };
-          
-          const mockStages = DEFAULT_STAGES.map((name, index) => ({
-            id: `stage-${jobId}-${index}`,
-            jobId,
-            name,
-            position: index,
-            isDefault: true,
-            createdAt: now,
-          }));
-          
-          let createManyCalledWith: any = null;
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, location, {
+            employmentType,
+            salaryRange,
+            description,
+          });
+          const mockStages = createMockStages(jobId);
           
           mockTransaction.mockImplementationOnce(async (callback: any) => {
             const txMock = {
@@ -666,9 +567,9 @@ describe('Property 7: Job creation with pipeline stages', () => {
                 create: vi.fn().mockResolvedValue(mockDbJob),
               },
               pipelineStage: {
-                createMany: vi.fn().mockImplementation((args: any) => {
-                  createManyCalledWith = args;
-                  return Promise.resolve({ count: 8 });
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
                 }),
                 findMany: vi.fn().mockResolvedValue(mockStages),
               },
@@ -701,10 +602,6 @@ describe('Property 7: Job creation with pipeline stages', () => {
             expect(stage.position).toBe(index);
             expect(stage.isDefault).toBe(true);
           });
-          
-          // Verify createMany was called with correct stage data
-          expect(createManyCalledWith).toBeDefined();
-          expect(createManyCalledWith.data.length).toBe(8);
         }
       ),
       { numRuns: 100 }
@@ -720,31 +617,8 @@ describe('Property 7: Job creation with pipeline stages', () => {
         departmentArbitrary,
         locationArbitrary,
         async (jobId, companyId, title, department, location) => {
-          const now = new Date();
-          
-          const mockDbJob = {
-            id: jobId,
-            companyId,
-            title: title.trim(),
-            department: department.trim(),
-            location: location.trim(),
-            employmentType: null,
-            salaryRange: null,
-            description: null,
-            status: 'active',
-            openings: 1,
-            createdAt: now,
-            updatedAt: now,
-          };
-          
-          const mockStages = DEFAULT_STAGES.map((name, index) => ({
-            id: `stage-${jobId}-${index}`,
-            jobId,
-            name,
-            position: index,
-            isDefault: true,
-            createdAt: now,
-          }));
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, location);
+          const mockStages = createMockStages(jobId);
           
           mockTransaction.mockImplementationOnce(async (callback: any) => {
             const txMock = {
@@ -752,7 +626,10 @@ describe('Property 7: Job creation with pipeline stages', () => {
                 create: vi.fn().mockResolvedValue(mockDbJob),
               },
               pipelineStage: {
-                createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
                 findMany: vi.fn().mockResolvedValue(mockStages),
               },
             };
@@ -777,14 +654,242 @@ describe('Property 7: Job creation with pipeline stages', () => {
 });
 
 
+/**
+ * **Feature: job-form-enhancements, Property 3: Multi-Select Locations Persistence**
+ * **Validates: Requirements 1.4**
+ * 
+ * For any set of selected locations, when the job is saved and then retrieved,
+ * the retrieved locations array SHALL contain exactly the same cities that were selected, in any order.
+ */
+describe('Property 3: Multi-Select Locations Persistence', () => {
+  // Available cities from jobFormOptions.ts
+  const availableCities = [
+    'mumbai', 'delhi', 'bangalore', 'hyderabad', 'chennai', 'kolkata', 'pune',
+    'ahmedabad', 'jaipur', 'lucknow', 'kanpur', 'nagpur', 'indore', 'thane',
+    'bhopal', 'visakhapatnam', 'vadodara', 'ghaziabad', 'ludhiana', 'agra',
+    'nashik', 'faridabad', 'meerut', 'rajkot', 'varanasi', 'srinagar',
+    'aurangabad', 'dhanbad', 'amritsar', 'noida', 'gurgaon', 'chandigarh',
+    'coimbatore', 'kochi', 'thiruvananthapuram', 'remote'
+  ];
+
+  // Arbitrary for generating random subsets of locations
+  const locationsArbitrary = fc.subarray(availableCities, { minLength: 1, maxLength: 10 });
+
+  it('should persist and retrieve the exact same locations after job creation', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        uuidArbitrary,
+        uuidArbitrary,
+        jobTitleArbitrary,
+        departmentArbitrary,
+        locationsArbitrary,
+        async (jobId, companyId, title, department, selectedLocations) => {
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, '', {
+            locations: selectedLocations,
+          });
+          const mockStages = createMockStages(jobId);
+
+          // Mock transaction for create
+          mockTransaction.mockImplementationOnce(async (callback: any) => {
+            const txMock = {
+              job: {
+                create: vi.fn().mockResolvedValue(mockDbJob),
+              },
+              pipelineStage: {
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
+                findMany: vi.fn().mockResolvedValue(mockStages),
+              },
+            };
+            return callback(txMock);
+          });
+
+          // Mock findUnique for getById
+          mockPrismaJob.findUnique.mockResolvedValueOnce({
+            ...mockDbJob,
+            pipelineStages: mockStages,
+            company: { name: 'Test Company', logoUrl: null },
+            assignedRecruiter: null,
+          });
+
+          // Create job with selected locations
+          const created = await jobService.create({
+            companyId,
+            title,
+            department,
+            locations: selectedLocations,
+          });
+
+          // Retrieve job
+          const retrieved = await jobService.getById(created.id);
+
+          // Verify locations array contains exactly the same cities (order-independent)
+          expect(retrieved.locations).toBeDefined();
+          expect(retrieved.locations?.length).toBe(selectedLocations.length);
+          
+          // Sort both arrays for comparison (order-independent)
+          const sortedSelected = [...selectedLocations].sort();
+          const sortedRetrieved = [...(retrieved.locations || [])].sort();
+          expect(sortedRetrieved).toEqual(sortedSelected);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('should persist empty locations array correctly', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        uuidArbitrary,
+        uuidArbitrary,
+        jobTitleArbitrary,
+        departmentArbitrary,
+        async (jobId, companyId, title, department) => {
+          const emptyLocations: string[] = [];
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, '', {
+            locations: emptyLocations,
+          });
+          const mockStages = createMockStages(jobId);
+
+          // Mock transaction for create
+          mockTransaction.mockImplementationOnce(async (callback: any) => {
+            const txMock = {
+              job: {
+                create: vi.fn().mockResolvedValue(mockDbJob),
+              },
+              pipelineStage: {
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
+                findMany: vi.fn().mockResolvedValue(mockStages),
+              },
+            };
+            return callback(txMock);
+          });
+
+          // Mock findUnique for getById
+          mockPrismaJob.findUnique.mockResolvedValueOnce({
+            ...mockDbJob,
+            pipelineStages: mockStages,
+            company: { name: 'Test Company', logoUrl: null },
+            assignedRecruiter: null,
+          });
+
+          // Create job with empty locations
+          const created = await jobService.create({
+            companyId,
+            title,
+            department,
+            locations: emptyLocations,
+          });
+
+          // Retrieve job
+          const retrieved = await jobService.getById(created.id);
+
+          // Verify locations is an empty array
+          expect(retrieved.locations).toBeDefined();
+          expect(Array.isArray(retrieved.locations)).toBe(true);
+          expect(retrieved.locations?.length).toBe(0);
+        }
+      ),
+      { numRuns: 50 }
+    );
+  });
+
+  it('should preserve locations after job update', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        uuidArbitrary,
+        uuidArbitrary,
+        jobTitleArbitrary,
+        departmentArbitrary,
+        locationsArbitrary,
+        locationsArbitrary,
+        async (jobId, companyId, title, department, initialLocations, updatedLocations) => {
+          // Create initial job mock
+          const initialMockDbJob = createMockDbJob(jobId, companyId, title, department, '', {
+            locations: initialLocations,
+          });
+          const mockStages = createMockStages(jobId);
+
+          // Mock transaction for create
+          mockTransaction.mockImplementationOnce(async (callback: any) => {
+            const txMock = {
+              job: {
+                create: vi.fn().mockResolvedValue(initialMockDbJob),
+              },
+              pipelineStage: {
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
+                findMany: vi.fn().mockResolvedValue(mockStages),
+              },
+            };
+            return callback(txMock);
+          });
+
+          // Create job
+          const created = await jobService.create({
+            companyId,
+            title,
+            department,
+            locations: initialLocations,
+          });
+
+          // Mock for update - findUnique check
+          mockPrismaJob.findUnique.mockResolvedValueOnce(initialMockDbJob);
+
+          // Updated job mock
+          const updatedMockDbJob = createMockDbJob(jobId, companyId, title, department, '', {
+            locations: updatedLocations,
+          });
+
+          // Mock transaction for update
+          mockTransaction.mockImplementationOnce(async (callback: any) => {
+            const txMock = {
+              job: {
+                update: vi.fn().mockResolvedValue(updatedMockDbJob),
+              },
+              pipelineStage: {
+                deleteMany: vi.fn().mockResolvedValue({ count: 8 }),
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
+                findMany: vi.fn().mockResolvedValue(mockStages),
+              },
+            };
+            return callback(txMock);
+          });
+
+          // Update job with new locations
+          const updated = await jobService.update(created.id, {
+            locations: updatedLocations,
+          });
+
+          // Verify updated locations match
+          expect(updated.locations).toBeDefined();
+          expect(updated.locations?.length).toBe(updatedLocations.length);
+          
+          const sortedUpdated = [...updatedLocations].sort();
+          const sortedRetrieved = [...(updated.locations || [])].sort();
+          expect(sortedRetrieved).toEqual(sortedUpdated);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+
 describe('Property 8: Unique job application URLs', () => {
   /**
    * **Feature: ats-enhancements-phase2, Property 8: Unique job application URLs**
    * **Validates: Requirements 4.4**
-   * 
-   * For any set of created jobs, each job should have a unique public application URL 
-   * that can be used to access the application form.
-   * The application URL format is: /apply/:jobId
    */
   it('should generate unique application URLs for all created jobs', async () => {
     await fc.assert(
@@ -795,32 +900,10 @@ describe('Property 8: Unique job application URLs', () => {
         ),
         async (jobDataList) => {
           const applicationUrls: string[] = [];
-          const now = new Date();
 
           for (const [jobId, companyId, title, department, location] of jobDataList) {
-            const mockDbJob = {
-              id: jobId,
-              companyId,
-              title: title.trim(),
-              department: department.trim(),
-              location: location.trim(),
-              employmentType: null,
-              salaryRange: null,
-              description: null,
-              status: 'active',
-              openings: 1,
-              createdAt: now,
-              updatedAt: now,
-            };
-            
-            const mockStages = DEFAULT_STAGES.map((name, index) => ({
-              id: `stage-${jobId}-${index}`,
-              jobId,
-              name,
-              position: index,
-              isDefault: true,
-              createdAt: now,
-            }));
+            const mockDbJob = createMockDbJob(jobId, companyId, title, department, location);
+            const mockStages = createMockStages(jobId);
             
             mockTransaction.mockImplementationOnce(async (callback: any) => {
               const txMock = {
@@ -828,7 +911,10 @@ describe('Property 8: Unique job application URLs', () => {
                   create: vi.fn().mockResolvedValue(mockDbJob),
                 },
                 pipelineStage: {
-                  createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                  create: vi.fn().mockImplementation((args: any) => {
+                    const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                    return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                  }),
                   findMany: vi.fn().mockResolvedValue(mockStages),
                 },
               };
@@ -871,31 +957,8 @@ describe('Property 8: Unique job application URLs', () => {
         departmentArbitrary,
         locationArbitrary,
         async (jobId, companyId, title, department, location) => {
-          const now = new Date();
-          
-          const mockDbJob = {
-            id: jobId,
-            companyId,
-            title: title.trim(),
-            department: department.trim(),
-            location: location.trim(),
-            employmentType: null,
-            salaryRange: null,
-            description: null,
-            status: 'active',
-            openings: 1,
-            createdAt: now,
-            updatedAt: now,
-          };
-          
-          const mockStages = DEFAULT_STAGES.map((name, index) => ({
-            id: `stage-${jobId}-${index}`,
-            jobId,
-            name,
-            position: index,
-            isDefault: true,
-            createdAt: now,
-          }));
+          const mockDbJob = createMockDbJob(jobId, companyId, title, department, location);
+          const mockStages = createMockStages(jobId);
           
           mockTransaction.mockImplementationOnce(async (callback: any) => {
             const txMock = {
@@ -903,7 +966,10 @@ describe('Property 8: Unique job application URLs', () => {
                 create: vi.fn().mockResolvedValue(mockDbJob),
               },
               pipelineStage: {
-                createMany: vi.fn().mockResolvedValue({ count: 8 }),
+                create: vi.fn().mockImplementation((args: any) => {
+                  const stageIndex = mockStages.findIndex(s => s.name === args.data.name);
+                  return Promise.resolve(mockStages[stageIndex] || mockStages[0]);
+                }),
                 findMany: vi.fn().mockResolvedValue(mockStages),
               },
             };
@@ -923,8 +989,6 @@ describe('Property 8: Unique job application URLs', () => {
           // Verify the job ID is a valid UUID (which ensures unique URLs)
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           expect(job.id).toMatch(uuidRegex);
-          
-          // Verify URL contains the job ID
           expect(expectedUrl).toContain(job.id);
         }
       ),

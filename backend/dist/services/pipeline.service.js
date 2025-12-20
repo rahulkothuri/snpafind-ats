@@ -190,6 +190,8 @@ export const pipelineService = {
             name: stage.name,
             position: stage.position,
             isDefault: stage.isDefault,
+            isMandatory: stage.isMandatory,
+            parentId: stage.parentId ?? undefined,
         };
     },
 };
