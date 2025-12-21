@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout, Button, MultiSelect, MandatoryCriteriaSection, PipelineStageConfigurator, DEFAULT_PIPELINE_STAGES, JobShareModal } from '../components';
+import { Layout, Button, MultiSelect, MandatoryCriteriaSection, PipelineStageConfigurator, JobShareModal, StageImportModal } from '../components';
+import { DEFAULT_PIPELINE_STAGES, type EnhancedPipelineStageConfig } from '../components/PipelineStageConfigurator';
 import { useAuth } from '../hooks/useAuth';
 import { useUsers } from '../hooks/useUsers';
 import api from '../services/api';
@@ -37,7 +38,7 @@ interface JobFormData {
   priority: JobPriority | '';
   jobDomain: string;
   assignedRecruiterId: string;
-  pipelineStages: PipelineStageConfig[];
+  pipelineStages: EnhancedPipelineStageConfig[];
 }
 
 const initialFormData: JobFormData = {
@@ -95,6 +96,9 @@ export function JobCreationPage() {
   const [createdJobId, setCreatedJobId] = useState<string>('');
   const [createdJobTitle, setCreatedJobTitle] = useState<string>('');
 
+  // State for StageImportModal - Requirements 3.1, 3.2, 3.4
+  const [showStageImportModal, setShowStageImportModal] = useState(false);
+
   // Fetch company users for recruiter assignment - Requirement 1.1
   const { data: users = [], isLoading: isLoadingUsers } = useUsers();
   
@@ -112,7 +116,7 @@ export function JobCreationPage() {
         .then((response) => {
           const job = response.data;
           // Convert pipeline stages from API format to form format
-          const pipelineStages: PipelineStageConfig[] = job.stages && job.stages.length > 0
+          const pipelineStages: EnhancedPipelineStageConfig[] = job.stages && job.stages.length > 0
             ? job.stages
                 .filter(stage => !stage.parentId) // Only top-level stages
                 .sort((a, b) => a.position - b.position)
@@ -128,6 +132,8 @@ export function JobCreationPage() {
                       name: sub.name,
                       position: sub.position,
                     })),
+                  type: 'screening', // Default type, will be inferred from stage name
+                  isCustom: !stage.isDefault,
                 }))
             : DEFAULT_PIPELINE_STAGES;
 
@@ -160,7 +166,7 @@ export function JobCreationPage() {
     }
   }, [isEditMode, id]);
 
-  const handleChange = (field: keyof JobFormData, value: string | number | '' | string[] | WorkMode | JobPriority | PipelineStageConfig[]) => {
+  const handleChange = (field: keyof JobFormData, value: string | number | '' | string[] | WorkMode | JobPriority | EnhancedPipelineStageConfig[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: '' }));
     setSubmitError(null);
@@ -294,6 +300,38 @@ export function JobCreationPage() {
   // Handle cancel - Requirement 20.6
   const handleCancel = () => {
     navigate(-1);
+  };
+
+  // Handle stage import - Requirements 3.3, 3.4
+  const handleStageImport = (importedStages: PipelineStageConfig[]) => {
+    // Convert imported stages to EnhancedPipelineStageConfig format
+    const enhancedStages: EnhancedPipelineStageConfig[] = importedStages.map((stage, index) => ({
+      ...stage,
+      position: index,
+      type: inferStageType(stage.name),
+      isCustom: true,
+      subStages: stage.subStages || [],
+    }));
+
+    handleChange('pipelineStages', enhancedStages);
+    setShowStageImportModal(false);
+  };
+
+  // Helper function to infer stage type from name
+  const inferStageType = (stageName: string): 'shortlisting' | 'screening' | 'interview' | 'offer' | 'hired' => {
+    const name = stageName.toLowerCase();
+    if (name.includes('shortlist') || name.includes('applied') || name.includes('queue')) {
+      return 'shortlisting';
+    } else if (name.includes('screen') || name.includes('review')) {
+      return 'screening';
+    } else if (name.includes('interview') || name.includes('selected')) {
+      return 'interview';
+    } else if (name.includes('offer')) {
+      return 'offer';
+    } else if (name.includes('hired') || name.includes('onboard')) {
+      return 'hired';
+    }
+    return 'screening'; // Default
   };
 
   // Handle share modal close - Requirement 7.1
@@ -801,10 +839,31 @@ Describe the position and its importance to the team...
           <MandatoryCriteriaSection />
 
           {/* Pipeline Stage Configuration - Requirement 4.1 */}
-          <PipelineStageConfigurator
-            stages={formData.pipelineStages}
-            onChange={(stages) => handleChange('pipelineStages', stages)}
-          />
+          <div className="form-section">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="form-section-header">Pipeline Stages Configuration</h3>
+                <p className="form-section-subtitle">
+                  Configure the hiring pipeline stages organized by phases. Each phase can contain multiple stages.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setShowStageImportModal(true)}
+                className="flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                Import Stages
+              </Button>
+            </div>
+            <PipelineStageConfigurator
+              stages={formData.pipelineStages}
+              onChange={(stages) => handleChange('pipelineStages', stages)}
+            />
+          </div>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between pt-4">
@@ -839,6 +898,14 @@ Describe the position and its importance to the team...
         onClose={handleShareModalClose}
         jobId={createdJobId}
         jobTitle={createdJobTitle}
+      />
+
+      {/* Stage Import Modal - Requirements 3.1, 3.2, 3.4 */}
+      <StageImportModal
+        isOpen={showStageImportModal}
+        onClose={() => setShowStageImportModal(false)}
+        onImport={handleStageImport}
+        currentJobId={id}
       />
     </Layout>
   );

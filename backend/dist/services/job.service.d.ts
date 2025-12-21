@@ -1,4 +1,4 @@
-import type { Job, PipelineStage, PipelineStageConfig, WorkMode, JobPriority } from '../types/index.js';
+import type { Job, PipelineStage, PipelineStageConfig, WorkMode, JobPriority, UserRole } from '../types/index.js';
 export interface CreateJobData {
     companyId: string;
     title: string;
@@ -66,30 +66,38 @@ export declare const jobService: {
      */
     validateAndNormalizePipelineStages(stages: PipelineStageConfig[]): PipelineStageConfig[];
     /**
-     * Get a job by ID with all fields and pipeline stages
-     * Requirements: 7.3, 8.3
+     * Validate job access for a user
+     * Requirements: 4.2, 4.3, 4.4
      */
-    getById(id: string): Promise<JobWithStages>;
+    validateJobAccess(jobId: string, userId: string, userRole: UserRole): Promise<boolean>;
     /**
-     * Get all jobs for a company with candidate counts
+     * Get a job by ID with access control validation
+     * Requirements: 7.3, 8.3, 4.2
      */
-    getByCompanyId(companyId: string): Promise<Job[]>;
+    getById(id: string, userId?: string, userRole?: UserRole): Promise<JobWithStages>;
     /**
-     * Get all jobs (with optional filters) with candidate counts
+     * Get all jobs for a company with role-based filtering
+     * Requirements: 1.1, 1.2, 1.3, 4.1
+     */
+    getByCompanyId(companyId: string, userId?: string, userRole?: UserRole): Promise<Job[]>;
+    /**
+     * Get all jobs with role-based filtering
+     * Requirements: 4.1, 4.5
      */
     getAll(filters?: {
         companyId?: string;
         status?: string;
-    }): Promise<Job[]>;
+    }, userId?: string, userRole?: UserRole): Promise<Job[]>;
     /**
-     * Update a job with all fields
-     * Requirements: 8.3
+     * Update a job with access control validation
+     * Requirements: 8.3, 4.3
      */
-    update(id: string, data: UpdateJobData): Promise<JobWithStages>;
+    update(id: string, data: UpdateJobData, userId?: string, userRole?: UserRole): Promise<JobWithStages>;
     /**
-     * Delete a job
+     * Delete a job with access control validation
+     * Requirements: 4.4
      */
-    delete(id: string): Promise<void>;
+    delete(id: string, userId?: string, userRole?: UserRole): Promise<void>;
     /**
      * Map Prisma job to Job type with all new fields
      */

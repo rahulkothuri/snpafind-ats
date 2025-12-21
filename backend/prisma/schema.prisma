@@ -41,6 +41,7 @@ model Company {
   users      User[]
   jobs       Job[]
   candidates Candidate[]
+  stageTemplates PipelineStageTemplate[]
 
   @@map("companies")
 }
@@ -66,6 +67,7 @@ model User {
 
   company      Company @relation(fields: [companyId], references: [id])
   assignedJobs Job[]   @relation("AssignedJobs")
+  createdStageTemplates PipelineStageTemplate[]
 
   @@map("users")
 }
@@ -127,7 +129,32 @@ model Job {
   jobCandidates     JobCandidate[]
   assignedRecruiter User?           @relation("AssignedJobs", fields: [assignedRecruiterId], references: [id])
 
+  @@index([companyId])
+  @@index([assignedRecruiterId])
+  @@index([companyId, assignedRecruiterId])
+  @@index([status])
   @@map("jobs")
+}
+
+model PipelineStageTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @default("")
+  stages      Json     @default("[]") // JSON array of PipelineStageConfig
+  isPublic    Boolean  @default(false) @map("is_public")
+  companyId   String   @map("company_id")
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [createdBy], references: [id])
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@index([createdBy])
+  @@index([isPublic])
+  @@map("pipeline_stage_templates")
 }
 
 model PipelineStage {

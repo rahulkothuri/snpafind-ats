@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
-import { NotFoundError, ValidationError } from '../middleware/errorHandler.js';
-import type { Job, PipelineStage, PipelineStageConfig, SubStageConfig, WorkMode, JobPriority } from '../types/index.js';
+import { NotFoundError, ValidationError, AuthorizationError } from '../middleware/errorHandler.js';
+import type { Job, PipelineStage, PipelineStageConfig, SubStageConfig, WorkMode, JobPriority, UserRole } from '../types/index.js';
+import { jobAccessControlService } from './jobAccessControl.service.js';
 
 // Mandatory stages that cannot be removed (Requirements 4.2)
 const MANDATORY_STAGES = ['Screening', 'Shortlisted', 'Offer'];
@@ -262,10 +263,26 @@ export const jobService = {
   },
 
   /**
-   * Get a job by ID with all fields and pipeline stages
-   * Requirements: 7.3, 8.3
+   * Validate job access for a user
+   * Requirements: 4.2, 4.3, 4.4
    */
-  async getById(id: string): Promise<JobWithStages> {
+  async validateJobAccess(jobId: string, userId: string, userRole: UserRole): Promise<boolean> {
+    return jobAccessControlService.validateJobAccess(jobId, userId, userRole);
+  },
+
+  /**
+   * Get a job by ID with access control validation
+   * Requirements: 7.3, 8.3, 4.2
+   */
+  async getById(id: string, userId?: string, userRole?: UserRole): Promise<JobWithStages> {
+    // Validate access if user info is provided
+    if (userId && userRole) {
+      const hasAccess = await this.validateJobAccess(id, userId, userRole);
+      if (!hasAccess) {
+        throw new AuthorizationError();
+      }
+    }
+
     const job = await prisma.job.findUnique({
       where: { id },
       include: {
@@ -302,9 +319,16 @@ export const jobService = {
   },
 
   /**
-   * Get all jobs for a company with candidate counts
+   * Get all jobs for a company with role-based filtering
+   * Requirements: 1.1, 1.2, 1.3, 4.1
    */
-  async getByCompanyId(companyId: string): Promise<Job[]> {
+  async getByCompanyId(companyId: string, userId?: string, userRole?: UserRole): Promise<Job[]> {
+    if (userId && userRole) {
+      // Use access control service for role-based filtering
+      return jobAccessControlService.getAccessibleJobs(userId, userRole, companyId);
+    }
+
+    // Fallback to all jobs if no user context (for backward compatibility)
     const jobs = await prisma.job.findMany({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
@@ -324,9 +348,23 @@ export const jobService = {
   },
 
   /**
-   * Get all jobs (with optional filters) with candidate counts
+   * Get all jobs with role-based filtering
+   * Requirements: 4.1, 4.5
    */
-  async getAll(filters?: { companyId?: string; status?: string }): Promise<Job[]> {
+  async getAll(filters?: { companyId?: string; status?: string }, userId?: string, userRole?: UserRole): Promise<Job[]> {
+    if (userId && userRole && filters?.companyId) {
+      // Use access control service for role-based filtering
+      const accessibleJobs = await jobAccessControlService.getAccessibleJobs(userId, userRole, filters.companyId);
+      
+      // Apply status filter if provided
+      if (filters.status) {
+        return accessibleJobs.filter(job => job.status === filters.status);
+      }
+      
+      return accessibleJobs;
+    }
+
+    // Fallback to original implementation for backward compatibility
     const where: Record<string, unknown> = {};
     if (filters?.companyId) {
       where.companyId = filters.companyId;
@@ -354,10 +392,18 @@ export const jobService = {
   },
 
   /**
-   * Update a job with all fields
-   * Requirements: 8.3
+   * Update a job with access control validation
+   * Requirements: 8.3, 4.3
    */
-  async update(id: string, data: UpdateJobData): Promise<JobWithStages> {
+  async update(id: string, data: UpdateJobData, userId?: string, userRole?: UserRole): Promise<JobWithStages> {
+    // Validate access if user info is provided
+    if (userId && userRole) {
+      const hasAccess = await this.validateJobAccess(id, userId, userRole);
+      if (!hasAccess) {
+        throw new AuthorizationError();
+      }
+    }
+
     const existing = await prisma.job.findUnique({
       where: { id },
     });
@@ -384,6 +430,12 @@ export const jobService = {
           salaryMin: ['Minimum salary cannot be greater than maximum'] 
         });
       }
+    }
+
+    // Handle immediate permission updates when assignedRecruiterId changes (Requirements 4.5)
+    if (data.assignedRecruiterId !== undefined && data.assignedRecruiterId !== existing.assignedRecruiterId) {
+      // Permission updates are handled automatically by the database update
+      // The new assignment will be immediately effective for subsequent requests
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -416,7 +468,7 @@ export const jobService = {
           priority: data.priority,
           jobDomain: data.jobDomain,
           
-          // Assignment
+          // Assignment (Requirements 4.5 - immediate permission updates)
           assignedRecruiterId: data.assignedRecruiterId,
           
           // Content
@@ -487,9 +539,18 @@ export const jobService = {
   },
 
   /**
-   * Delete a job
+   * Delete a job with access control validation
+   * Requirements: 4.4
    */
-  async delete(id: string): Promise<void> {
+  async delete(id: string, userId?: string, userRole?: UserRole): Promise<void> {
+    // Validate access if user info is provided
+    if (userId && userRole) {
+      const hasAccess = await this.validateJobAccess(id, userId, userRole);
+      if (!hasAccess) {
+        throw new AuthorizationError();
+      }
+    }
+
     const existing = await prisma.job.findUnique({
       where: { id },
     });

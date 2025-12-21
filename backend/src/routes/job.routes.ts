@@ -5,6 +5,12 @@ import pipelineService from '../services/pipeline.service.js';
 import prisma from '../lib/prisma.js';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
+import { 
+  requireJobAccess, 
+  requireJobCreatePermission, 
+  requireJobUpdatePermission, 
+  requireJobDeletePermission 
+} from '../middleware/jobAccessControl.js';
 
 const router = Router();
 
@@ -125,8 +131,8 @@ function parseZodErrors(error: z.ZodError): Record<string, string[]> {
 
 /**
  * GET /api/jobs
- * Get all jobs (filtered by company for non-admin users)
- * Requirements: 7.1, 7.2
+ * Get all jobs with role-based filtering
+ * Requirements: 7.1, 7.2, 4.1, 4.5
  */
 router.get(
   '/',
@@ -140,7 +146,9 @@ router.get(
       if (status && typeof status === 'string') {
         filters.status = status;
       }
-      const jobs = await jobService.getAll(filters);
+      
+      // Use role-based filtering
+      const jobs = await jobService.getAll(filters, req.user!.userId, req.user!.role);
       res.json(jobs);
     } catch (error) {
       next(error);
@@ -150,15 +158,16 @@ router.get(
 
 /**
  * GET /api/jobs/:id
- * Get a job by ID with all fields and pipeline stages
- * Requirements: 7.3, 8.3
+ * Get a job by ID with access control validation
+ * Requirements: 7.3, 8.3, 4.2
  */
 router.get(
   '/:id',
   authenticate,
+  requireJobAccess(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const job = await jobService.getById(req.params.id);
+      const job = await jobService.getById(req.params.id, req.user!.userId, req.user!.role);
       res.json(job);
     } catch (error) {
       next(error);
@@ -168,11 +177,13 @@ router.get(
 
 /**
  * GET /api/jobs/:id/candidates
- * Get all candidates who applied to a specific job
+ * Get all candidates who applied to a specific job with access control
+ * Requirements: 4.2
  */
 router.get(
   '/:id/candidates',
   authenticate,
+  requireJobAccess(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const jobId = req.params.id;
@@ -227,13 +238,13 @@ router.get(
 
 /**
  * POST /api/jobs
- * Create a new job with all enhanced fields
- * Requirements: 1.1, 4.1, 5.1, 5.2, 5.3, 5.4
+ * Create a new job with access control
+ * Requirements: 1.1, 4.1, 4.2, 5.1, 5.2, 5.3, 5.4
  */
 router.post(
   '/',
   authenticate,
-  authorize('admin', 'hiring_manager', 'recruiter'),
+  requireJobCreatePermission(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const result = createJobSchema.safeParse(req.body);
@@ -254,13 +265,13 @@ router.post(
 
 /**
  * PUT /api/jobs/:id
- * Update a job with all enhanced fields
- * Requirements: 8.3
+ * Update a job with access control validation
+ * Requirements: 8.3, 4.3
  */
 router.put(
   '/:id',
   authenticate,
-  authorize('admin', 'hiring_manager', 'recruiter'),
+  requireJobUpdatePermission(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const result = updateJobSchema.safeParse(req.body);
@@ -268,7 +279,7 @@ router.put(
         throw new ValidationError(parseZodErrors(result.error));
       }
 
-      const job = await jobService.update(req.params.id, result.data);
+      const job = await jobService.update(req.params.id, result.data, req.user!.userId, req.user!.role);
       res.json(job);
     } catch (error) {
       next(error);
@@ -278,15 +289,16 @@ router.put(
 
 /**
  * DELETE /api/jobs/:id
- * Delete a job
+ * Delete a job with access control validation
+ * Requirements: 4.4
  */
 router.delete(
   '/:id',
   authenticate,
-  authorize('admin', 'hiring_manager'),
+  requireJobDeletePermission(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      await jobService.delete(req.params.id);
+      await jobService.delete(req.params.id, req.user!.userId, req.user!.role);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -308,12 +320,13 @@ const reorderStageSchema = z.object({
 
 /**
  * GET /api/jobs/:id/pipeline
- * Get all pipeline stages for a job
- * Requirements: 6.3
+ * Get all pipeline stages for a job with access control
+ * Requirements: 6.3, 4.2
  */
 router.get(
   '/:id/pipeline',
   authenticate,
+  requireJobAccess(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const stages = await pipelineService.getStagesByJobId(req.params.id);
@@ -326,13 +339,13 @@ router.get(
 
 /**
  * POST /api/jobs/:id/pipeline/stages
- * Insert a custom sub-stage at a specific position
- * Requirements: 6.2
+ * Insert a custom sub-stage at a specific position with access control
+ * Requirements: 6.2, 4.3
  */
 router.post(
   '/:id/pipeline/stages',
   authenticate,
-  authorize('admin', 'hiring_manager'),
+  requireJobUpdatePermission(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const result = insertStageSchema.safeParse(req.body);
@@ -353,13 +366,13 @@ router.post(
 
 /**
  * PUT /api/jobs/:id/pipeline/stages/:stageId/reorder
- * Reorder a stage to a new position
- * Requirements: 6.4
+ * Reorder a stage to a new position with access control
+ * Requirements: 6.4, 4.3
  */
 router.put(
   '/:id/pipeline/stages/:stageId/reorder',
   authenticate,
-  authorize('admin', 'hiring_manager'),
+  requireJobUpdatePermission(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const result = reorderStageSchema.safeParse(req.body);
@@ -380,16 +393,73 @@ router.put(
 
 /**
  * DELETE /api/jobs/:id/pipeline/stages/:stageId
- * Delete a custom stage
+ * Delete a custom stage with access control
+ * Requirements: 4.3
  */
 router.delete(
   '/:id/pipeline/stages/:stageId',
   authenticate,
-  authorize('admin', 'hiring_manager'),
+  requireJobUpdatePermission(),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       await pipelineService.deleteStage(req.params.stageId);
       res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/jobs/:id/import-stages
+ * Import stages from another job with access control validation
+ * Requirements: 3.3, 3.4, 3.5
+ */
+router.post(
+  '/:id/import-stages',
+  authenticate,
+  requireJobUpdatePermission(),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { sourceJobId } = req.body;
+      
+      if (!sourceJobId) {
+        throw new ValidationError({ sourceJobId: ['Source job ID is required'] });
+      }
+
+      // Import stages using the stage template service
+      const { stageTemplateService } = await import('../services/stageTemplate.service.js');
+      
+      // Get stages from source job
+      const sourceJob = await jobService.getById(sourceJobId, req.user!.userId, req.user!.role);
+      if (!sourceJob.stages || sourceJob.stages.length === 0) {
+        throw new ValidationError({ stages: ['Source job has no pipeline stages to import'] });
+      }
+
+      // Convert stages to PipelineStageConfig format
+      const stagesToImport = sourceJob.stages.map(stage => ({
+        name: stage.name,
+        position: stage.position,
+        isMandatory: stage.isMandatory || false,
+        subStages: stage.subStages?.map(sub => ({
+          name: sub.name,
+          position: sub.position,
+        })) || [],
+      }));
+
+      // Update the target job with imported stages
+      const updatedJob = await jobService.update(
+        req.params.id, 
+        { pipelineStages: stagesToImport },
+        req.user!.userId,
+        req.user!.role
+      );
+
+      res.json({
+        success: true,
+        message: `Successfully imported ${stagesToImport.length} stages from job "${sourceJob.title}"`,
+        job: updatedJob,
+      });
     } catch (error) {
       next(error);
     }

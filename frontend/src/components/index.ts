@@ -40,3 +40,9 @@ export { JobDetailsPanel } from './JobDetailsPanel';
 export type { JobDetailsPanelProps } from './JobDetailsPanel';
 export { JobDescriptionModal } from './JobDescriptionModal';
 export type { JobDescriptionModalProps } from './JobDescriptionModal';
+export { StageImportModal } from './StageImportModal';
+export type { StageImportModalProps } from './StageImportModal';
+
+// Route Protection Components
+export { JobProtectedRoute } from './JobProtectedRoute';
+export { RoleProtectedRoute } from './RoleProtectedRoute';

@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, ApplicationPage } from './pages';
+import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage } from './pages';
 import { useAuth } from './hooks/useAuth';
+import { JobProtectedRoute, RoleProtectedRoute } from './components';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,12 +62,23 @@ function App() {
           } />
           <Route path="/jobs/new" element={
             <ProtectedRoute>
-              <JobCreationPage />
+              <RoleProtectedRoute allowedRoles={['admin', 'hiring_manager']}>
+                <JobCreationPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/jobs/:id" element={
+            <ProtectedRoute>
+              <JobProtectedRoute>
+                <JobDetailsPage />
+              </JobProtectedRoute>
             </ProtectedRoute>
           } />
           <Route path="/jobs/:id/edit" element={
             <ProtectedRoute>
-              <JobCreationPage />
+              <JobProtectedRoute requireEdit={true}>
+                <JobCreationPage />
+              </JobProtectedRoute>
             </ProtectedRoute>
           } />
           {/* Public route - no auth required */}

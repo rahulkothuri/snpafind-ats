@@ -1,4 +1,5 @@
 import api from './api';
+import type { User } from '../types';
 
 export interface DashboardMetrics {
   openRoles: number;
@@ -19,6 +20,7 @@ export interface RolePipeline {
   age: number;
   sla: 'On track' | 'At risk' | 'Breached';
   priority: 'High' | 'Medium' | 'Low';
+  assignedRecruiterId?: string;
 }
 
 export interface FunnelStage {
@@ -48,7 +50,7 @@ export interface DashboardData {
 }
 
 export const dashboardService = {
-  async getMetrics(): Promise<DashboardData> {
+  async getMetrics(user?: User): Promise<DashboardData> {
     // For now, return mock data since we don't have a dedicated dashboard endpoint
     // In a real implementation, this would aggregate data from multiple endpoints
     const response = await api.get('/jobs');
@@ -57,8 +59,16 @@ export const dashboardService = {
     const candidatesResponse = await api.get('/candidates');
     const candidates = candidatesResponse.data;
 
-    // Calculate metrics from actual data
-    const openRoles = jobs.filter((j: { status: string }) => j.status === 'active').length;
+    // Filter jobs based on user role - Requirements 5.1
+    let filteredJobs = jobs;
+    if (user?.role === 'recruiter') {
+      filteredJobs = jobs.filter((job: { assignedRecruiterId?: string }) => 
+        job.assignedRecruiterId === user.id
+      );
+    }
+
+    // Calculate metrics from filtered data
+    const openRoles = filteredJobs.filter((j: { status: string }) => j.status === 'active').length;
     const activeCandidates = candidates.length;
 
     return {
@@ -70,7 +80,13 @@ export const dashboardService = {
         timeToFillMedian: 24,
         offerAcceptanceRate: 78,
       },
-      rolePipeline: jobs.slice(0, 6).map((job: { id: string; title: string; location: string; openings: number }, index: number) => ({
+      rolePipeline: filteredJobs.slice(0, 6).map((job: { 
+        id: string; 
+        title: string; 
+        location: string; 
+        openings: number;
+        assignedRecruiterId?: string;
+      }, index: number) => ({
         id: job.id,
         role: job.title,
         location: job.location,
@@ -80,6 +96,7 @@ export const dashboardService = {
         age: Math.floor(Math.random() * 30) + 10,
         sla: index % 3 === 0 ? 'At risk' : index % 3 === 1 ? 'Breached' : 'On track',
         priority: index % 3 === 0 ? 'High' : index % 3 === 1 ? 'Medium' : 'Low',
+        assignedRecruiterId: job.assignedRecruiterId,
       })),
       funnel: [
         { name: 'Applied', count: 236, percentage: 100 },

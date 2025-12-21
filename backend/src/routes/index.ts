@@ -5,6 +5,7 @@ import userRoutes from './user.routes.js';
 import jobRoutes from './job.routes.js';
 import candidateRoutes from './candidate.routes.js';
 import publicRoutes from './public.routes.js';
+import stageTemplateRoutes from './stageTemplates.js';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/companies', companyRoutes);
 router.use('/users', userRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/candidates', candidateRoutes);
+router.use('/stage-templates', stageTemplateRoutes);
 
 export default router;

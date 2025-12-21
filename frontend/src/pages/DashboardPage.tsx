@@ -2,6 +2,7 @@ import { Layout, KPICard, Badge, Button, Table, LoadingSpinner, ErrorMessage } f
 import { useAuth } from '../hooks/useAuth';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 
 /**
  * Dashboard Page - Requirements 15.1-15.10, 22.1-22.3
@@ -592,6 +593,60 @@ export function DashboardPage() {
   const { data: dashboardData, isLoading, error, refetch } = useDashboard();
   const navigate = useNavigate();
 
+  // Generate role-specific table columns - Requirements 5.2
+  const getRoleSpecificColumns = useMemo(() => {
+    const baseColumns = [...pipelineColumns];
+    
+    // Add actions column for admins and hiring managers
+    if (user?.role === 'admin' || user?.role === 'hiring_manager') {
+      baseColumns.push({
+        key: 'actions',
+        header: 'Actions',
+        render: (row) => (
+          <div className="flex gap-1">
+            <Button 
+              variant="mini" 
+              miniColor="default"
+              onClick={() => navigate(`/jobs/${row.id}`)}
+            >
+              View
+            </Button>
+            <Button 
+              variant="mini" 
+              miniColor="default"
+              onClick={() => navigate(`/jobs/${row.id}/edit`)}
+            >
+              Edit
+            </Button>
+          </div>
+        ),
+      });
+    } else if (user?.role === 'recruiter') {
+      // Recruiters can only view their assigned jobs
+      baseColumns.push({
+        key: 'actions',
+        header: 'Actions',
+        render: (row) => (
+          <Button 
+            variant="mini" 
+            miniColor="default"
+            onClick={() => navigate(`/jobs/${row.id}`)}
+          >
+            View
+          </Button>
+        ),
+      });
+    }
+    
+    return baseColumns;
+  }, [user?.role, navigate]);
+
+  // Handle row click with role-based permissions - Requirements 5.2
+  const handleRowClick = (row: RolePipeline) => {
+    // All users can view job details if they have access
+    navigate(`/jobs/${row.id}`);
+  };
+
   // Use API data if available, otherwise fall back to sample data
   const metrics = dashboardData?.metrics || {
     openRoles: 12,
@@ -604,7 +659,7 @@ export function DashboardPage() {
 
   const allRolePipeline = dashboardData?.rolePipeline || sampleRolePipeline;
   const rolePipeline = getLimitedRoles(allRolePipeline, 7);
-  const showViewAllRoles = allRolePipeline.length > 7;
+  // const showViewAllRoles = allRolePipeline.length > 7;
   
   const allInterviews = sampleInterviews;
   const interviews = getLimitedInterviews(allInterviews, 5);
@@ -623,11 +678,23 @@ export function DashboardPage() {
     navigate('/interviews');
   };
 
-  // Header actions for the dashboard
+  // Check if user can create jobs - Requirements 5.2
+  const canCreateJob = user?.role === 'admin' || user?.role === 'hiring_manager';
+
+  // Header actions for the dashboard - Requirements 5.2
   const headerActions = (
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm">Saved views</Button>
       <Button variant="outline" size="sm">Export</Button>
+      {canCreateJob && (
+        <Button 
+          variant="primary" 
+          size="sm"
+          onClick={() => navigate('/jobs/new')}
+        >
+          Create Job
+        </Button>
+      )}
     </div>
   );
 
@@ -689,7 +756,12 @@ export function DashboardPage() {
           {/* Role-wise Pipeline Table - Requirement 15.2, 2.1, 2.2, 2.3, 2.4 */}
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-[#111827]">Role-wise Pipeline</h3>
+              <h3 className="text-sm font-semibold text-[#111827]">
+                Role-wise Pipeline
+                {user?.role === 'recruiter' && (
+                  <span className="text-xs text-[#64748b] ml-2">(Assigned to you)</span>
+                )}
+              </h3>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -698,12 +770,21 @@ export function DashboardPage() {
                 View All
               </Button>
             </div>
-            <Table
-              columns={pipelineColumns}
-              data={rolePipeline}
-              keyExtractor={(row) => row.id}
-              onRowClick={(row) => console.log('Selected role:', row.role)}
-            />
+            {rolePipeline.length === 0 ? (
+              <div className="text-center py-8 text-[#64748b]">
+                {user?.role === 'recruiter' 
+                  ? 'No jobs assigned to you yet.' 
+                  : 'No jobs available.'
+                }
+              </div>
+            ) : (
+              <Table
+                columns={getRoleSpecificColumns}
+                data={rolePipeline}
+                keyExtractor={(row) => row.id}
+                onRowClick={handleRowClick}
+              />
+            )}
           </div>
 
           {/* Hiring Funnel - Requirement 15.3 */}
