@@ -165,6 +165,15 @@ export interface Candidate {
   updatedAt: Date;
   currentStage?: string;
   jobApplications?: JobApplication[];
+  // Enhanced fields
+  age?: number;
+  industry?: string;
+  jobDomain?: string;
+  candidateSummary?: string;
+  tags?: string[];
+  title?: string;
+  department?: string;
+  internalMobility?: boolean;
 }
 
 export interface JobApplication {

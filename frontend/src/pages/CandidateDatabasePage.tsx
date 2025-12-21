@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Layout, KPICard, Badge, Button, Table, DetailPanel, DetailSection, SummaryRow, SkillsTags, Timeline, NotesSection, ActionsSection, LoadingSpinner, ErrorMessage } from '../components';
-import type { Column } from '../components';
+import { Layout, KPICard, Badge, Button, DetailPanel, DetailSection, SummaryRow, SkillsTags, Timeline, NotesSection, ActionsSection, LoadingSpinner, ErrorMessage, EnhancedCandidateCard, PaginationControls } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useCandidates } from '../hooks/useCandidates';
 import { getResumeUrl } from '../services';
@@ -39,6 +38,12 @@ interface DatabaseCandidate {
   resumeUrl?: string;
   updatedAt: string;
   internalMobility: boolean;
+  // Enhanced fields for comprehensive display
+  age?: number;
+  industry?: string;
+  jobDomain?: string;
+  candidateSummary?: string;
+  createdAt: string;
 }
 
 interface FilterState {
@@ -52,21 +57,7 @@ interface FilterState {
   sortBy: string;
 }
 
-// Sample data - Requirements 30.1-30.6
-const sampleCandidates: DatabaseCandidate[] = [
-  { id: '1', name: 'Priya Sharma', email: 'priya.sharma@email.com', phone: '+91 98765 43210', title: 'Senior Software Engineer', department: 'Engineering', experienceYears: 6, currentCompany: 'FinEdge Systems', location: 'Bangalore', source: 'LinkedIn', availability: 'Immediate', skills: ['Java', 'Spring Boot', 'Microservices', 'PostgreSQL', 'Kafka'], tags: ['High priority', 'Fintech'], currentCtc: '₹28 LPA', expectedCtc: '₹38 LPA', noticePeriod: '30 days', updatedAt: '2 hours ago', internalMobility: false },
-  { id: '2', name: 'Rahul Verma', email: 'rahul.verma@email.com', phone: '+91 98765 43211', title: 'Backend Developer', department: 'Engineering', experienceYears: 4, currentCompany: 'CloudNova', location: 'Hyderabad', source: 'Referral', availability: '30 days', skills: ['Node.js', 'React', 'MongoDB', 'AWS'], tags: ['Referral'], currentCtc: '₹18 LPA', expectedCtc: '₹25 LPA', noticePeriod: '60 days', updatedAt: '1 day ago', internalMobility: false },
-  { id: '3', name: 'Ankit Patel', email: 'ankit.patel@email.com', phone: '+91 98765 43212', title: 'Tech Lead', department: 'Engineering', experienceYears: 8, currentCompany: 'NeoPay', location: 'Gurgaon', source: 'Job Board', availability: '60+ days', skills: ['Java', 'Kafka', 'Kubernetes', 'System Design'], tags: ['High priority', 'Leadership'], currentCtc: '₹42 LPA', expectedCtc: '₹55 LPA', noticePeriod: '90 days', updatedAt: '3 hours ago', internalMobility: false },
-  { id: '4', name: 'Sneha Reddy', email: 'sneha.reddy@email.com', phone: '+91 98765 43213', title: 'Software Engineer', department: 'Engineering', experienceYears: 3, currentCompany: 'CodeNest', location: 'Chennai', source: 'Career Page', availability: 'Immediate', skills: ['Python', 'Django', 'PostgreSQL', 'Docker'], tags: ['Fresher pool'], currentCtc: '₹12 LPA', expectedCtc: '₹18 LPA', noticePeriod: '30 days', updatedAt: '5 hours ago', internalMobility: true },
-  { id: '5', name: 'Vikram Singh', email: 'vikram.singh@email.com', phone: '+91 98765 43214', title: 'Senior Developer', department: 'Engineering', experienceYears: 5, currentCompany: 'FinEdge Systems', location: 'Pune', source: 'LinkedIn', availability: '15 days', skills: ['Java', 'Spring Boot', 'React', 'Docker'], tags: ['Fintech'], currentCtc: '₹22 LPA', expectedCtc: '₹30 LPA', noticePeriod: '45 days', updatedAt: '1 day ago', internalMobility: false },
-  { id: '6', name: 'Meera Nair', email: 'meera.nair@email.com', phone: '+91 98765 43215', title: 'Backend Engineer', department: 'Engineering', experienceYears: 2, currentCompany: 'CloudNova', location: 'Remote', source: 'Agency', availability: 'Immediate', skills: ['Go', 'gRPC', 'Redis', 'Kubernetes'], tags: ['Remote'], currentCtc: '₹10 LPA', expectedCtc: '₹15 LPA', noticePeriod: '15 days', updatedAt: '2 days ago', internalMobility: false },
-  { id: '7', name: 'Arjun Kumar', email: 'arjun.kumar@email.com', phone: '+91 98765 43216', title: 'Full Stack Developer', department: 'Engineering', experienceYears: 4, currentCompany: 'NeoPay', location: 'Bangalore', source: 'Referral', availability: '30 days', skills: ['Node.js', 'React', 'TypeScript', 'PostgreSQL'], tags: ['Referral', 'High priority'], currentCtc: '₹20 LPA', expectedCtc: '₹28 LPA', noticePeriod: '30 days', updatedAt: '6 hours ago', internalMobility: false },
-  { id: '8', name: 'Divya Menon', email: 'divya.menon@email.com', phone: '+91 98765 43217', title: 'Product Manager', department: 'Product', experienceYears: 5, currentCompany: 'CodeNest', location: 'Hyderabad', source: 'LinkedIn', availability: '30 days', skills: ['Product Strategy', 'Agile', 'Data Analysis', 'User Research'], tags: ['Product'], currentCtc: '₹24 LPA', expectedCtc: '₹32 LPA', noticePeriod: '30 days', updatedAt: '1 week ago', internalMobility: false },
-  { id: '9', name: 'Karthik Iyer', email: 'karthik.iyer@email.com', phone: '+91 98765 43218', title: 'Sales Manager', department: 'Sales', experienceYears: 7, currentCompany: 'FinEdge Systems', location: 'Gurgaon', source: 'Headhunted', availability: '60+ days', skills: ['B2B Sales', 'Account Management', 'CRM', 'Negotiation'], tags: ['Sales', 'Leadership'], currentCtc: '₹35 LPA', expectedCtc: '₹45 LPA', noticePeriod: '90 days', updatedAt: '3 days ago', internalMobility: false },
-  { id: '10', name: 'Neha Gupta', email: 'neha.gupta@email.com', phone: '+91 98765 43219', title: 'UX Designer', department: 'Design', experienceYears: 4, currentCompany: 'CloudNova', location: 'Remote', source: 'LinkedIn', availability: 'Immediate', skills: ['Figma', 'User Research', 'Prototyping', 'Design Systems'], tags: ['Design', 'Remote'], currentCtc: '₹18 LPA', expectedCtc: '₹24 LPA', noticePeriod: '30 days', updatedAt: '4 hours ago', internalMobility: false },
-  { id: '11', name: 'Amit Sharma', email: 'amit.sharma@email.com', phone: '+91 98765 43220', title: 'Data Analyst', department: 'Analytics', experienceYears: 3, currentCompany: 'NeoPay', location: 'Chennai', source: 'Job Board', availability: '15 days', skills: ['SQL', 'Python', 'Tableau', 'Excel'], tags: ['Analytics'], currentCtc: '₹14 LPA', expectedCtc: '₹20 LPA', noticePeriod: '30 days', updatedAt: '2 days ago', internalMobility: true },
-  { id: '12', name: 'Ritu Patel', email: 'ritu.patel@email.com', phone: '+91 98765 43221', title: 'HR Manager', department: 'HR', experienceYears: 6, currentCompany: 'CodeNest', location: 'Pune', source: 'Referral', availability: '30 days', skills: ['Recruitment', 'Employee Relations', 'HRIS', 'Compliance'], tags: ['HR', 'Leadership'], currentCtc: '₹20 LPA', expectedCtc: '₹26 LPA', noticePeriod: '60 days', updatedAt: '5 days ago', internalMobility: false },
-];
+// Sample data - Requirements 30.1-30.6 - REMOVED: Now using database data only
 
 // Filter options
 const departmentOptions = ['All', 'Engineering', 'Product', 'Sales', 'Design', 'Analytics', 'HR'];
@@ -287,32 +278,8 @@ function InsightCard({
 }
 
 
-// Helper function to generate avatar initials
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-// Helper function to generate avatar background color based on name
-function getAvatarColor(name: string): string {
-  const colors = [
-    'bg-[#dbeafe] text-[#1d4ed8]',
-    'bg-[#dcfce7] text-[#166534]',
-    'bg-[#fef3c7] text-[#92400e]',
-    'bg-[#fce7f3] text-[#9d174d]',
-    'bg-[#e0e7ff] text-[#4338ca]',
-    'bg-[#ccfbf1] text-[#0f766e]',
-  ];
-  const index = name.charCodeAt(0) % colors.length;
-  return colors[index];
-}
-
-// Candidate Table Component - Requirements 17.1, 17.6, 9.1, 9.2
-function CandidateMasterTable({
+// Candidate Card Grid Component - Requirements 17.1, 17.6, 9.1, 9.2
+function CandidateCardGrid({
   candidates,
   onCandidateClick,
   selectedCandidate,
@@ -321,142 +288,26 @@ function CandidateMasterTable({
   onCandidateClick: (candidate: DatabaseCandidate) => void;
   selectedCandidate: DatabaseCandidate | null;
 }) {
-  const columns: Column<DatabaseCandidate>[] = [
-    {
-      key: 'name',
-      header: 'Name & Contact',
-      sortable: true,
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          {/* Avatar - Requirement 9.2 */}
-          <div
-            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${getAvatarColor(row.name)}`}
-          >
-            {getInitials(row.name)}
-          </div>
-          <div className="min-w-0">
-            <div className="font-medium text-[#111827] truncate">{row.name}</div>
-            <div className="text-[10px] text-[#64748b] truncate">{row.email}</div>
-            <div className="text-[10px] text-[#94a3b8]">{row.phone}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'department',
-      header: 'Role & Dept',
-      sortable: true,
-      render: (row) => (
-        <div>
-          <div className="text-sm text-[#374151]">{row.title}</div>
-          {/* Role badge - Requirement 9.2 */}
-          <Badge text={row.department} variant="blue" />
-        </div>
-      ),
-    },
-    {
-      key: 'experienceYears',
-      header: 'Exp',
-      sortable: true,
-      align: 'center',
-      render: (row) => (
-        <span className="text-sm text-[#374151] font-medium">{row.experienceYears} yrs</span>
-      ),
-    },
-    {
-      key: 'currentCompany',
-      header: 'Company / Location',
-      sortable: true,
-      render: (row) => (
-        <div>
-          <div className="text-sm text-[#374151]">{row.currentCompany}</div>
-          <div className="text-[10px] text-[#64748b] flex items-center gap-1">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {row.location}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'source',
-      header: 'Source & Availability',
-      sortable: true,
-      render: (row) => (
-        <div className="space-y-1">
-          <div className="text-sm text-[#374151]">{row.source}</div>
-          {/* Status badge - Requirement 9.2 */}
-          <Badge
-            text={row.availability}
-            variant={row.availability === 'Immediate' ? 'green' : row.availability === '15 days' ? 'blue' : row.availability === '30 days' ? 'orange' : 'gray'}
-          />
-        </div>
-      ),
-    },
-    {
-      key: 'skills',
-      header: 'Skills & Tags',
-      render: (row) => (
-        <div className="flex flex-wrap gap-1 max-w-[200px]">
-          {row.skills.slice(0, 2).map((skill) => (
-            <span
-              key={skill}
-              className="px-2 py-0.5 bg-[#dbeafe] text-[#1d4ed8] text-[9px] rounded-full font-medium"
-            >
-              {skill}
-            </span>
-          ))}
-          {row.skills.length > 2 && (
-            <span className="text-[9px] text-[#94a3b8] font-medium">+{row.skills.length - 2}</span>
-          )}
-          {row.tags.slice(0, 1).map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-0.5 bg-[#fef3c7] text-[#92400e] text-[9px] rounded-full font-medium"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      ),
-    },
-    {
-      key: 'updatedAt',
-      header: 'Updated',
-      sortable: true,
-      render: (row) => (
-        <span className="text-xs text-[#64748b]">{row.updatedAt}</span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      render: () => (
-        <div className="flex gap-1">
-          <Button variant="mini" miniColor="cv" onClick={() => {}}>CV</Button>
-          <Button variant="mini" miniColor="schedule" onClick={() => {}}>Add</Button>
-          <Button variant="mini" miniColor="note" onClick={() => {}}>Share</Button>
-        </div>
-      ),
-    },
-  ];
+  if (candidates.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-12 text-center">
+        <div className="text-[#64748b] text-lg mb-2">No candidates found</div>
+        <div className="text-[#94a3b8] text-sm">Try adjusting your search or filter criteria</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
-      <Table
-        columns={columns}
-        data={candidates}
-        keyExtractor={(row) => row.id}
-        onRowClick={onCandidateClick}
-        selectedRow={selectedCandidate || undefined}
-      />
-      {/* Footer tip - Requirement 17.11 */}
-      <div className="px-4 py-3 bg-[#f8fafc] border-t border-[#e2e8f0] text-xs text-[#64748b] flex items-center gap-2">
-        <span className="text-base">💡</span>
-        <span>Tip: Use filters and search to find internal profiles for mobility opportunities</span>
-      </div>
+    <div className="space-y-4">
+      {candidates.map((candidate) => (
+        <EnhancedCandidateCard
+          key={candidate.id}
+          candidate={candidate}
+          onClick={onCandidateClick}
+          isSelected={selectedCandidate?.id === candidate.id}
+        />
+      ))}
+      
     </div>
   );
 }
@@ -575,6 +426,8 @@ export function CandidateDatabasePage() {
   const { user, logout } = useAuth();
   const { data: apiCandidates, isLoading, error, refetch } = useCandidates();
   const [selectedCandidate, setSelectedCandidate] = useState<DatabaseCandidate | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     department: 'All',
@@ -586,10 +439,6 @@ export function CandidateDatabasePage() {
     sortBy: 'Recently updated',
   });
 
-  const handleFilterChange = (key: keyof FilterState, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
   // Map API candidates to local format
   const candidatesFromApi: DatabaseCandidate[] = useMemo(() => {
     if (!apiCandidates) return [];
@@ -598,26 +447,32 @@ export function CandidateDatabasePage() {
       name: c.name,
       email: c.email,
       phone: c.phone || '',
-      title: c.currentCompany ? `${c.currentCompany}` : 'Candidate',
-      department: 'Engineering', // Default, would come from job association
+      title: c.title || c.currentCompany || 'Candidate',
+      department: c.department || 'Engineering', // Default, would come from job association
       experienceYears: c.experienceYears,
       currentCompany: c.currentCompany || '',
       location: c.location,
       source: c.source,
       availability: c.availability || 'Not specified',
       skills: Array.isArray(c.skills) ? c.skills : [],
-      tags: [],
+      tags: Array.isArray(c.tags) ? c.tags : [],
       currentCtc: c.currentCtc || '',
       expectedCtc: c.expectedCtc || '',
       noticePeriod: c.noticePeriod || '',
       resumeUrl: c.resumeUrl,
       updatedAt: new Date(c.updatedAt).toLocaleDateString(),
-      internalMobility: false,
+      internalMobility: c.internalMobility || false,
+      // Enhanced fields from database
+      age: c.age,
+      industry: c.industry,
+      jobDomain: c.jobDomain,
+      candidateSummary: c.candidateSummary,
+      createdAt: new Date(c.createdAt).toLocaleDateString(),
     }));
   }, [apiCandidates]);
 
-  // Use API data if available, otherwise fall back to sample data
-  const allCandidates = candidatesFromApi.length > 0 ? candidatesFromApi : sampleCandidates;
+  // Use API data only - no fallback to sample data
+  const allCandidates = candidatesFromApi;
 
   // Filter and sort candidates
   const filteredCandidates = useMemo(() => {
@@ -700,6 +555,24 @@ export function CandidateDatabasePage() {
     return result;
   }, [filters, allCandidates]);
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
+  const paginatedCandidates = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredCandidates.slice(startIndex, endIndex);
+  }, [filteredCandidates, currentPage, itemsPerPage]);
+
+  // Reset to first page when filters change
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   // Calculate KPI metrics - Requirement 17.4
   const totalCandidates = allCandidates.length;
   const uniqueSkills = new Set(allCandidates.flatMap((c) => c.skills)).size;
@@ -770,15 +643,24 @@ export function CandidateDatabasePage() {
           />
         </div>
 
-        {/* Database Insights - Requirement 17.5 */}
-        <DatabaseInsights candidates={allCandidates} />
-
-        {/* Candidate Master List Table - Requirements 17.1, 17.6 */}
-        <CandidateMasterTable
-          candidates={filteredCandidates}
+        {/* Candidate Card Grid - Requirements 17.1, 17.6 */}
+        <CandidateCardGrid
+          candidates={paginatedCandidates}
           onCandidateClick={setSelectedCandidate}
           selectedCandidate={selectedCandidate}
         />
+
+        {/* Pagination Controls - Requirement 4.1, 4.2, 4.3, 4.4, 4.5 */}
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          totalItems={filteredCandidates.length}
+          itemsPerPage={itemsPerPage}
+        />
+
+        {/* Database Insights - Requirement 17.5 (moved to bottom) */}
+        <DatabaseInsights candidates={allCandidates} />
       </div>
 
       {/* Detail Panel - Requirements 17.7, 17.8, 17.9 */}

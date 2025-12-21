@@ -374,7 +374,9 @@ describe('Property 10: Job validation rejects missing required fields', () => {
     );
   });
 
-  it('should reject job creation when department is missing or empty', async () => {
+  // Department is now optional - jobDomain is used as the primary field
+  // This test is skipped as department validation is no longer required
+  it.skip('should reject job creation when department is missing or empty', async () => {
     await fc.assert(
       fc.asyncProperty(
         uuidArbitrary,
@@ -401,13 +403,12 @@ describe('Property 10: Job validation rejects missing required fields', () => {
       fc.asyncProperty(
         uuidArbitrary,
         fc.constantFrom('', '   '),
-        fc.constantFrom('', '   '),
-        async (companyId, emptyTitle, emptyDepartment) => {
+        async (companyId, emptyTitle) => {
           await expect(
             jobService.create({
               companyId,
               title: emptyTitle,
-              department: emptyDepartment,
+              // department is now optional
             })
           ).rejects.toThrow(ValidationError);
         }
@@ -506,34 +507,8 @@ describe('Property 6: Job validation rejects missing required fields (Phase 2)',
     );
   });
 
-  it('should reject job with missing department and return validation error', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        uuidArbitrary,
-        jobTitleArbitrary,
-        fc.constantFrom('', '   ', '\t', '\n', undefined as unknown as string),
-        locationArbitrary,
-        async (companyId, title, invalidDepartment, location) => {
-          try {
-            await jobService.create({
-              companyId,
-              title,
-              department: invalidDepartment || '',
-              location,
-            });
-            return false;
-          } catch (error) {
-            expect(error).toBeInstanceOf(ValidationError);
-            const validationError = error as ValidationError;
-            expect(validationError.details).toBeDefined();
-            expect(validationError.details?.department).toBeDefined();
-            return true;
-          }
-        }
-      ),
-      { numRuns: 50 }
-    );
-  });
+  // Department is now optional - jobDomain is used as the primary field
+  // This test is removed as department validation is no longer required
 });
 
 

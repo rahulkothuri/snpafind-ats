@@ -686,15 +686,6 @@ export function DashboardPage() {
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm">Saved views</Button>
       <Button variant="outline" size="sm">Export</Button>
-      {canCreateJob && (
-        <Button 
-          variant="primary" 
-          size="sm"
-          onClick={() => navigate('/jobs/new')}
-        >
-          Create Job
-        </Button>
-      )}
     </div>
   );
 

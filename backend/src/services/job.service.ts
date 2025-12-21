@@ -21,7 +21,7 @@ const DEFAULT_STAGES: PipelineStageConfig[] = [
 export interface CreateJobData {
   companyId: string;
   title: string;
-  department: string;
+  department?: string; // Made optional - jobDomain is used instead
   
   // Experience range (Requirements 1.1, 1.2)
   experienceMin?: number;
@@ -62,7 +62,7 @@ export interface CreateJobData {
 
 export interface UpdateJobData {
   title?: string;
-  department?: string;
+  department?: string | null; // Made optional - jobDomain is used instead
   
   // Experience range
   experienceMin?: number | null;
@@ -119,9 +119,7 @@ export const jobService = {
     if (!data.title || data.title.trim() === '') {
       errors.title = ['Title is required'];
     }
-    if (!data.department || data.department.trim() === '') {
-      errors.department = ['Department is required'];
-    }
+    // Department is optional - jobDomain is used as the primary field
     
     // Validate experience range (Requirements 1.2)
     if (data.experienceMin !== undefined && data.experienceMax !== undefined) {
@@ -154,7 +152,7 @@ export const jobService = {
         data: {
           companyId: data.companyId,
           title: data.title.trim(),
-          department: data.department.trim(),
+          department: data.department?.trim() || data.jobDomain || 'General', // Use jobDomain as fallback
           
           // Experience range
           experienceMin: data.experienceMin,
@@ -193,6 +191,9 @@ export const jobService = {
       });
 
       // Create pipeline stages (Requirements 4.1, 4.5)
+      // Track the next available position for sub-stages to avoid unique constraint violations
+      let nextSubStagePosition = stagesToCreate.length * 100; // Start sub-stages at a high position offset
+      
       for (const stage of stagesToCreate) {
         const createdStage = await tx.pipelineStage.create({
           data: {
@@ -211,7 +212,7 @@ export const jobService = {
               data: {
                 jobId: newJob.id,
                 name: subStage.name,
-                position: subStage.position,
+                position: nextSubStagePosition++, // Use unique position for sub-stages
                 isDefault: false,
                 isMandatory: false,
                 parentId: createdStage.id,
@@ -255,9 +256,13 @@ export const jobService = {
       }
     }
 
-    // Mark mandatory stages
-    return stages.map(stage => ({
+    // Sort stages by position and re-normalize positions to avoid duplicates
+    const sortedStages = stages.sort((a, b) => a.position - b.position);
+    
+    // Re-assign positions sequentially to avoid unique constraint violations
+    return sortedStages.map((stage, index) => ({
       ...stage,
+      position: index,
       isMandatory: MANDATORY_STAGES.includes(stage.name),
     }));
   },
@@ -492,6 +497,9 @@ export const jobService = {
 
         // Create new stages
         const stagesToCreate = this.validateAndNormalizePipelineStages(data.pipelineStages);
+        // Track the next available position for sub-stages to avoid unique constraint violations
+        let nextSubStagePosition = stagesToCreate.length * 100;
+        
         for (const stage of stagesToCreate) {
           const createdStage = await tx.pipelineStage.create({
             data: {
@@ -510,7 +518,7 @@ export const jobService = {
                 data: {
                   jobId: id,
                   name: subStage.name,
-                  position: subStage.position,
+                  position: nextSubStagePosition++, // Use unique position for sub-stages
                   isDefault: false,
                   isMandatory: false,
                   parentId: createdStage.id,

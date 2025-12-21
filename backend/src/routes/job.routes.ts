@@ -33,7 +33,7 @@ const pipelineStageSchema = z.object({
 // Validation schemas with all new fields (Requirements 1.1)
 const createJobSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  department: z.string().min(1, 'Department is required'),
+  department: z.string().optional(), // Made optional - jobDomain is used instead
   
   // Experience range (Requirements 1.2)
   experienceMin: z.number().min(0).optional(),
@@ -74,7 +74,7 @@ const createJobSchema = z.object({
 
 const updateJobSchema = z.object({
   title: z.string().min(1, 'Title is required').optional(),
-  department: z.string().min(1, 'Department is required').optional(),
+  department: z.string().nullable().optional(), // Made optional - jobDomain is used instead
   
   // Experience range
   experienceMin: z.number().min(0).nullable().optional(),

@@ -20,6 +20,15 @@ export interface Candidate {
   createdAt: string;
   updatedAt: string;
   currentStage?: string;
+  // Enhanced fields for comprehensive candidate display
+  age?: number;
+  industry?: string;
+  jobDomain?: string;
+  candidateSummary?: string;
+  tags?: string[];
+  title?: string;
+  department?: string;
+  internalMobility?: boolean;
 }
 
 export interface JobCandidate {

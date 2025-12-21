@@ -1,5 +1,5 @@
 /**
- * JobDetailsPanel Component - Requirements 5.2, 5.3, 5.4, 5.5
+ * JobDetailsPanel Component - Requirements 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 5.2, 5.3, 5.4, 5.5
  * 
  * Displays complete job information on the application page.
  * Shows company info, all job posting details, job description, and mandatory criteria.
@@ -7,10 +7,12 @@
  * Features:
  * - Company information with logo
  * - All job posting details in organized sections
- * - Job description content
- * - Mandatory criteria section
+ * - Job description content with markdown rendering (Requirement 1.2)
+ * - Full job description display including responsibilities, requirements, benefits (Requirement 1.1, 1.3)
+ * - Mandatory criteria section with prominent positioning (Requirements 2.1, 2.2, 2.3)
  */
 
+import ReactMarkdown from 'react-markdown';
 import { MANDATORY_CRITERIA_CONTENT } from './MandatoryCriteriaSection';
 
 export interface JobDetailsPanelProps {
@@ -34,6 +36,10 @@ export interface JobDetailsPanelProps {
     locations?: string[];
     priority?: string;
     jobDomain?: string;
+    // Additional job description sections (Requirement 1.3)
+    responsibilities?: string;
+    requirements?: string;
+    benefits?: string;
   };
   company: {
     name: string;
@@ -173,25 +179,76 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
         </div>
       )}
 
-      {/* Job Description Section */}
+      {/* Job Description Section - Requirement 1.1, 1.2 */}
       {job.description && (
         <div className="p-6 border-b border-[#e2e8f0]">
           <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
             Job Description
           </h3>
-          <div 
-            className="prose prose-sm max-w-none text-[#374151]"
-            dangerouslySetInnerHTML={{ __html: job.description }}
-          />
+          <div className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal">
+            <ReactMarkdown>{job.description}</ReactMarkdown>
+          </div>
         </div>
       )}
 
-      {/* Mandatory Criteria Section */}
-      <div className="p-6 bg-[#fffbeb]">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f59e0b] flex items-center justify-center">
+      {/* Responsibilities Section - Requirement 1.3 */}
+      {job.responsibilities && (
+        <div className="p-6 border-b border-[#e2e8f0]">
+          <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#0b6cf0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              Responsibilities
+            </span>
+          </h3>
+          <div className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal">
+            <ReactMarkdown>{job.responsibilities}</ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {/* Requirements Section - Requirement 1.3 */}
+      {job.requirements && (
+        <div className="p-6 border-b border-[#e2e8f0]">
+          <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#0b6cf0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Requirements
+            </span>
+          </h3>
+          <div className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal">
+            <ReactMarkdown>{job.requirements}</ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {/* Benefits Section - Requirement 1.3 */}
+      {job.benefits && (
+        <div className="p-6 border-b border-[#e2e8f0]">
+          <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Benefits
+            </span>
+          </h3>
+          <div className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal">
+            <ReactMarkdown>{job.benefits}</ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {/* Mandatory Criteria Section - Requirements 2.1, 2.2, 2.3 */}
+      {/* Positioned prominently before Apply button with distinct visual styling */}
+      <div className="p-6 bg-gradient-to-br from-[#fffbeb] to-[#fef3c7] border-t-4 border-[#f59e0b]">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#f59e0b] flex items-center justify-center shadow-md">
             <svg 
-              className="w-4 h-4 text-white" 
+              className="w-6 h-6 text-white" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -204,33 +261,43 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
               />
             </svg>
           </div>
-          <h3 className="text-sm font-semibold text-[#92400e]">
-            {MANDATORY_CRITERIA_CONTENT.title}
-          </h3>
+          <div>
+            <h3 className="text-base font-bold text-[#92400e]">
+              {MANDATORY_CRITERIA_CONTENT.title}
+            </h3>
+            <p className="text-xs text-[#b45309]">Please review before applying</p>
+          </div>
         </div>
 
-        <p className="text-sm text-[#78350f] font-medium mb-3">
-          {MANDATORY_CRITERIA_CONTENT.intro}
-        </p>
+        <div className="bg-white/50 rounded-lg p-4 mb-4 border border-[#fcd34d]">
+          <p className="text-sm text-[#78350f] font-semibold">
+            {MANDATORY_CRITERIA_CONTENT.intro}
+          </p>
+        </div>
 
-        <ol className="space-y-2 mb-4">
+        <ol className="space-y-3 mb-4">
           {MANDATORY_CRITERIA_CONTENT.criteria.map((criterion, index) => (
             <li 
               key={index} 
-              className="flex gap-2 text-sm text-[#78350f]"
+              className="flex gap-3 text-sm text-[#78350f] bg-white/30 rounded-lg p-3 border border-[#fde68a]"
             >
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#fcd34d] text-[#78350f] text-xs font-semibold flex items-center justify-center">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f59e0b] text-white text-xs font-bold flex items-center justify-center shadow-sm">
                 {index + 1}
               </span>
-              <span>{criterion}</span>
+              <span className="pt-0.5 font-medium">{criterion}</span>
             </li>
           ))}
         </ol>
 
-        <div className="pt-3 border-t border-[#fcd34d]">
-          <p className="text-xs font-semibold text-[#92400e] uppercase tracking-wide">
-            {MANDATORY_CRITERIA_CONTENT.note}
-          </p>
+        <div className="pt-4 border-t border-[#fcd34d]">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#dc2626]" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm font-bold text-[#92400e] uppercase tracking-wide">
+              {MANDATORY_CRITERIA_CONTENT.note}
+            </p>
+          </div>
         </div>
       </div>
     </div>

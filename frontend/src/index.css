@@ -453,3 +453,119 @@ body {
 .form-actions-spread {
   justify-content: space-between;
 }
+
+
+/* Application Page Responsive Styles - Requirements 5.1, 5.2, 5.3, 5.4, 5.5 */
+
+/* Touch manipulation for better mobile interaction */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Mobile layout (< 768px) - Requirement 5.1 */
+@media (max-width: 767px) {
+  /* Stack content vertically */
+  .application-page-layout {
+    flex-direction: column !important;
+  }
+  
+  /* Full-width form fields */
+  .application-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Touch-friendly button sizes (min 44px) - Requirement 5.5 */
+  .application-page-layout button,
+  .application-page-layout input,
+  .application-page-layout select,
+  .application-page-layout textarea {
+    min-height: 44px;
+  }
+  
+  /* Ensure radio buttons and checkboxes are touch-friendly */
+  .application-page-layout input[type="radio"],
+  .application-page-layout input[type="checkbox"] {
+    min-width: 20px;
+    min-height: 20px;
+  }
+}
+
+/* Tablet layout (768px - 1024px) - Requirement 5.2 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Adjust column proportions */
+  .application-form-view {
+    gap: 1.5rem;
+  }
+  
+  /* Optimize spacing for medium screens */
+  .application-form-container {
+    padding: 1.25rem;
+  }
+}
+
+/* Desktop layout (> 1024px) - Requirement 5.3 */
+@media (min-width: 1025px) {
+  /* Two-column layout with sticky job details */
+  .job-details-sticky {
+    position: sticky;
+    top: 2rem;
+    align-self: flex-start;
+  }
+  
+  /* Efficient use of screen space */
+  .application-form-view {
+    gap: 1.5rem;
+  }
+}
+
+/* Form accessibility improvements - Requirement 5.4 */
+/* Focus states for keyboard navigation */
+.form-input:focus-visible,
+.form-select:focus-visible,
+.form-textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Ensure proper focus management for buttons */
+button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-primary);
+  color: white;
+  padding: 8px 16px;
+  z-index: 100;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Ensure links are accessible */
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Radio and checkbox focus states */
+input[type="radio"]:focus-visible,
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Line clamp utility for text truncation */
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

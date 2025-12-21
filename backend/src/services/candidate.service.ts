@@ -26,6 +26,15 @@ interface PrismaCandidateResult {
   score: number | null;
   createdAt: Date;
   updatedAt: Date;
+  // Enhanced fields
+  age: number | null;
+  industry: string | null;
+  jobDomain: string | null;
+  candidateSummary: string | null;
+  tags: unknown;
+  title: string | null;
+  department: string | null;
+  internalMobility: boolean;
 }
 
 export interface CreateCandidateData {
@@ -112,6 +121,15 @@ function mapPrismaCandidateToCandidate(candidate: PrismaCandidateResult): Candid
     score: candidate.score ?? undefined,
     createdAt: candidate.createdAt,
     updatedAt: candidate.updatedAt,
+    // Enhanced fields
+    age: candidate.age ?? undefined,
+    industry: candidate.industry ?? undefined,
+    jobDomain: candidate.jobDomain ?? undefined,
+    candidateSummary: candidate.candidateSummary ?? undefined,
+    tags: Array.isArray(candidate.tags) ? candidate.tags as string[] : [],
+    title: candidate.title ?? undefined,
+    department: candidate.department ?? undefined,
+    internalMobility: candidate.internalMobility ?? false,
   };
 }
 

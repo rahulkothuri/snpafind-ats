@@ -193,6 +193,17 @@ model Candidate {
   skills          Json     @default("[]")
   resumeUrl       String?  @map("resume_url")
   score           Int?
+  
+  // Enhanced fields for comprehensive candidate display
+  age             Int?
+  industry        String?
+  jobDomain       String?  @map("job_domain")
+  candidateSummary String? @map("candidate_summary") @db.Text
+  tags            Json     @default("[]")
+  title           String?  // Current job title
+  department      String?  // Current department
+  internalMobility Boolean @default(false) @map("internal_mobility")
+  
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

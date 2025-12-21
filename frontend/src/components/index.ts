@@ -10,6 +10,8 @@ export { Button } from './Button';
 export { KPICard } from './KPICard';
 export { Table, Pagination } from './Table';
 export type { Column } from './Table';
+export { EnhancedCandidateCard } from './EnhancedCandidateCard';
+export { PaginationControls } from './PaginationControls';
 
 // Loading, Error, and Empty State Components - Requirements 23.1, 23.2, 23.3, 23.4
 export { LoadingSpinner } from './LoadingSpinner';

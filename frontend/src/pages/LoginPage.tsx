@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import authService from '../services/auth.service';
@@ -22,9 +22,15 @@ export function LoginPage() {
   // Get success message from navigation state (e.g., after registration)
   const successMessage = (location.state as { message?: string })?.message;
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated - use useEffect to avoid setState during render
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Show nothing while redirecting
   if (isAuthenticated) {
-    navigate('/dashboard', { replace: true });
     return null;
   }
 
