@@ -744,6 +744,8 @@ export function DashboardPage() {
             />
           </div>
 
+         
+
           {/* Role-wise Pipeline Table - Requirement 15.2, 2.1, 2.2, 2.3, 2.4 */}
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -778,15 +780,15 @@ export function DashboardPage() {
             )}
           </div>
 
-          {/* Hiring Funnel - Requirement 15.3 */}
-          <HiringFunnel stages={funnel} />
+          {/* Upcoming Interviews - Moved to top - Requirement 15.4, 3.1, 3.2, 3.3, 3.4 */}
+        <UpcomingInterviews 
+          interviews={interviews} 
+          showViewAll={showViewAllInterviews}
+          onViewAll={handleViewAllInterviews}
+        />
 
-          {/* Upcoming Interviews - Requirement 15.4, 3.1, 3.2, 3.3, 3.4 */}
-          <UpcomingInterviews 
-            interviews={interviews} 
-            showViewAll={showViewAllInterviews}
-            onViewAll={handleViewAllInterviews}
-          />
+          {/* Hiring Funnel - Moved to bottom - Requirement 15.3 */}
+          <HiringFunnel stages={funnel} />
         </div>
 
         {/* Right Sidebar Column - Reorganized per Requirements 1.1, 1.2 */}

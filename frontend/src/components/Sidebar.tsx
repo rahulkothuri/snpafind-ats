@@ -78,6 +78,24 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
     navigate('/jobs/new');
   };
 
+  /**
+   * Handle logout with navigation
+   * Requirements: 6.3, 6.4 - Navigate to login page immediately after logout
+   */
+  const handleLogout = () => {
+    // Clear localStorage first
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Call the onLogout callback if provided (to update React state)
+    if (onLogout) {
+      onLogout();
+    }
+    
+    // Navigate to login page immediately
+    navigate('/login', { replace: true });
+  };
+
   return (
     <aside
       className={`
@@ -142,7 +160,7 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
             )}
             
             {/* Navigation Items */}
-            <ul className="space-y-1">
+            <ul className="space-y-1 px-2">
               {section.items.map((item) => {
                 const IconComponent = item.icon;
                 return (
@@ -150,8 +168,9 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
                     <NavLink
                       to={item.path}
                       className={`
-                        flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg
+                        flex items-center gap-3 px-3 py-2.5 rounded-lg
                         transition-all duration-200
+                        ${collapsed ? 'justify-center' : ''}
                         ${isActive(item.path)
                           ? 'bg-[#0b6cf0] text-white font-medium'
                           : 'hover:bg-[#0b6cf0] hover:text-white text-[#374151]'
@@ -204,7 +223,7 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
         <div className={`bg-[#f8fafc] border-t border-[#e2e8f0] ${collapsed ? 'p-2' : 'px-4 pb-4'}`}>
           {!collapsed ? (
             <button
-              onClick={onLogout}
+              onClick={handleLogout}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#64748b] hover:text-[#dc2626] hover:bg-red-50 rounded-lg transition-colors"
               title="Logout"
             >
@@ -213,7 +232,7 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
             </button>
           ) : (
             <button
-              onClick={onLogout}
+              onClick={handleLogout}
               className="p-2 text-[#64748b] hover:text-[#dc2626] hover:bg-red-50 rounded-lg transition-colors mx-auto block"
               title="Logout"
             >

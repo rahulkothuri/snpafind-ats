@@ -48,3 +48,15 @@ export type { StageImportModalProps } from './StageImportModal';
 // Route Protection Components
 export { JobProtectedRoute } from './JobProtectedRoute';
 export { RoleProtectedRoute } from './RoleProtectedRoute';
+
+// Search and Filter Components - Requirements 1.1, 2.1, 3.1
+export { SearchInput } from './SearchInput';
+export type { SearchInputProps } from './SearchInput';
+export { StatusToggle } from './StatusToggle';
+export type { StatusToggleProps } from './StatusToggle';
+
+// Split Panel Components - Requirements 5.1, 5.2
+export { RolesLeftPanel } from './RolesLeftPanel';
+export type { RolesLeftPanelProps, Role as RolesLeftPanelRole } from './RolesLeftPanel';
+export { JobDetailsRightPanel } from './JobDetailsRightPanel';
+export type { JobDetailsRightPanelProps, PipelineCandidate, ViewMode, StageCount } from './JobDetailsRightPanel';

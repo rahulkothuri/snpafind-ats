@@ -128,48 +128,68 @@ export const jobAccessControlService: JobAccessControlService = {
     }
 
     // Map to Job type with counts
-    return jobs.map((j: any) => ({
-      id: j.id,
-      companyId: j.companyId,
-      title: j.title,
-      department: j.department,
+    return jobs.map((j: any) => {
+      const candidateCount = j._count?.jobCandidates ?? 0;
       
-      // Experience range
-      experienceMin: j.experienceMin ?? undefined,
-      experienceMax: j.experienceMax ?? undefined,
+      // Count candidates in interview stages
+      const interviewStages = ['Interview', 'Selected'];
+      const interviewCount = j.jobCandidates?.filter(
+        (jc: any) => jc.currentStage && interviewStages.includes(jc.currentStage.name)
+      ).length ?? 0;
       
-      // Salary range
-      salaryMin: j.salaryMin ?? undefined,
-      salaryMax: j.salaryMax ?? undefined,
-      variables: j.variables ?? undefined,
-      
-      // Requirements
-      educationQualification: j.educationQualification ?? undefined,
-      ageUpTo: j.ageUpTo ?? undefined,
-      skills: Array.isArray(j.skills) ? j.skills as string[] : [],
-      preferredIndustry: j.preferredIndustry ?? undefined,
-      
-      // Work details
-      workMode: j.workMode as any ?? undefined,
-      locations: Array.isArray(j.locations) ? j.locations as string[] : [],
-      priority: j.priority as any ?? undefined,
-      jobDomain: j.jobDomain ?? undefined,
-      
-      // Assignment
-      assignedRecruiterId: j.assignedRecruiterId ?? undefined,
-      
-      // Content
-      description: j.description ?? '',
-      status: j.status as 'active' | 'paused' | 'closed',
-      openings: j.openings,
-      createdAt: j.createdAt,
-      updatedAt: j.updatedAt,
-      
-      // Legacy fields
-      location: j.location ?? undefined,
-      employmentType: j.employmentType ?? undefined,
-      salaryRange: j.salaryRange ?? undefined,
-    }));
+      // Count candidates in offer stage
+      const offerCount = j.jobCandidates?.filter(
+        (jc: any) => jc.currentStage && jc.currentStage.name === 'Offer'
+      ).length ?? 0;
+
+      return {
+        id: j.id,
+        companyId: j.companyId,
+        title: j.title,
+        department: j.department,
+        
+        // Experience range
+        experienceMin: j.experienceMin ?? undefined,
+        experienceMax: j.experienceMax ?? undefined,
+        
+        // Salary range
+        salaryMin: j.salaryMin ?? undefined,
+        salaryMax: j.salaryMax ?? undefined,
+        variables: j.variables ?? undefined,
+        
+        // Requirements
+        educationQualification: j.educationQualification ?? undefined,
+        ageUpTo: j.ageUpTo ?? undefined,
+        skills: Array.isArray(j.skills) ? j.skills as string[] : [],
+        preferredIndustry: j.preferredIndustry ?? undefined,
+        
+        // Work details
+        workMode: j.workMode as any ?? undefined,
+        locations: Array.isArray(j.locations) ? j.locations as string[] : [],
+        priority: j.priority as any ?? undefined,
+        jobDomain: j.jobDomain ?? undefined,
+        
+        // Assignment
+        assignedRecruiterId: j.assignedRecruiterId ?? undefined,
+        
+        // Content
+        description: j.description ?? '',
+        status: j.status as 'active' | 'paused' | 'closed',
+        openings: j.openings,
+        createdAt: j.createdAt,
+        updatedAt: j.updatedAt,
+        
+        // Legacy fields
+        location: j.location ?? undefined,
+        employmentType: j.employmentType ?? undefined,
+        salaryRange: j.salaryRange ?? undefined,
+        
+        // Counts - these were missing!
+        candidateCount,
+        interviewCount,
+        offerCount,
+      };
+    });
   },
 };
 

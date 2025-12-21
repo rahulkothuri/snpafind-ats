@@ -48,8 +48,9 @@ describe('EnhancedCandidateCard', () => {
 
     // Check if basic information is displayed
     expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
-    expect(screen.getByText('+1 234 567 8900')).toBeInTheDocument();
+    // Email and phone are combined in a single element with bullet separator
+    expect(screen.getByText(/john\.doe@example\.com/)).toBeInTheDocument();
+    expect(screen.getByText(/\+1 234 567 8900/)).toBeInTheDocument();
     expect(screen.getByText('Tech Corp')).toBeInTheDocument();
     expect(screen.getByText('San Francisco')).toBeInTheDocument();
   });
@@ -63,15 +64,16 @@ describe('EnhancedCandidateCard', () => {
       />
     );
 
-    // Should show first 5 skills
+    // Should show all 6 skills (component shows up to 7)
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
     expect(screen.getByText('React')).toBeInTheDocument();
     expect(screen.getByText('Node.js')).toBeInTheDocument();
     expect(screen.getByText('TypeScript')).toBeInTheDocument();
     expect(screen.getByText('Python')).toBeInTheDocument();
+    expect(screen.getByText('AWS')).toBeInTheDocument();
     
-    // Should show "+1 more" for the 6th skill
-    expect(screen.getByText('+1 more')).toBeInTheDocument();
+    // With only 6 skills, no "+X more" should be shown (component shows overflow for >7 skills)
+    expect(screen.queryByText(/\+\d+ more/)).not.toBeInTheDocument();
   });
 
   it('displays candidate summary when available', () => {
@@ -153,7 +155,7 @@ describe('EnhancedCandidateCard', () => {
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('Tech Corp')).toBeInTheDocument();
     
-    // Should not show summary section when not available
-    expect(screen.queryByText('Summary:')).not.toBeInTheDocument();
+    // Should show "No summary available" when candidateSummary is undefined
+    expect(screen.getByText('No summary available')).toBeInTheDocument();
   });
 });

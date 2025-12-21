@@ -21,10 +21,19 @@ export function useAuth() {
     setUser(userData);
   }, []);
 
-  const logout = useCallback(() => {
+  /**
+   * Logout function - clears authentication data and optionally calls a callback
+   * Requirements: 6.1, 6.2 - Clear token and user data from localStorage
+   * @param onComplete - Optional callback to execute after logout (e.g., navigation)
+   */
+  const logout = useCallback((onComplete?: () => void) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    // Call the callback after clearing auth data
+    if (onComplete) {
+      onComplete();
+    }
   }, []);
 
   return {

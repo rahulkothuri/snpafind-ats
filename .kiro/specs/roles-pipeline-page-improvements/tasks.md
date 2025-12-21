@@ -1,0 +1,105 @@
+# Implementation Plan
+
+- [-] 1. Create filter utility functions and types
+  - [x] 1.1 Create filter utility functions for role and candidate search
+    - Create `frontend/src/utils/filters.ts` with `filterRolesBySearch`, `filterRolesByStatus`, and `filterCandidatesBySearch` functions
+    - Add TypeScript types for filter parameters
+    - _Requirements: 1.2, 2.2, 2.3, 3.2_
+  - [ ]* 1.2 Write property test for role search filtering
+    - **Property 1: Role search filtering preserves matching roles**
+    - **Validates: Requirements 1.2**
+  - [ ]* 1.3 Write property test for open status filter
+    - **Property 2: Open status filter shows only active roles**
+    - **Validates: Requirements 2.2**
+  - [ ]* 1.4 Write property test for closed status filter
+    - **Property 3: Closed status filter shows only inactive roles**
+    - **Validates: Requirements 2.3**
+  - [ ]* 1.5 Write property test for candidate search filtering
+    - **Property 4: Candidate search filtering preserves matching candidates**
+    - **Validates: Requirements 3.2**
+
+- [x] 2. Create reusable UI components
+  - [x] 2.1 Create SearchInput component
+    - Create `frontend/src/components/SearchInput.tsx` with search icon and clear button
+    - Add debounced input handling
+    - Export from components index
+    - _Requirements: 1.1, 3.1_
+  - [x] 2.2 Create StatusToggle component
+    - Create `frontend/src/components/StatusToggle.tsx` with Open/Closed toggle
+    - Style with active/inactive states
+    - Export from components index
+    - _Requirements: 2.1_
+
+- [x] 3. Update data mapping for accurate application counts
+  - [x] 3.1 Update role mapping to use candidateCount from API
+    - Modify `rolesFromApi` mapping in RolesPage to use `job.candidateCount` for applicants
+    - Add status field mapping from `job.status`
+    - Ensure zero is displayed for jobs with no applications
+    - _Requirements: 4.1, 4.3, 4.4_
+  - [ ]* 3.2 Write property test for application count mapping
+    - **Property 5: Application count maps correctly from API data**
+    - **Validates: Requirements 4.1, 4.3**
+
+- [x] 4. Implement split-panel layout for RolesPage
+  - [x] 4.1 Create RolesLeftPanel component
+    - Create component with SearchInput, StatusToggle, and compact RolesListTable
+    - Style with 40% width on desktop
+    - Handle role selection callback
+    - _Requirements: 1.1, 2.1, 5.1_
+  - [x] 4.2 Create JobDetailsRightPanel component
+    - Create component with job header, KPI cards, candidate search, stage strip, and candidate view
+    - Style with 60% width on desktop
+    - Show placeholder when no role selected
+    - _Requirements: 3.1, 5.2, 5.3, 5.5_
+  - [x] 4.3 Refactor RolesPage to use split-panel layout
+    - Replace current layout with grid layout using RolesLeftPanel and JobDetailsRightPanel
+    - Add responsive breakpoint at 1024px for vertical stacking
+    - Wire up all state and callbacks between panels
+    - _Requirements: 5.1, 5.4_
+
+- [x] 5. Implement search and filter functionality
+  - [x] 5.1 Add role search state and filtering
+    - Add `roleSearchQuery` state to RolesPage
+    - Apply `filterRolesBySearch` to roles list
+    - Pass search props to RolesLeftPanel
+    - _Requirements: 1.2, 1.3_
+  - [x] 5.2 Add status toggle state and filtering
+    - Add `statusFilter` state with 'open' as default
+    - Apply `filterRolesByStatus` to roles list
+    - Combine with search filter
+    - _Requirements: 2.2, 2.3, 2.4, 2.5_
+  - [x] 5.3 Add candidate search state and filtering
+    - Add `candidateSearchQuery` state to RolesPage
+    - Apply `filterCandidatesBySearch` to candidates list
+    - Pass search props to JobDetailsRightPanel
+    - _Requirements: 3.2, 3.3_
+
+- [x] 6. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 7. Fix logout redirect functionality
+  - [x] 7.1 Update useAuth hook to support navigation callback
+    - Modify logout function to accept optional navigation callback
+    - Ensure localStorage is cleared before callback
+    - _Requirements: 6.1, 6.2_
+  - [x] 7.2 Update Sidebar logout handler to navigate
+    - Import useNavigate in Sidebar component
+    - Call navigate('/login') after logout
+    - _Requirements: 6.3, 6.4_
+  - [x] 7.3 Update all pages using logout to include navigation
+    - Update DashboardPage, RolesPage, and other pages to navigate on logout
+    - _Requirements: 6.3, 6.4_
+  - [ ]* 7.4 Write property test for logout clearing auth data
+    - **Property 6: Logout clears all authentication data**
+    - **Validates: Requirements 6.1, 6.2**
+
+- [x] 8. Handle empty states and edge cases
+  - [x] 8.1 Add empty state for no matching roles
+    - Display message when search/filter returns no roles
+    - _Requirements: 1.4_
+  - [x] 8.2 Add empty state for no matching candidates
+    - Display message when candidate search returns no results
+    - _Requirements: 3.4_
+
+- [x] 9. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
