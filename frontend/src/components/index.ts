@@ -13,6 +13,10 @@ export type { Column } from './Table';
 export { EnhancedCandidateCard } from './EnhancedCandidateCard';
 export { PaginationControls } from './PaginationControls';
 
+// Bulk Actions Components - Requirements 1.1, 1.2, 1.3
+export { BulkActionsToolbar } from './BulkActionsToolbar';
+export type { BulkActionsToolbarProps, BulkMoveResult } from './BulkActionsToolbar';
+
 // Loading, Error, and Empty State Components - Requirements 23.1, 23.2, 23.3, 23.4
 export { LoadingSpinner } from './LoadingSpinner';
 export { LoadingOverlay } from './LoadingOverlay';
@@ -60,3 +64,35 @@ export { RolesLeftPanel } from './RolesLeftPanel';
 export type { RolesLeftPanelProps, Role as RolesLeftPanelRole } from './RolesLeftPanel';
 export { JobDetailsRightPanel } from './JobDetailsRightPanel';
 export type { JobDetailsRightPanelProps, PipelineCandidate, ViewMode, StageCount } from './JobDetailsRightPanel';
+
+// Pipeline Stage Components - Requirements 4.1, 4.5
+export { PipelineStageCard } from './PipelineStageCard';
+export type { PipelineStageCardProps, StageMetric } from './PipelineStageCard';
+
+// Advanced Filters Component - Requirements 4.3
+export { AdvancedFilters } from './AdvancedFilters';
+export type { AdvancedFiltersProps, AdvancedFiltersState } from './AdvancedFilters';
+
+// Candidate Notes Section Component - Requirements 6.1, 6.2, 6.3
+export { CandidateNotesSection } from './NotesSection';
+export type { CandidateNotesSectionProps } from './NotesSection';
+
+// Candidate Attachments Section Component - Requirements 6.4, 6.5
+export { CandidateAttachmentsSection, validateAttachment } from './AttachmentsSection';
+export type { CandidateAttachmentsSectionProps } from './AttachmentsSection';
+
+// Candidate Tags Section Component - Requirements 7.1, 7.2
+export { CandidateTagsSection } from './TagsSection';
+export type { CandidateTagsSectionProps } from './TagsSection';
+
+// Notification Components - Requirements 8.2, 8.3, 8.4, 8.5
+export { NotificationBell } from './NotificationBell';
+export type { NotificationBellProps } from './NotificationBell';
+
+// Alerts Panel Component - Requirements 9.2, 9.5, 10.2, 10.3
+export { AlertsPanel } from './AlertsPanel';
+export type { AlertsPanelProps } from './AlertsPanel';
+
+// SLA Configuration Component - Requirements 10.5
+export { SLAConfigSection } from './SLAConfigSection';
+export type { default as SLAConfigSectionDefault } from './SLAConfigSection';

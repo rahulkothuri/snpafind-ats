@@ -4,6 +4,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import candidateService from '../services/candidate.service.js';
+import stageHistoryService from '../services/stageHistory.service.js';
+import notesService from '../services/notes.service.js';
+import attachmentsService, { ALLOWED_ATTACHMENT_EXTENSIONS, ALLOWED_ATTACHMENT_MIME_TYPES, MAX_ATTACHMENT_SIZE, } from '../services/attachments.service.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import { authenticate } from '../middleware/auth.js';
 const router = Router();
@@ -49,6 +52,41 @@ const upload = multer({
     },
     fileFilter,
 });
+// Configure multer for attachment uploads (Requirements 6.4, 6.5)
+const ATTACHMENTS_UPLOAD_DIR = 'uploads/attachments';
+// Ensure attachments upload directory exists
+if (!fs.existsSync(ATTACHMENTS_UPLOAD_DIR)) {
+    fs.mkdirSync(ATTACHMENTS_UPLOAD_DIR, { recursive: true });
+}
+const attachmentStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, ATTACHMENTS_UPLOAD_DIR);
+    },
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `attachment-${uniqueSuffix}${ext}`);
+    },
+});
+const attachmentFileFilter = (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(ext)) {
+        cb(new Error(`Invalid file extension. Allowed: ${ALLOWED_ATTACHMENT_EXTENSIONS.join(', ')}`));
+        return;
+    }
+    if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.mimetype)) {
+        cb(new Error('Invalid file type. Allowed: PDF, DOC, DOCX, PNG, JPG, JPEG'));
+        return;
+    }
+    cb(null, true);
+};
+const attachmentUpload = multer({
+    storage: attachmentStorage,
+    limits: {
+        fileSize: MAX_ATTACHMENT_SIZE,
+    },
+    fileFilter: attachmentFileFilter,
+});
 // Validation schemas
 const createCandidateSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -92,14 +130,22 @@ const searchQuerySchema = z.object({
     scoreMin: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
     scoreMax: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
     sortBy: z.enum(['score_asc', 'score_desc', 'updated', 'name']).optional(),
+    tags: z.string().optional().transform((val) => val ? val.split(',').map(t => t.trim()).filter(t => t) : undefined),
 });
 const changeStageSchema = z.object({
     jobCandidateId: z.string().min(1, 'Job candidate ID is required'),
     newStageId: z.string().min(1, 'New stage ID is required'),
     rejectionReason: z.string().optional(),
+    comment: z.string().optional(),
 });
 const updateScoreSchema = z.object({
     score: z.number().min(0, 'Score must be at least 0').max(100, 'Score must be at most 100'),
+});
+const createNoteSchema = z.object({
+    content: z.string().min(1, 'Note content is required'),
+});
+const addTagSchema = z.object({
+    tag: z.string().min(1, 'Tag is required'),
 });
 // Helper to validate request body
 function validateBody(schema, body) {
@@ -221,12 +267,15 @@ router.delete('/:id', authenticate, async (req, res, next) => {
 /**
  * PUT /api/candidates/:id/stage
  * Change a candidate's stage in a job pipeline
- * Requirements: 24.1, 24.2, 24.3, 24.4
+ * Requirements: 24.1, 24.2, 24.3, 24.4, 2.1, 2.2
  */
 router.put('/:id/stage', authenticate, async (req, res, next) => {
     try {
         const data = validateBody(changeStageSchema, req.body);
-        const result = await candidateService.changeStage(data);
+        const result = await candidateService.changeStage({
+            ...data,
+            movedBy: req.user?.userId,
+        });
         return res.json(result);
     }
     catch (error) {
@@ -271,6 +320,77 @@ router.get('/:id/activities', authenticate, async (req, res, next) => {
     try {
         const activities = await candidateService.getActivityTimeline(req.params.id);
         return res.json(activities);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * GET /api/candidates/:id/stage-history
+ * Get stage history for a candidate with duration calculations
+ * Requirements: 2.3
+ */
+router.get('/:id/stage-history', authenticate, async (req, res, next) => {
+    try {
+        const candidateId = req.params.id;
+        const stageHistory = await stageHistoryService.getStageHistoryByCandidateId(candidateId);
+        return res.json(stageHistory);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * GET /api/candidates/:id/notes
+ * Get all notes for a candidate in reverse chronological order
+ * Requirements: 6.1, 6.2, 6.3
+ */
+router.get('/:id/notes', authenticate, async (req, res, next) => {
+    try {
+        const candidateId = req.params.id;
+        const notes = await notesService.getNotes(candidateId);
+        return res.json(notes);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/candidates/:id/notes
+ * Create a new note for a candidate
+ * Requirements: 6.1, 6.2
+ */
+router.post('/:id/notes', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ code: 'UNAUTHORIZED', message: 'User ID not found' });
+        }
+        const data = validateBody(createNoteSchema, req.body);
+        const note = await notesService.createNote({
+            candidateId: req.params.id,
+            content: data.content,
+            createdBy: userId,
+        });
+        return res.status(201).json(note);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * DELETE /api/candidates/:id/notes/:noteId
+ * Delete a note from a candidate
+ * Requirements: 6.1
+ */
+router.delete('/:id/notes/:noteId', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ code: 'UNAUTHORIZED', message: 'User ID not found' });
+        }
+        await notesService.deleteNote(req.params.noteId, userId);
+        return res.status(204).send();
     }
     catch (error) {
         next(error);
@@ -345,6 +465,140 @@ export const validateResumeFile = (file) => {
     }
     return { valid: true };
 };
+/**
+ * GET /api/candidates/:id/attachments
+ * Get all attachments for a candidate
+ * Requirements: 6.4, 6.5
+ */
+router.get('/:id/attachments', authenticate, async (req, res, next) => {
+    try {
+        const candidateId = req.params.id;
+        const attachments = await attachmentsService.getAttachments(candidateId);
+        return res.json(attachments);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/candidates/:id/attachments
+ * Upload an attachment for a candidate (multipart)
+ * Requirements: 6.4, 6.5
+ */
+router.post('/:id/attachments', authenticate, (req, res, next) => {
+    attachmentUpload.single('attachment')(req, res, async (err) => {
+        try {
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({
+                        code: 'FILE_TOO_LARGE',
+                        message: 'File size exceeds maximum limit of 10MB',
+                    });
+                }
+                return res.status(400).json({
+                    code: 'UPLOAD_ERROR',
+                    message: err.message,
+                });
+            }
+            if (err) {
+                return res.status(400).json({
+                    code: 'INVALID_FILE',
+                    message: err.message,
+                });
+            }
+            if (!req.file) {
+                return res.status(400).json({
+                    code: 'NO_FILE',
+                    message: 'No attachment file provided',
+                });
+            }
+            const userId = req.user?.userId;
+            if (!userId) {
+                return res.status(401).json({ code: 'UNAUTHORIZED', message: 'User ID not found' });
+            }
+            const candidateId = req.params.id;
+            const fileUrl = `/${ATTACHMENTS_UPLOAD_DIR}/${req.file.filename}`;
+            const attachment = await attachmentsService.uploadAttachment({
+                candidateId,
+                fileName: req.file.originalname,
+                fileUrl,
+                fileType: req.file.mimetype,
+                fileSize: req.file.size,
+                uploadedBy: userId,
+            });
+            return res.status(201).json(attachment);
+        }
+        catch (error) {
+            next(error);
+        }
+    });
+});
+/**
+ * DELETE /api/candidates/:id/attachments/:attachmentId
+ * Delete an attachment from a candidate
+ * Requirements: 6.4
+ */
+router.delete('/:id/attachments/:attachmentId', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ code: 'UNAUTHORIZED', message: 'User ID not found' });
+        }
+        await attachmentsService.deleteAttachment(req.params.attachmentId, userId);
+        return res.status(204).send();
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/candidates/:id/tags
+ * Add a tag to a candidate
+ * Requirements: 7.2
+ */
+router.post('/:id/tags', authenticate, async (req, res, next) => {
+    try {
+        const data = validateBody(addTagSchema, req.body);
+        const candidate = await candidateService.addTag(req.params.id, data.tag);
+        return res.status(201).json(candidate);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * DELETE /api/candidates/:id/tags/:tag
+ * Remove a tag from a candidate
+ * Requirements: 7.5
+ */
+router.delete('/:id/tags/:tag', authenticate, async (req, res, next) => {
+    try {
+        const tag = decodeURIComponent(req.params.tag);
+        const candidate = await candidateService.removeTag(req.params.id, tag);
+        return res.json(candidate);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * GET /api/candidates/tags
+ * Get all unique tags used in the company
+ * Requirements: 7.2 (for autocomplete)
+ */
+router.get('/tags/all', authenticate, async (req, res, next) => {
+    try {
+        const companyId = req.user?.companyId;
+        if (!companyId) {
+            return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Company ID not found' });
+        }
+        const tags = await candidateService.getAllTags(companyId);
+        return res.json(tags);
+    }
+    catch (error) {
+        next(error);
+    }
+});
 export { ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES, MAX_FILE_SIZE };
 export default router;
 //# sourceMappingURL=candidate.routes.js.map

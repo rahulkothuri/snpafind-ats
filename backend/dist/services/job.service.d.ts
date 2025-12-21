@@ -2,7 +2,7 @@ import type { Job, PipelineStage, PipelineStageConfig, WorkMode, JobPriority, Us
 export interface CreateJobData {
     companyId: string;
     title: string;
-    department: string;
+    department?: string;
     experienceMin?: number;
     experienceMax?: number;
     salaryMin?: number;
@@ -26,7 +26,7 @@ export interface CreateJobData {
 }
 export interface UpdateJobData {
     title?: string;
-    department?: string;
+    department?: string | null;
     experienceMin?: number | null;
     experienceMax?: number | null;
     salaryMin?: number | null;

@@ -8,3 +8,4 @@ export { SettingsPage } from './SettingsPage';
 export { JobCreationPage } from './JobCreationPage';
 export { JobDetailsPage } from './JobDetailsPage';
 export { ApplicationPage } from './ApplicationPage';
+export { CandidateProfilePage } from './CandidateProfilePage';

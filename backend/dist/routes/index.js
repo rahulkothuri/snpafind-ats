@@ -6,6 +6,7 @@ import jobRoutes from './job.routes.js';
 import candidateRoutes from './candidate.routes.js';
 import publicRoutes from './public.routes.js';
 import stageTemplateRoutes from './stageTemplates.js';
+import pipelineRoutes from './pipeline.routes.js';
 const router = Router();
 // Health check endpoint
 router.get('/health', (_req, res) => {
@@ -20,5 +21,6 @@ router.use('/users', userRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/candidates', candidateRoutes);
 router.use('/stage-templates', stageTemplateRoutes);
+router.use('/pipeline', pipelineRoutes);
 export default router;
 //# sourceMappingURL=index.js.map

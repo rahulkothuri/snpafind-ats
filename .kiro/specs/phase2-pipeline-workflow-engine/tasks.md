@@ -1,0 +1,388 @@
+# Implementation Plan
+
+- [x] 1. Update database schema for Phase 2 features
+  - [x] 1.1 Add StageHistory model to Prisma schema
+    - Add fields: id, jobCandidateId, stageId, stageName, enteredAt, exitedAt, durationHours, comment, movedBy
+    - Add relations to JobCandidate, PipelineStage, and User
+    - Add indexes for jobCandidateId and stageId
+    - _Requirements: 2.1, 2.2, 11.2_
+  - [x] 1.2 Add CandidateNote model to Prisma schema
+    - Add fields: id, candidateId, content, createdBy, createdAt, updatedAt
+    - Add relations to Candidate and User
+    - _Requirements: 6.1, 6.2_
+  - [x] 1.3 Add CandidateAttachment model to Prisma schema
+    - Add fields: id, candidateId, fileName, fileUrl, fileType, fileSize, uploadedBy, createdAt
+    - Add relations to Candidate and User
+    - _Requirements: 6.4, 6.5_
+  - [x] 1.4 Add Notification model to Prisma schema
+    - Add fields: id, userId, type, title, message, entityType, entityId, isRead, createdAt
+    - Add NotificationType enum (stage_change, feedback_pending, sla_breach, interview_scheduled, offer_pending)
+    - Add indexes for userId+isRead and createdAt
+    - _Requirements: 8.1, 11.1_
+  - [x] 1.5 Add SLAConfig model to Prisma schema
+    - Add fields: id, companyId, stageName, thresholdDays, createdAt, updatedAt
+    - Add unique constraint on companyId+stageName
+    - _Requirements: 10.5_
+  - [x] 1.6 Create and run database migration
+    - Generate Prisma migration for all new models
+    - Run migration against database
+    - _Requirements: 11.1, 11.2_
+
+- [x] 2. Implement stage history tracking backend
+  - [x] 2.1 Create stage history service
+    - Implement createStageEntry function to record stage entry
+    - Implement closeStageEntry function to record stage exit and calculate duration
+    - Implement getStageHistory function to retrieve history for a candidate
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [ ]* 2.2 Write property test for stage entry timestamp
+    - **Property 4: Stage entry records timestamp**
+    - **Validates: Requirements 2.1**
+  - [ ]* 2.3 Write property test for stage exit timestamp
+    - **Property 5: Stage exit records timestamp**
+    - **Validates: Requirements 2.2**
+  - [ ]* 2.4 Write property test for duration calculation
+    - **Property 6: Duration calculation correctness**
+    - **Validates: Requirements 2.3**
+  - [x] 2.5 Update candidate stage change to create history records
+    - Modify changeStage in candidate.service.ts to create stage history
+    - Close previous stage entry when moving to new stage
+    - _Requirements: 2.1, 2.2_
+  - [x] 2.6 Add stage history API endpoint
+    - Implement GET /api/candidates/:id/stage-history
+    - Return stage history with duration calculations
+    - _Requirements: 2.3_
+
+- [x] 3. Implement bulk stage movement
+  - [x] 3.1 Create bulk move service
+    - Implement bulkMoveService.move function
+    - Use database transaction for atomic operations
+    - Handle partial failures gracefully
+    - _Requirements: 1.3, 1.6_
+  - [ ]* 3.2 Write property test for bulk movement
+    - **Property 1: Bulk movement moves all selected candidates**
+    - **Validates: Requirements 1.3**
+  - [ ]* 3.3 Write property test for activity record creation
+    - **Property 2: Bulk movement creates activity records**
+    - **Validates: Requirements 1.4**
+  - [ ]* 3.4 Write property test for partial failure handling
+    - **Property 3: Partial bulk failures continue processing**
+    - **Validates: Requirements 1.6**
+  - [x] 3.5 Add bulk move API endpoint
+    - Implement POST /api/pipeline/bulk-move
+    - Accept candidateIds, targetStageId, jobId, comment
+    - Return success count and failure details
+    - _Requirements: 1.3, 1.4, 1.5_
+
+- [x] 4. Implement stage-level comments
+  - [x] 4.1 Update stage change to support comments
+    - Add comment parameter to changeStage function
+    - Store comment in activity metadata and stage history
+    - _Requirements: 3.1, 3.2_
+  - [x] 4.2 Add rejection comment validation
+    - Detect rejection stages by name pattern
+    - Require comment when moving to rejection stage
+    - _Requirements: 3.4_
+  - [ ]* 4.3 Write property test for comment round-trip
+    - **Property 9: Stage movement comments round-trip**
+    - **Validates: Requirements 3.2, 3.3**
+  - [ ]* 4.4 Write property test for rejection comment requirement
+    - **Property 10: Rejection requires comment**
+    - **Validates: Requirements 3.4**
+
+- [x] 5. Checkpoint - Ensure backend stage tracking works
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Implement candidate notes backend
+  - [x] 6.1 Create notes service
+    - Implement createNote function with author tracking
+    - Implement getNotes function with reverse chronological order
+    - Implement deleteNote function
+    - _Requirements: 6.1, 6.2, 6.3_
+  - [ ]* 6.2 Write property test for notes metadata
+    - **Property 16: Notes stored with metadata**
+    - **Validates: Requirements 6.2**
+  - [ ]* 6.3 Write property test for notes ordering
+    - **Property 17: Notes reverse chronological order**
+    - **Validates: Requirements 6.3**
+  - [x] 6.4 Add notes API endpoints
+    - Implement GET /api/candidates/:id/notes
+    - Implement POST /api/candidates/:id/notes
+    - Implement DELETE /api/candidates/:id/notes/:noteId
+    - _Requirements: 6.1, 6.2_
+
+- [x] 7. Implement candidate attachments backend
+  - [x] 7.1 Create attachments service
+    - Implement uploadAttachment function with file validation
+    - Implement getAttachments function
+    - Implement deleteAttachment function
+    - _Requirements: 6.4, 6.5_
+  - [ ]* 7.2 Write property test for attachment validation
+    - **Property 18: Attachment validation**
+    - **Validates: Requirements 6.4**
+  - [ ]* 7.3 Write property test for attachment metadata
+    - **Property 19: Attachment metadata display**
+    - **Validates: Requirements 6.5**
+  - [x] 7.4 Add attachments API endpoints
+    - Implement GET /api/candidates/:id/attachments
+    - Implement POST /api/candidates/:id/attachments (multipart)
+    - Implement DELETE /api/candidates/:id/attachments/:attachmentId
+    - _Requirements: 6.4, 6.5_
+
+- [x] 8. Implement tags functionality
+  - [x] 8.1 Update candidate service for tags
+    - Implement addTag function
+    - Implement removeTag function
+    - Update search to support tag filtering
+    - _Requirements: 7.2, 7.3, 7.5_
+  - [ ]* 8.2 Write property test for tag filtering
+    - **Property 20: Tag filtering returns matching candidates**
+    - **Validates: Requirements 7.3**
+  - [ ]* 8.3 Write property test for tag removal
+    - **Property 22: Tag removal updates immediately**
+    - **Validates: Requirements 7.5**
+  - [x] 8.4 Add tags API endpoints
+    - Implement POST /api/candidates/:id/tags
+    - Implement DELETE /api/candidates/:id/tags/:tag
+    - _Requirements: 7.2, 7.5_
+
+- [x] 9. Checkpoint - Ensure candidate profile backend works
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 10. Implement notifications backend
+  - [x] 10.1 Create notification service
+    - Implement createNotification function
+    - Implement getNotifications function with unread filter
+    - Implement markAsRead function
+    - Implement markAllAsRead function
+    - _Requirements: 8.1, 8.2, 8.5_
+  - [ ]* 10.2 Write property test for notification creation
+    - **Property 23: Stage change creates notification**
+    - **Validates: Requirements 8.1**
+  - [ ]* 10.3 Write property test for read status
+    - **Property 24: Notification read status updates**
+    - **Validates: Requirements 8.5**
+  - [x] 10.4 Add notifications API endpoints
+    - Implement GET /api/notifications
+    - Implement PUT /api/notifications/:id/read
+    - Implement PUT /api/notifications/mark-all-read
+    - _Requirements: 8.2, 8.5_
+  - [x] 10.5 Integrate notifications with stage changes
+    - Trigger notification creation on stage change
+    - Notify relevant users (recruiter, hiring manager)
+    - _Requirements: 8.1_
+
+- [x] 11. Implement SLA alerts backend
+  - [x] 11.1 Create SLA service
+    - Implement getSLAConfig function
+    - Implement updateSLAConfig function
+    - Implement checkSLABreaches function
+    - _Requirements: 10.1, 10.5_
+  - [ ]* 11.2 Write property test for SLA breach detection
+    - **Property 28: SLA breach creates alert**
+    - **Validates: Requirements 10.1**
+  - [ ]* 11.3 Write property test for SLA alert dismissal
+    - **Property 29: Stage change dismisses SLA alert**
+    - **Validates: Requirements 10.4**
+  - [x] 11.4 Add SLA API endpoints
+    - Implement GET /api/alerts (with type filter)
+    - Implement GET /api/settings/sla
+    - Implement PUT /api/settings/sla
+    - _Requirements: 10.1, 10.3, 10.5_
+
+- [x] 12. Implement pipeline analytics backend
+  - [x] 12.1 Create pipeline analytics service
+    - Implement getStageMetrics function
+    - Calculate average TAT per stage
+    - Calculate SLA breach counts
+    - _Requirements: 2.4, 4.1_
+  - [ ]* 12.2 Write property test for TAT calculation
+    - **Property 7: Average TAT calculation**
+    - **Validates: Requirements 2.4**
+  - [x] 12.3 Add pipeline analytics API endpoint
+    - Implement GET /api/jobs/:id/pipeline/analytics
+    - Return stage metrics with counts and TAT
+    - _Requirements: 2.4, 4.1_
+
+- [x] 13. Checkpoint - Ensure all backend services work
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 14. Build bulk actions frontend
+  - [x] 14.1 Create BulkActionsToolbar component
+    - Add checkbox selection to candidate list
+    - Show toolbar when candidates selected
+    - Include stage dropdown and move button
+    - _Requirements: 1.1, 1.2_
+  - [x] 14.2 Implement bulk move functionality
+    - Connect to bulk move API
+    - Show loading state during operation
+    - Display success/failure message
+    - _Requirements: 1.3, 1.5_
+  - [x] 14.3 Add comment modal for bulk moves
+    - Show comment input before bulk move
+    - Require comment for rejection stages
+    - _Requirements: 3.1, 3.4_
+
+- [x] 15. Build enhanced pipeline view frontend
+  - [x] 15.1 Create PipelineStageCard component
+    - Display stage name and candidate count
+    - Highlight SLA breach count
+    - Support click to filter
+    - _Requirements: 4.1, 4.5_
+  - [ ]* 15.2 Write property test for stage counts
+    - **Property 11: Stage counts match actual candidates**
+    - **Validates: Requirements 4.1**
+  - [x] 15.3 Implement stage drill-down filtering
+    - Filter candidate list on stage click
+    - Update URL with stage filter
+    - _Requirements: 4.2_
+  - [ ]* 15.4 Write property test for stage filtering
+    - **Property 12: Stage filter shows matching candidates**
+    - **Validates: Requirements 4.2**
+  - [x] 15.5 Add advanced filters
+    - Add skills filter dropdown
+    - Add experience range filter
+    - Add source filter dropdown
+    - _Requirements: 4.3_
+  - [ ]* 15.6 Write property test for filter updates
+    - **Property 13: Filter updates counts and list**
+    - **Validates: Requirements 4.4**
+
+- [x] 16. Build candidate profile page frontend
+  - [x] 16.1 Create CandidateProfilePage component
+    - Add route /candidates/:id
+    - Fetch candidate data with notes, attachments, history
+    - _Requirements: 5.1_
+  - [x] 16.2 Build resume viewer section
+    - Embed PDF viewer for PDF resumes
+    - Show download link for other formats
+    - _Requirements: 5.2_
+  - [x] 16.3 Build parsed data section
+    - Display all candidate fields in organized layout
+    - Show contact info, experience, skills, education
+    - _Requirements: 5.3_
+  - [ ]* 16.4 Write property test for profile fields
+    - **Property 14: Profile shows all parsed fields**
+    - **Validates: Requirements 5.3**
+  - [x] 16.5 Build activity timeline section
+    - Display all activities chronologically
+    - Show stage changes with comments
+    - _Requirements: 5.4_
+  - [ ]* 16.6 Write property test for timeline completeness
+    - **Property 15: Activity timeline completeness**
+    - **Validates: Requirements 5.4**
+
+- [x] 17. Build notes section frontend
+  - [x] 17.1 Create NotesSection component
+    - Display existing notes with author and timestamp
+    - Add new note form
+    - _Requirements: 6.1, 6.2_
+  - [x] 17.2 Implement note CRUD operations
+    - Connect to notes API
+    - Handle add and delete operations
+    - _Requirements: 6.1, 6.2_
+
+- [x] 18. Build attachments section frontend
+  - [x] 18.1 Create AttachmentsSection component
+    - Display existing attachments with metadata
+    - Add file upload with drag-and-drop
+    - _Requirements: 6.4, 6.5_
+  - [x] 18.2 Implement attachment upload
+    - Validate file type and size client-side
+    - Upload to API and refresh list
+    - _Requirements: 6.4_
+
+- [x] 19. Build tags section frontend
+  - [x] 19.1 Create TagsSection component
+    - Display existing tags as colored badges
+    - Add tag input with autocomplete
+    - _Requirements: 7.1, 7.2_
+  - [x] 19.2 Implement tag CRUD operations
+    - Connect to tags API
+    - Handle add and remove operations
+    - _Requirements: 7.2, 7.5_
+  - [ ]* 19.3 Write property test for tags display
+    - **Property 21: Tags display on candidate cards**
+    - **Validates: Requirements 7.4**
+
+- [x] 20. Checkpoint - Ensure candidate profile page works
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 21. Build notifications frontend
+  - [x] 21.1 Create NotificationBell component
+    - Display bell icon with unread count badge
+    - Show dropdown on click
+    - _Requirements: 8.2, 8.3_
+  - [x] 21.2 Create NotificationDropdown component
+    - List recent notifications
+    - Mark as read on click
+    - Navigate to related entity
+    - _Requirements: 8.3, 8.4, 8.5_
+  - [x] 21.3 Add notification bell to header
+    - Integrate NotificationBell in Layout component
+    - Fetch notifications on mount
+    - _Requirements: 8.2_
+
+- [x] 22. Build alerts panel frontend
+  - [x] 22.1 Create AlertsPanel component
+    - Display SLA breach alerts
+    - Display pending feedback alerts
+    - Show alert age
+    - _Requirements: 9.2, 9.5, 10.2, 10.3_
+  - [x] 22.2 Add alerts to dashboard
+    - Integrate AlertsPanel in DashboardPage
+    - Fetch alerts on mount
+    - _Requirements: 9.2, 10.2_
+  - [x] 22.3 Implement alert navigation
+    - Navigate to candidate on alert click
+    - _Requirements: 9.3_
+
+- [x] 23. Build SLA configuration frontend
+  - [x] 23.1 Create SLAConfigSection component
+    - Display current SLA thresholds per stage
+    - Allow editing thresholds
+    - _Requirements: 10.5_
+  - [x] 23.2 Add SLA config to settings page
+    - Integrate in SettingsPage
+    - Connect to SLA API
+    - _Requirements: 10.5_
+
+- [x] 24. Integration and final testing
+  - [x] 24.1 Test complete bulk move flow
+    - Select multiple candidates
+    - Move to new stage with comment
+    - Verify all moved and notifications created
+    - _Requirements: 1.3, 1.4, 8.1_
+  - [x] 24.2 Test candidate profile page
+    - View profile with all sections
+    - Add notes and attachments
+    - Verify timeline shows all activities
+    - _Requirements: 5.1, 5.4, 6.1, 6.4_
+  - [x] 24.3 Test notifications flow
+    - Trigger stage change
+    - Verify notification appears
+    - Mark as read and verify count updates
+    - _Requirements: 8.1, 8.5_
+  - [x] 24.4 Test SLA alerts
+    - Configure SLA threshold
+    - Create candidate exceeding threshold
+    - Verify alert appears
+    - _Requirements: 10.1, 10.5_
+  - [ ]* 24.5 Write property test for notification round-trip
+    - **Property 30: Notification data round-trip**
+    - **Validates: Requirements 11.3, 11.4**
+
+- [x] 25. Update seed data
+  - [x] 25.1 Add sample stage history data
+    - Create stage history entries for existing candidates
+    - Include various durations for TAT testing
+    - _Requirements: 2.1, 2.2_
+  - [x] 25.2 Add sample notifications
+    - Create sample notifications for demo
+    - Include mix of read and unread
+    - _Requirements: 8.1_
+  - [x] 25.3 Add sample SLA configurations
+    - Create default SLA thresholds per stage
+    - _Requirements: 10.5_
+
+- [x] 26. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

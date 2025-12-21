@@ -1,23 +1,32 @@
 /**
- * JobDetailsRightPanel Component - Requirements 3.1, 5.2, 5.3, 5.5
+ * JobDetailsRightPanel Component - Requirements 1.1, 1.2, 3.1, 4.1, 4.2, 4.5, 5.2, 5.3, 5.5
  * 
  * Right panel of the split-panel layout containing:
  * - Job header with title, department, and actions
  * - KPI cards row (4 metrics)
+ * - Enhanced pipeline stage cards with SLA breach indicators
+ * - Bulk actions toolbar (when candidates selected)
  * - Candidate search input
- * - Stage summary strip
- * - Candidate view (table or board)
+ * - Stage summary strip with drill-down filtering
+ * - Candidate view (table or board) with checkbox selection
  * 
  * Styled with 60% width on desktop
  * Shows placeholder when no role is selected
  */
 
-import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner } from './index';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, AdvancedFilters } from './index';
 import type { Column } from './Table';
+import type { AdvancedFiltersState } from './AdvancedFilters';
+import { pipelineService, jobsService } from '../services';
+import type { BulkMoveResult, PipelineAnalytics } from '../services';
+import { extractUniqueSkills, extractUniqueSources, applyAdvancedFilters } from '../utils/filters';
 
 // Types
 export interface PipelineCandidate {
   id: string;
+  jobCandidateId?: string; // ID of the JobCandidate record for bulk operations
   name: string;
   title: string;
   stage: string;
@@ -70,6 +79,10 @@ export interface JobDetailsRightPanelProps {
   isLoading: boolean;
   onViewJobDescription?: () => void;
   jobDescriptionLoading?: boolean;
+  pipelineStages?: { id: string; name: string; position: number }[];
+  onCandidatesMoved?: () => void;
+  /** Enable enhanced pipeline view with stage cards - Requirements 4.1, 4.5 */
+  showEnhancedPipeline?: boolean;
 }
 
 
@@ -166,15 +179,69 @@ function StageSummaryStrip({
 }
 
 
-// Candidate Table View Component
+// Candidate Table View Component with checkbox selection - Requirements 1.1
 function CandidateTableView({ 
   candidates, 
-  onCandidateClick 
+  onCandidateClick,
+  selectedCandidates,
+  onSelectionChange,
 }: { 
   candidates: PipelineCandidate[]; 
   onCandidateClick: (candidate: PipelineCandidate) => void;
+  selectedCandidates: string[];
+  onSelectionChange: (candidateIds: string[]) => void;
 }) {
+  const allSelected = candidates.length > 0 && candidates.every(c => selectedCandidates.includes(c.jobCandidateId || c.id));
+  const someSelected = candidates.some(c => selectedCandidates.includes(c.jobCandidateId || c.id)) && !allSelected;
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // Deselect all
+      const candidateIds = candidates.map(c => c.jobCandidateId || c.id);
+      onSelectionChange(selectedCandidates.filter(id => !candidateIds.includes(id)));
+    } else {
+      // Select all
+      const candidateIds = candidates.map(c => c.jobCandidateId || c.id);
+      const newSelection = [...new Set([...selectedCandidates, ...candidateIds])];
+      onSelectionChange(newSelection);
+    }
+  };
+
+  const handleSelectCandidate = (candidate: PipelineCandidate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const candidateId = candidate.jobCandidateId || candidate.id;
+    if (selectedCandidates.includes(candidateId)) {
+      onSelectionChange(selectedCandidates.filter(id => id !== candidateId));
+    } else {
+      onSelectionChange([...selectedCandidates, candidateId]);
+    }
+  };
+
   const columns: Column<PipelineCandidate>[] = [
+    {
+      key: 'select',
+      header: (
+        <input
+          type="checkbox"
+          checked={allSelected}
+          ref={(el) => {
+            if (el) el.indeterminate = someSelected;
+          }}
+          onChange={handleSelectAll}
+          className="w-4 h-4 rounded border-gray-300 text-[#0b6cf0] focus:ring-[#0b6cf0] cursor-pointer"
+        />
+      ),
+      width: '40px',
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedCandidates.includes(row.jobCandidateId || row.id)}
+          onChange={() => {}}
+          onClick={(e) => handleSelectCandidate(row, e)}
+          className="w-4 h-4 rounded border-gray-300 text-[#0b6cf0] focus:ring-[#0b6cf0] cursor-pointer"
+        />
+      ),
+    },
     {
       key: 'name',
       header: 'Candidate',
@@ -260,21 +327,32 @@ function CandidateTableView({
 }
 
 
-// Kanban Card Component
+// Kanban Card Component with checkbox selection - Requirements 1.1
 function KanbanCard({ 
   candidate, 
-  onClick 
+  onClick,
+  isSelected,
+  onSelect,
 }: { 
   candidate: PipelineCandidate; 
   onClick: () => void;
+  isSelected: boolean;
+  onSelect: (e: React.MouseEvent) => void;
 }) {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl border border-[#e2e8f0] p-3 shadow-sm hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5"
+      className={`bg-white rounded-xl border ${isSelected ? 'border-[#0b6cf0] ring-2 ring-[#0b6cf0]/20' : 'border-[#e2e8f0]'} p-3 shadow-sm hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5`}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => {}}
+            onClick={onSelect}
+            className="w-4 h-4 rounded border-gray-300 text-[#0b6cf0] focus:ring-[#0b6cf0] cursor-pointer"
+          />
           <div className={`w-8 h-8 rounded-full ${getAvatarColor(candidate.name)} flex items-center justify-center text-white text-xs font-medium`}>
             {getInitials(candidate.name)}
           </div>
@@ -326,20 +404,34 @@ const stageColors: Record<string, { bg: string; border: string; indicator: strin
   'Rejected': { bg: 'bg-[#fee2e2]', border: 'border-[#fecaca]', indicator: 'bg-[#ef4444]' },
 };
 
-// Kanban Board View Component
+// Kanban Board View Component with checkbox selection - Requirements 1.1
 function KanbanBoardView({ 
   candidates, 
   stages,
-  onCandidateClick 
+  onCandidateClick,
+  selectedCandidates,
+  onSelectionChange,
 }: { 
   candidates: PipelineCandidate[]; 
   stages: string[];
   onCandidateClick: (candidate: PipelineCandidate) => void;
+  selectedCandidates: string[];
+  onSelectionChange: (candidateIds: string[]) => void;
 }) {
   const getCandidatesByStage = (stage: string) => 
     candidates.filter((c) => c.stage === stage);
 
   const getStageStyle = (stage: string) => stageColors[stage] || stageColors['Queue'];
+
+  const handleSelectCandidate = (candidate: PipelineCandidate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const candidateId = candidate.jobCandidateId || candidate.id;
+    if (selectedCandidates.includes(candidateId)) {
+      onSelectionChange(selectedCandidates.filter(id => id !== candidateId));
+    } else {
+      onSelectionChange([...selectedCandidates, candidateId]);
+    }
+  };
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
@@ -367,6 +459,8 @@ function KanbanBoardView({
                   key={candidate.id}
                   candidate={candidate}
                   onClick={() => onCandidateClick(candidate)}
+                  isSelected={selectedCandidates.includes(candidate.jobCandidateId || candidate.id)}
+                  onSelect={(e) => handleSelectCandidate(candidate, e)}
                 />
               ))}
               {stageCandidates.length === 0 && (
@@ -397,11 +491,103 @@ export function JobDetailsRightPanel({
   isLoading,
   onViewJobDescription,
   jobDescriptionLoading = false,
+  pipelineStages = [],
+  onCandidatesMoved,
+  showEnhancedPipeline = true,
 }: JobDetailsRightPanelProps) {
-  // Calculate stage counts
+  // URL search params for stage filter - Requirements 4.2
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Selection state for bulk operations - Requirements 1.1, 1.2
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [isBulkMoving, setIsBulkMoving] = useState(false);
+  
+  // Pipeline analytics state - Requirements 4.1, 4.5
+  const [pipelineAnalytics, setPipelineAnalytics] = useState<PipelineAnalytics | null>(null);
+
+  // Advanced filters state - Requirements 4.3
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
+    skills: [],
+    experienceMin: null,
+    experienceMax: null,
+    source: null,
+  });
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+
+  // Extract available skills and sources from candidates - Requirements 4.3
+  const availableSkills = useMemo(() => {
+    const candidatesWithSkills = candidates.map(c => ({
+      ...c,
+      skills: c.skills || [],
+      experience: c.experience,
+      source: c.source,
+    }));
+    return extractUniqueSkills(candidatesWithSkills);
+  }, [candidates]);
+
+  const availableSources = useMemo(() => {
+    const candidatesWithSource = candidates.map(c => ({
+      ...c,
+      skills: c.skills || [],
+      experience: c.experience,
+      source: c.source,
+    }));
+    return extractUniqueSources(candidatesWithSource);
+  }, [candidates]);
+
+  // Apply advanced filters to candidates - Requirements 4.3, 4.4
+  const filteredByAdvanced = useMemo(() => {
+    const candidatesForFilter = candidates.map(c => ({
+      ...c,
+      skills: c.skills || [],
+      experience: c.experience,
+      source: c.source,
+    }));
+    return applyAdvancedFilters(candidatesForFilter, advancedFilters);
+  }, [candidates, advancedFilters]);
+
+  // Sync stage filter with URL - Requirements 4.2
+  useEffect(() => {
+    const urlStage = searchParams.get('stage');
+    if (urlStage && urlStage !== stageFilter) {
+      onStageFilterChange(urlStage);
+    }
+  }, [searchParams, stageFilter, onStageFilterChange]);
+
+  // Update URL when stage filter changes - Requirements 4.2
+  const handleStageFilterChange = useCallback((stage: string | null) => {
+    onStageFilterChange(stage);
+    if (stage) {
+      setSearchParams({ stage });
+    } else {
+      setSearchParams({});
+    }
+  }, [onStageFilterChange, setSearchParams]);
+
+  // Fetch pipeline analytics when role changes - Requirements 4.1
+  useEffect(() => {
+    async function fetchAnalytics() {
+      if (!role || !showEnhancedPipeline) {
+        setPipelineAnalytics(null);
+        return;
+      }
+
+      try {
+        const analytics = await jobsService.getPipelineAnalytics(role.id);
+        setPipelineAnalytics(analytics);
+      } catch (error) {
+        console.error('Failed to fetch pipeline analytics:', error);
+        setPipelineAnalytics(null);
+      }
+    }
+
+    fetchAnalytics();
+  }, [role, showEnhancedPipeline]);
+
+  // Calculate stage counts from filtered candidates - Requirements 4.4
   const stageCounts: StageCount[] = defaultStages.map((stage) => ({
     name: stage,
-    count: candidates.filter((c) => c.stage === stage).length,
+    count: filteredByAdvanced.filter((c) => c.stage === stage).length,
   }));
 
   // Calculate KPI metrics
@@ -412,6 +598,42 @@ export function JobDetailsRightPanel({
   const offersMade = candidates.filter((c) => c.stage === 'Offer').length;
   const acceptanceRate = 75;
   const avgTimeInStage = 4.2;
+
+  // Handle bulk move - Requirements 1.3, 1.5
+  const handleBulkMove = useCallback(async (targetStageId: string, comment?: string): Promise<BulkMoveResult> => {
+    if (!role) {
+      return { success: false, movedCount: 0, failedCount: selectedCandidates.length };
+    }
+
+    setIsBulkMoving(true);
+    try {
+      const result = await pipelineService.bulkMove({
+        candidateIds: selectedCandidates,
+        targetStageId,
+        jobId: role.id,
+        comment,
+      });
+
+      // Refresh candidates list after successful move
+      if (result.movedCount > 0 && onCandidatesMoved) {
+        onCandidatesMoved();
+      }
+
+      return result;
+    } finally {
+      setIsBulkMoving(false);
+    }
+  }, [role, selectedCandidates, onCandidatesMoved]);
+
+  // Clear selection handler
+  const handleClearSelection = useCallback(() => {
+    setSelectedCandidates([]);
+  }, []);
+
+  // Get pipeline stages for bulk move dropdown
+  const bulkMoveStages = pipelineStages.length > 0 
+    ? pipelineStages 
+    : defaultStages.map((name, index) => ({ id: name, name, position: index }));
 
   // Show placeholder when no role is selected - Requirement 5.5
   if (!role) {
@@ -461,7 +683,7 @@ export function JobDetailsRightPanel({
         <KPICard
           label="Total candidates"
           value={totalCandidates}
-          trend={{ text: `${pendingFeedback} New Candidates`, type: 'ok' }}
+          trend={{ text: `${newThisWeek} New Candidates`, type: 'ok' }}
         />
         <KPICard
           label="Interviews"
@@ -475,10 +697,19 @@ export function JobDetailsRightPanel({
         />
         <KPICard
           label="Avg time"
-          value={`${avgTimeInStage}d`}
+          value={pipelineAnalytics ? `${pipelineAnalytics.overallTAT.toFixed(1)}d` : `${avgTimeInStage}d`}
           trend={{ text: 'In stage', type: 'warn' }}
         />
       </div>
+
+      {/* Bulk Actions Toolbar - Requirements 1.1, 1.2 */}
+      <BulkActionsToolbar
+        selectedCandidates={selectedCandidates}
+        stages={bulkMoveStages}
+        onBulkMove={handleBulkMove}
+        onClearSelection={handleClearSelection}
+        isLoading={isBulkMoving}
+      />
 
       {/* Candidate Search and Stage Strip */}
       <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm space-y-3">
@@ -518,30 +749,36 @@ export function JobDetailsRightPanel({
         <StageSummaryStrip 
           stages={stageCounts} 
           activeStage={stageFilter}
-          onStageFilter={onStageFilterChange} 
+          onStageFilter={handleStageFilterChange} 
         />
       </div>
+
+      {/* Advanced Filters - Requirements 4.3 */}
+      <AdvancedFilters
+        filters={advancedFilters}
+        onFiltersChange={setAdvancedFilters}
+        availableSkills={availableSkills}
+        availableSources={availableSources}
+        isExpanded={isFiltersExpanded}
+        onToggleExpand={() => setIsFiltersExpanded(!isFiltersExpanded)}
+      />
 
       {/* Candidates View */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
-      ) : candidates.length === 0 ? (
+      ) : filteredByAdvanced.length === 0 ? (
         <div className="bg-white rounded-xl border border-[#e2e8f0] p-8 text-center">
           {/* Empty state for no matching candidates - Requirement 3.4 */}
-          {candidateSearchQuery.trim() || stageFilter ? (
+          {candidateSearchQuery.trim() || stageFilter || advancedFilters.skills.length > 0 || advancedFilters.source || advancedFilters.experienceMin !== null || advancedFilters.experienceMax !== null ? (
             <>
               <div className="w-12 h-12 mx-auto mb-3 bg-[#f8fafc] rounded-full flex items-center justify-center">
                 <span className="text-2xl">🔍</span>
               </div>
               <p className="text-[#374151] font-medium">No matching candidates</p>
               <p className="text-sm text-[#64748b] mt-1">
-                {candidateSearchQuery.trim() && stageFilter
-                  ? `No candidates found matching "${candidateSearchQuery}" in ${stageFilter} stage`
-                  : candidateSearchQuery.trim()
-                    ? `No candidates found matching "${candidateSearchQuery}"`
-                    : `No candidates in ${stageFilter} stage`}
+                No candidates found matching your filter criteria
               </p>
               <p className="text-xs text-[#94a3b8] mt-2">Try adjusting your search or filter criteria</p>
             </>
@@ -554,14 +791,18 @@ export function JobDetailsRightPanel({
         </div>
       ) : viewMode === 'table' ? (
         <CandidateTableView
-          candidates={candidates}
+          candidates={filteredByAdvanced}
           onCandidateClick={onCandidateClick}
+          selectedCandidates={selectedCandidates}
+          onSelectionChange={setSelectedCandidates}
         />
       ) : (
         <KanbanBoardView
-          candidates={candidates}
+          candidates={filteredByAdvanced}
           stages={defaultStages}
           onCandidateClick={onCandidateClick}
+          selectedCandidates={selectedCandidates}
+          onSelectionChange={setSelectedCandidates}
         />
       )}
     </div>

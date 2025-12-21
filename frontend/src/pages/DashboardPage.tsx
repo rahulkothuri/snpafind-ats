@@ -1,4 +1,4 @@
-import { Layout, KPICard, Badge, Button, Table, LoadingSpinner, ErrorMessage } from '../components';
+import { Layout, KPICard, Badge, Button, Table, LoadingSpinner, ErrorMessage, AlertsPanel } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate } from 'react-router-dom';
@@ -63,13 +63,6 @@ interface Task {
   text: string;
   age: string;
   severity: 'high' | 'medium' | 'low';
-}
-
-interface Alert {
-  id: string;
-  level: 'critical' | 'warning' | 'info';
-  message: string;
-  action: string;
 }
 
 interface SourcePerformance {
@@ -183,12 +176,6 @@ const sampleTasks: Task[] = [
   { id: '2', type: 'Approval', text: 'Approve offer letter for Vikram Singh', age: '1d', severity: 'high' },
   { id: '3', type: 'Reminder', text: 'Follow up with Ankit Patel on offer decision', age: '3d', severity: 'medium' },
   { id: '4', type: 'Pipeline', text: 'Review 12 new applications for Data Analyst', age: '4h', severity: 'medium' },
-];
-
-const sampleAlerts: Alert[] = [
-  { id: '1', level: 'critical', message: 'SLA breach: Sales Lead (North) - 32 days', action: 'View role' },
-  { id: '2', level: 'warning', message: 'Resume parsing failed for 3 candidates', action: 'Review' },
-  { id: '3', level: 'info', message: 'New LinkedIn integration available', action: 'Learn more' },
 ];
 
 const sampleSources: SourcePerformance[] = [
@@ -425,93 +412,6 @@ function TasksSection({ tasks }: { tasks: Task[] }) {
   );
 }
 
-// Alerts Section Component
-function AlertsSection({ alerts }: { alerts: Alert[] }) {
-  // Professional emoji icons and enhanced styling - Requirements 4.1, 4.2, 4.3
-  const levelStyles = {
-    critical: { 
-      bg: 'bg-red-50', 
-      border: 'border-red-100', 
-      icon: '🚨',
-      text: 'text-red-700',
-      iconBg: 'bg-red-100 text-red-600',
-      actionHover: 'hover:bg-red-100'
-    },
-    warning: { 
-      bg: 'bg-amber-50', 
-      border: 'border-amber-100', 
-      icon: '⚠️',
-      text: 'text-amber-700',
-      iconBg: 'bg-amber-100 text-amber-600',
-      actionHover: 'hover:bg-amber-100'
-    },
-    info: { 
-      bg: 'bg-blue-50', 
-      border: 'border-blue-100', 
-      icon: 'ℹ️',
-      text: 'text-blue-700',
-      iconBg: 'bg-blue-100 text-blue-600',
-      actionHover: 'hover:bg-blue-100'
-    },
-  };
-
-  // Handle keyboard navigation for alerts - Requirements 4.4
-  const handleKeyDown = (event: React.KeyboardEvent, alertId: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      console.log('Alert action triggered:', alertId);
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 
-        className="text-sm font-semibold text-[#111827] mb-4"
-        id="alerts-section-heading"
-      >
-        Alerts
-      </h3>
-      <div 
-        className="space-y-2"
-        role="list"
-        aria-labelledby="alerts-section-heading"
-      >
-        {alerts.map((alert) => {
-          const style = levelStyles[alert.level];
-          return (
-            <div
-              key={alert.id}
-              className={`group flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 ${style.bg} ${style.border} cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
-              role="listitem"
-              tabIndex={0}
-              aria-label={`${alert.level} alert: ${alert.message}`}
-              onKeyDown={(e) => handleKeyDown(e, alert.id)}
-            >
-              <div 
-                className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${style.iconBg}`}
-                aria-hidden="true"
-              >
-                {style.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className={`text-xs font-medium leading-tight ${style.text} line-clamp-2`}>
-                  {alert.message}
-                </span>
-                <button 
-                  className={`text-[10px] font-semibold ${style.text} mt-1 block ${style.actionHover} rounded px-1 -ml-1 transition-colors`}
-                  aria-label={`${alert.action} for ${alert.level} alert`}
-                >
-                  {alert.action} →
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // Source Performance Component
 function SourcePerformanceChart({ sources }: { sources: SourcePerformance[] }) {
   return (
@@ -678,9 +578,6 @@ export function DashboardPage() {
     navigate('/interviews');
   };
 
-  // Check if user can create jobs - Requirements 5.2
-  const canCreateJob = user?.role === 'admin' || user?.role === 'hiring_manager';
-
   // Header actions for the dashboard - Requirements 5.2
   const headerActions = (
     <div className="flex items-center gap-2">
@@ -796,7 +693,8 @@ export function DashboardPage() {
           {/* Tasks and Alerts Section - Moved to top right position per Requirement 1.1 */}
           <div className="grid grid-cols-1 gap-4">
             <TasksSection tasks={sampleTasks} />
-            <AlertsSection alerts={sampleAlerts} />
+            {/* AlertsPanel - Requirements 9.2, 10.2 - Fetches alerts on mount */}
+            <AlertsPanel maxAlerts={5} />
           </div>
 
           {/* Recruiter Load - Requirement 15.8 */}

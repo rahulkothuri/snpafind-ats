@@ -1,4 +1,5 @@
 import type { User } from '../types';
+import { NotificationBell } from './NotificationBell';
 
 /**
  * Header Component - Requirements 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 22.1
@@ -10,6 +11,7 @@ import type { User } from '../types';
  * - Time range filter dropdown
  * - User pill with avatar, name, role, company
  * - Contextual pills and action buttons
+ * - Notification bell with unread count
  */
 
 interface HeaderProps {
@@ -36,8 +38,7 @@ export function Header({
   companyName = 'Acme Technologies',
   showHamburger = false,
 }: HeaderProps) {
-  // Note: user and companyName are currently not used in the UI but are kept for future features
-  void user; // Suppress unused variable warning
+  // Note: companyName is currently not used in the UI but is kept for future features
   void companyName; // Suppress unused variable warning
   const contextPills: ContextPill[] = [
     { label: 'Time zone', value: 'IST' },
@@ -98,12 +99,8 @@ export function Header({
           ))}
         </div>
 
-        {/* Notification Icon - Requirement 2.4 */}
-        <button className="px-3 py-1.5 rounded-full hover:bg-[#f3f4f6] transition-colors text-[#64748b] hover:text-[#374151]">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-        </button>
+        {/* Notification Bell - Requirements 8.2, 8.3 */}
+        <NotificationBell userId={user?.id} />
 
 
 

@@ -164,6 +164,8 @@ export function RolesPage() {
   const [candidateSearchQuery, setCandidateSearchQuery] = useState('');
   const [jobCandidates, setJobCandidates] = useState<PipelineCandidate[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string; position: number }[]>([]);
+  const [candidatesRefreshKey, setCandidatesRefreshKey] = useState(0);
   
   // Job Description Modal state
   const [isJobDescriptionModalOpen, setIsJobDescriptionModalOpen] = useState(false);
@@ -276,20 +278,28 @@ export function RolesPage() {
     async function fetchJobCandidates() {
       if (!selectedRole) {
         setJobCandidates([]);
+        setPipelineStages([]);
         return;
       }
 
       // If using sample data, use sample candidates for demo
       if (rolesFromApi.length === 0) {
         setJobCandidates(sampleCandidates);
+        setPipelineStages([]);
         return;
       }
 
       setCandidatesLoading(true);
       try {
-        const candidates = await candidatesService.getByJob(selectedRole.id);
+        // Fetch candidates and pipeline stages in parallel
+        const [candidates, stages] = await Promise.all([
+          candidatesService.getByJob(selectedRole.id),
+          jobsService.getPipelineStages(selectedRole.id),
+        ]);
+        
         const mappedCandidates: PipelineCandidate[] = candidates.map((jc: JobCandidate) => ({
           id: jc.candidateId,
+          jobCandidateId: jc.id, // Include jobCandidateId for bulk operations
           name: jc.candidate?.name || 'Unknown',
           title: jc.candidate?.currentCompany || 'Candidate',
           stage: jc.stageName || 'Applied',
@@ -308,16 +318,23 @@ export function RolesPage() {
           resumeUrl: jc.candidate?.resumeUrl,
         }));
         setJobCandidates(mappedCandidates);
+        setPipelineStages(stages.map(s => ({ id: s.id, name: s.name, position: s.position })));
       } catch (error) {
         console.error('Failed to fetch job candidates:', error);
         setJobCandidates([]);
+        setPipelineStages([]);
       } finally {
         setCandidatesLoading(false);
       }
     }
 
     fetchJobCandidates();
-  }, [selectedRole, rolesFromApi.length]);
+  }, [selectedRole, rolesFromApi.length, candidatesRefreshKey]);
+
+  // Handler to refresh candidates after bulk move
+  const handleCandidatesMoved = useCallback(() => {
+    setCandidatesRefreshKey(prev => prev + 1);
+  }, []);
 
   // Filter candidates by stage and search - Requirements 3.2
   const filteredCandidates = useMemo(() => {
@@ -425,6 +442,8 @@ export function RolesPage() {
               isLoading={candidatesLoading}
               onViewJobDescription={handleViewJobDescription}
               jobDescriptionLoading={jobDescriptionLoading}
+              pipelineStages={pipelineStages}
+              onCandidatesMoved={handleCandidatesMoved}
             />
           </div>
         </div>

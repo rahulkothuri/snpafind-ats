@@ -16,7 +16,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 
 export interface Column<T> {
   key: string;
-  header: string;
+  header: string | React.ReactNode;
   sortable?: boolean;
   render?: (row: T) => React.ReactNode;
   width?: string;

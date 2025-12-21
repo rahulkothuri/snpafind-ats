@@ -2,6 +2,8 @@ import prisma from '../lib/prisma.js';
 import { Prisma } from '@prisma/client';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/errorHandler.js';
 import type { Candidate, CandidateActivity, JobCandidate } from '../types/index.js';
+import { stageHistoryService } from './stageHistory.service.js';
+import { notificationService } from './notification.service.js';
 
 // Transaction client type
 type TransactionClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>;
@@ -83,12 +85,15 @@ export interface CandidateSearchFilters {
   scoreMin?: number;
   scoreMax?: number;
   sortBy?: 'score_asc' | 'score_desc' | 'updated' | 'name';
+  tags?: string[];
 }
 
 export interface StageChangeData {
   jobCandidateId: string;
   newStageId: string;
   rejectionReason?: string;
+  comment?: string;
+  movedBy?: string;
 }
 
 export interface StageChangeResult {
@@ -387,7 +392,7 @@ export const candidateService = {
 
   /**
    * Change a candidate's stage in a job pipeline
-   * Requirements: 24.1, 24.2, 24.3, 24.4
+   * Requirements: 24.1, 24.2, 24.3, 24.4, 2.1, 2.2
    */
   async changeStage(data: StageChangeData): Promise<StageChangeResult> {
     // Validate required fields
@@ -430,17 +435,38 @@ export const candidateService = {
     }
 
     // Check if moving to Rejected stage requires a reason (Requirements 24.4)
-    if (newStage.name.toLowerCase() === 'rejected' && !data.rejectionReason) {
+    const isRejectionStage = newStage.name.toLowerCase().includes('reject') || 
+                             newStage.name.toLowerCase().includes('declined') ||
+                             newStage.name.toLowerCase().includes('not selected');
+    
+    if (isRejectionStage && !data.rejectionReason && !data.comment) {
       throw new ValidationError({ 
         rejectionReason: ['Rejection reason is required when moving to Rejected stage'] 
       });
     }
 
     const oldStageName = jobCandidate.currentStage.name;
+    const oldStageId = jobCandidate.currentStageId;
     const newStageName = newStage.name;
+    const comment = data.comment || data.rejectionReason;
 
-    // Update stage and create activity in a transaction (Requirements 24.1, 24.2)
+    // Update stage and create activity in a transaction (Requirements 24.1, 24.2, 2.1, 2.2)
     const result = await prisma.$transaction(async (tx: TransactionClient) => {
+      // Close the previous stage history entry (Requirements 2.2)
+      await stageHistoryService.closeStageEntry({
+        jobCandidateId: data.jobCandidateId,
+        stageId: oldStageId,
+      }, tx);
+
+      // Create new stage history entry (Requirements 2.1)
+      await stageHistoryService.createStageEntry({
+        jobCandidateId: data.jobCandidateId,
+        stageId: data.newStageId,
+        stageName: newStageName,
+        comment,
+        movedBy: data.movedBy,
+      }, tx);
+
       // Update the job candidate's current stage
       const updatedJobCandidate = await tx.jobCandidate.update({
         where: { id: data.jobCandidateId },
@@ -448,8 +474,8 @@ export const candidateService = {
       });
 
       // Create activity entry for the stage change
-      const activityDescription = data.rejectionReason
-        ? `Moved from ${oldStageName} to ${newStageName}. Reason: ${data.rejectionReason}`
+      const activityDescription = comment
+        ? `Moved from ${oldStageName} to ${newStageName}. Reason: ${comment}`
         : `Moved from ${oldStageName} to ${newStageName}`;
 
       const activity = await tx.candidateActivity.create({
@@ -459,17 +485,35 @@ export const candidateService = {
           activityType: 'stage_change',
           description: activityDescription,
           metadata: {
-            fromStageId: jobCandidate.currentStageId,
+            fromStageId: oldStageId,
             fromStageName: oldStageName,
             toStageId: data.newStageId,
             toStageName: newStageName,
             rejectionReason: data.rejectionReason,
+            comment,
           },
         },
       });
 
       return { updatedJobCandidate, activity };
     });
+
+    // Create notifications for stage change (Requirements 8.1)
+    // This is done outside the transaction to not block the main operation
+    try {
+      await notificationService.createStageChangeNotifications({
+        candidateId: jobCandidate.candidateId,
+        candidateName: jobCandidate.candidate.name,
+        jobId: jobCandidate.jobId,
+        jobTitle: jobCandidate.job.title,
+        fromStageName: oldStageName,
+        toStageName: newStageName,
+        movedByUserId: data.movedBy,
+      });
+    } catch (notificationError) {
+      // Log but don't fail the stage change if notification fails
+      console.error('Failed to create stage change notifications:', notificationError);
+    }
 
     return {
       jobCandidate: {
@@ -615,7 +659,7 @@ export const candidateService = {
 
   /**
    * Search candidates with score filtering and sorting
-   * Requirements: 25.3, 25.4
+   * Requirements: 25.3, 25.4, 7.3
    */
   async searchWithScoring(companyId: string, filters: CandidateSearchFilters): Promise<Candidate[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -679,12 +723,117 @@ export const candidateService = {
       orderBy = { name: 'asc' };
     }
 
+    // Get all candidates first, then filter by tags in memory
+    // (PostgreSQL JSON array filtering requires raw queries for complex operations)
     const candidates = await prisma.candidate.findMany({
       where,
       orderBy,
     });
 
-    return candidates.map((c: PrismaCandidateResult) => mapPrismaCandidateToCandidate(c));
+    let result = candidates.map((c: PrismaCandidateResult) => mapPrismaCandidateToCandidate(c));
+
+    // Filter by tags (Requirements 7.3)
+    if (filters.tags && filters.tags.length > 0) {
+      result = result.filter((candidate) => {
+        const candidateTags = candidate.tags || [];
+        // Check if candidate has ALL the specified tags
+        return filters.tags!.every((tag) => candidateTags.includes(tag));
+      });
+    }
+
+    return result;
+  },
+
+  /**
+   * Add a tag to a candidate
+   * Requirements: 7.2
+   */
+  async addTag(candidateId: string, tag: string): Promise<Candidate> {
+    const existing = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Candidate');
+    }
+
+    // Validate tag
+    const trimmedTag = tag.trim();
+    if (!trimmedTag) {
+      throw new ValidationError({ tag: ['Tag cannot be empty'] });
+    }
+
+    // Get current tags
+    const currentTags = Array.isArray(existing.tags) ? existing.tags as string[] : [];
+
+    // Check if tag already exists (case-insensitive)
+    const tagExists = currentTags.some(
+      (t) => t.toLowerCase() === trimmedTag.toLowerCase()
+    );
+
+    if (tagExists) {
+      // Return candidate as-is if tag already exists
+      return mapPrismaCandidateToCandidate(existing as PrismaCandidateResult);
+    }
+
+    // Add the new tag
+    const updatedTags = [...currentTags, trimmedTag];
+
+    const candidate = await prisma.candidate.update({
+      where: { id: candidateId },
+      data: { tags: updatedTags },
+    });
+
+    return mapPrismaCandidateToCandidate(candidate as PrismaCandidateResult);
+  },
+
+  /**
+   * Remove a tag from a candidate
+   * Requirements: 7.5
+   */
+  async removeTag(candidateId: string, tag: string): Promise<Candidate> {
+    const existing = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Candidate');
+    }
+
+    // Get current tags
+    const currentTags = Array.isArray(existing.tags) ? existing.tags as string[] : [];
+
+    // Remove the tag (case-insensitive match)
+    const trimmedTag = tag.trim();
+    const updatedTags = currentTags.filter(
+      (t) => t.toLowerCase() !== trimmedTag.toLowerCase()
+    );
+
+    const candidate = await prisma.candidate.update({
+      where: { id: candidateId },
+      data: { tags: updatedTags },
+    });
+
+    return mapPrismaCandidateToCandidate(candidate as PrismaCandidateResult);
+  },
+
+  /**
+   * Get all unique tags used across candidates in a company
+   * Requirements: 7.2 (for autocomplete/selection)
+   */
+  async getAllTags(companyId: string): Promise<string[]> {
+    const candidates = await prisma.candidate.findMany({
+      where: { companyId },
+      select: { tags: true },
+    });
+
+    const allTags = new Set<string>();
+    for (const candidate of candidates) {
+      const tags = Array.isArray(candidate.tags) ? candidate.tags as string[] : [];
+      tags.forEach((tag) => allTags.add(tag));
+    }
+
+    return Array.from(allTags).sort();
   },
 };
 

@@ -40,6 +40,14 @@ export const jobAccessControlService = {
             if (!job) {
                 return false;
             }
+            // Get user's company to verify they belong to the same company as the job
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { companyId: true },
+            });
+            if (!user || user.companyId !== job.companyId) {
+                return false;
+            }
             // Check role-based access
             switch (userRole) {
                 case 'admin':
@@ -98,41 +106,53 @@ export const jobAccessControlService = {
                 jobs = [];
         }
         // Map to Job type with counts
-        return jobs.map((j) => ({
-            id: j.id,
-            companyId: j.companyId,
-            title: j.title,
-            department: j.department,
-            // Experience range
-            experienceMin: j.experienceMin ?? undefined,
-            experienceMax: j.experienceMax ?? undefined,
-            // Salary range
-            salaryMin: j.salaryMin ?? undefined,
-            salaryMax: j.salaryMax ?? undefined,
-            variables: j.variables ?? undefined,
-            // Requirements
-            educationQualification: j.educationQualification ?? undefined,
-            ageUpTo: j.ageUpTo ?? undefined,
-            skills: Array.isArray(j.skills) ? j.skills : [],
-            preferredIndustry: j.preferredIndustry ?? undefined,
-            // Work details
-            workMode: j.workMode ?? undefined,
-            locations: Array.isArray(j.locations) ? j.locations : [],
-            priority: j.priority ?? undefined,
-            jobDomain: j.jobDomain ?? undefined,
-            // Assignment
-            assignedRecruiterId: j.assignedRecruiterId ?? undefined,
-            // Content
-            description: j.description ?? '',
-            status: j.status,
-            openings: j.openings,
-            createdAt: j.createdAt,
-            updatedAt: j.updatedAt,
-            // Legacy fields
-            location: j.location ?? undefined,
-            employmentType: j.employmentType ?? undefined,
-            salaryRange: j.salaryRange ?? undefined,
-        }));
+        return jobs.map((j) => {
+            const candidateCount = j._count?.jobCandidates ?? 0;
+            // Count candidates in interview stages
+            const interviewStages = ['Interview', 'Selected'];
+            const interviewCount = j.jobCandidates?.filter((jc) => jc.currentStage && interviewStages.includes(jc.currentStage.name)).length ?? 0;
+            // Count candidates in offer stage
+            const offerCount = j.jobCandidates?.filter((jc) => jc.currentStage && jc.currentStage.name === 'Offer').length ?? 0;
+            return {
+                id: j.id,
+                companyId: j.companyId,
+                title: j.title,
+                department: j.department,
+                // Experience range
+                experienceMin: j.experienceMin ?? undefined,
+                experienceMax: j.experienceMax ?? undefined,
+                // Salary range
+                salaryMin: j.salaryMin ?? undefined,
+                salaryMax: j.salaryMax ?? undefined,
+                variables: j.variables ?? undefined,
+                // Requirements
+                educationQualification: j.educationQualification ?? undefined,
+                ageUpTo: j.ageUpTo ?? undefined,
+                skills: Array.isArray(j.skills) ? j.skills : [],
+                preferredIndustry: j.preferredIndustry ?? undefined,
+                // Work details
+                workMode: j.workMode ?? undefined,
+                locations: Array.isArray(j.locations) ? j.locations : [],
+                priority: j.priority ?? undefined,
+                jobDomain: j.jobDomain ?? undefined,
+                // Assignment
+                assignedRecruiterId: j.assignedRecruiterId ?? undefined,
+                // Content
+                description: j.description ?? '',
+                status: j.status,
+                openings: j.openings,
+                createdAt: j.createdAt,
+                updatedAt: j.updatedAt,
+                // Legacy fields
+                location: j.location ?? undefined,
+                employmentType: j.employmentType ?? undefined,
+                salaryRange: j.salaryRange ?? undefined,
+                // Counts - these were missing!
+                candidateCount,
+                interviewCount,
+                offerCount,
+            };
+        });
     },
 };
 /**

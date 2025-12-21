@@ -42,11 +42,14 @@ export interface CandidateSearchFilters {
     scoreMin?: number;
     scoreMax?: number;
     sortBy?: 'score_asc' | 'score_desc' | 'updated' | 'name';
+    tags?: string[];
 }
 export interface StageChangeData {
     jobCandidateId: string;
     newStageId: string;
     rejectionReason?: string;
+    comment?: string;
+    movedBy?: string;
 }
 export interface StageChangeResult {
     jobCandidate: JobCandidate;
@@ -100,7 +103,7 @@ export declare const candidateService: {
     delete(id: string): Promise<void>;
     /**
      * Change a candidate's stage in a job pipeline
-     * Requirements: 24.1, 24.2, 24.3, 24.4
+     * Requirements: 24.1, 24.2, 24.3, 24.4, 2.1, 2.2
      */
     changeStage(data: StageChangeData): Promise<StageChangeResult>;
     /**
@@ -123,9 +126,24 @@ export declare const candidateService: {
     getActivityTimeline(candidateId: string): Promise<CandidateActivity[]>;
     /**
      * Search candidates with score filtering and sorting
-     * Requirements: 25.3, 25.4
+     * Requirements: 25.3, 25.4, 7.3
      */
     searchWithScoring(companyId: string, filters: CandidateSearchFilters): Promise<Candidate[]>;
+    /**
+     * Add a tag to a candidate
+     * Requirements: 7.2
+     */
+    addTag(candidateId: string, tag: string): Promise<Candidate>;
+    /**
+     * Remove a tag from a candidate
+     * Requirements: 7.5
+     */
+    removeTag(candidateId: string, tag: string): Promise<Candidate>;
+    /**
+     * Get all unique tags used across candidates in a company
+     * Requirements: 7.2 (for autocomplete/selection)
+     */
+    getAllTags(companyId: string): Promise<string[]>;
 };
 export default candidateService;
 //# sourceMappingURL=candidate.service.d.ts.map

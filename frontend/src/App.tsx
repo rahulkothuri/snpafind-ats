@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage } from './pages';
+import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage, CandidateProfilePage } from './pages';
 import { useAuth } from './hooks/useAuth';
 import { JobProtectedRoute, RoleProtectedRoute } from './components';
 
@@ -83,6 +83,12 @@ function App() {
           } />
           {/* Public route - no auth required */}
           <Route path="/apply/:jobId" element={<ApplicationPage />} />
+          {/* Candidate Profile Page - Requirements 5.1 */}
+          <Route path="/candidates/:id" element={
+            <ProtectedRoute>
+              <CandidateProfilePage />
+            </ProtectedRoute>
+          } />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

@@ -109,6 +109,14 @@ export interface Candidate {
     score?: number;
     createdAt: Date;
     updatedAt: Date;
+    age?: number;
+    industry?: string;
+    jobDomain?: string;
+    candidateSummary?: string;
+    tags?: string[];
+    title?: string;
+    department?: string;
+    internalMobility?: boolean;
 }
 export interface JobCandidate {
     id: string;

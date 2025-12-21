@@ -17,31 +17,32 @@ model Company {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Enhanced company profile fields (Requirements 7.1, 7.2)
-  website        String?
-  companySize    String?  @map("company_size")
-  industry       String?
-  description    String?  @db.Text
+  website     String?
+  companySize String? @map("company_size")
+  industry    String?
+  description String? @db.Text
 
   // Contact & Location
-  phone          String?
-  city           String?
-  state          String?
-  country        String?
-  postalCode     String?  @map("postal_code")
+  phone      String?
+  city       String?
+  state      String?
+  country    String?
+  postalCode String? @map("postal_code")
 
   // Social Media Links
-  linkedinUrl    String?  @map("linkedin_url")
-  twitterUrl     String?  @map("twitter_url")
-  facebookUrl    String?  @map("facebook_url")
-  careersPageUrl String?  @map("careers_page_url")
+  linkedinUrl    String? @map("linkedin_url")
+  twitterUrl     String? @map("twitter_url")
+  facebookUrl    String? @map("facebook_url")
+  careersPageUrl String? @map("careers_page_url")
 
   // Branding
-  brandColor     String?  @map("brand_color") @default("#0b6cf0")
+  brandColor String? @default("#0b6cf0") @map("brand_color")
 
-  users      User[]
-  jobs       Job[]
-  candidates Candidate[]
+  users          User[]
+  jobs           Job[]
+  candidates     Candidate[]
   stageTemplates PipelineStageTemplate[]
+  slaConfigs     SLAConfig[]
 
   @@map("companies")
 }
@@ -65,9 +66,15 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  company      Company @relation(fields: [companyId], references: [id])
-  assignedJobs Job[]   @relation("AssignedJobs")
+  company               Company                 @relation(fields: [companyId], references: [id])
+  assignedJobs          Job[]                   @relation("AssignedJobs")
   createdStageTemplates PipelineStageTemplate[]
+
+  // Phase 2 relations
+  stageHistoryMoves    StageHistory[]        @relation("StageHistoryMovedBy")
+  candidateNotes       CandidateNote[]       @relation("CandidateNoteAuthor")
+  candidateAttachments CandidateAttachment[] @relation("CandidateAttachmentUploader")
+  notifications        Notification[]
 
   @@map("users")
 }
@@ -81,48 +88,48 @@ enum JobStatus {
 }
 
 model Job {
-  id             String    @id @default(uuid())
-  companyId      String    @map("company_id")
-  title          String
-  department     String
-  
+  id         String @id @default(uuid())
+  companyId  String @map("company_id")
+  title      String
+  department String
+
   // Experience range (Requirements 1.1, 1.2)
-  experienceMin  Float?    @map("experience_min")
-  experienceMax  Float?    @map("experience_max")
-  
+  experienceMin Float? @map("experience_min")
+  experienceMax Float? @map("experience_max")
+
   // Salary range (Requirements 1.1, 1.3)
-  salaryMin      Float?    @map("salary_min")
-  salaryMax      Float?    @map("salary_max")
-  variables      String?   // Incentives description
-  
+  salaryMin Float?  @map("salary_min")
+  salaryMax Float?  @map("salary_max")
+  variables String? // Incentives description
+
   // Requirements (Requirements 1.1)
   educationQualification String? @map("education_qualification")
-  ageUpTo        Int?      @map("age_up_to")
-  skills         Json      @default("[]")
-  preferredIndustry String? @map("preferred_industry")
-  
+  ageUpTo                Int?    @map("age_up_to")
+  skills                 Json    @default("[]")
+  preferredIndustry      String? @map("preferred_industry")
+
   // Work details (Requirements 1.1, 1.4, 1.5, 1.6)
-  workMode       String?   @map("work_mode")
-  locations      Json      @default("[]")  // Array of cities (multi-select)
-  priority       String?   @default("Medium")
-  jobDomain      String?   @map("job_domain")
-  
+  workMode  String? @map("work_mode")
+  locations Json    @default("[]") // Array of cities (multi-select)
+  priority  String? @default("Medium")
+  jobDomain String? @map("job_domain")
+
   // Assignment (Requirements 1.1)
   assignedRecruiterId String? @map("assigned_recruiter_id")
-  
+
   // Content
-  description    String?   @db.Text
-  
+  description String? @db.Text
+
   // Existing fields
-  status         JobStatus @default(active)
-  openings       Int       @default(1)
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  
+  status    JobStatus @default(active)
+  openings  Int       @default(1)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
   // Legacy fields (kept for compatibility)
   location       String?
-  employmentType String?   @map("employment_type")
-  salaryRange    String?   @map("salary_range")
+  employmentType String? @map("employment_type")
+  salaryRange    String? @map("salary_range")
 
   company           Company         @relation(fields: [companyId], references: [id])
   pipelineStages    PipelineStage[]
@@ -164,52 +171,55 @@ model PipelineStage {
   position    Int
   isDefault   Boolean  @default(false) @map("is_default")
   isMandatory Boolean  @default(false) @map("is_mandatory")
-  parentId    String?  @map("parent_id")  // For sub-stages (Requirements 4.1, 4.2, 4.3)
+  parentId    String?  @map("parent_id") // For sub-stages (Requirements 4.1, 4.2, 4.3)
   createdAt   DateTime @default(now()) @map("created_at")
 
   job           Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
   parent        PipelineStage?  @relation("SubStages", fields: [parentId], references: [id], onDelete: Cascade)
   subStages     PipelineStage[] @relation("SubStages")
   jobCandidates JobCandidate[]
+  stageHistory  StageHistory[]
 
   @@unique([jobId, position])
   @@map("pipeline_stages")
 }
 
 model Candidate {
-  id              String   @id @default(uuid())
-  companyId       String   @map("company_id")
+  id              String  @id @default(uuid())
+  companyId       String  @map("company_id")
   name            String
-  email           String   @unique
+  email           String  @unique
   phone           String?
-  experienceYears Float    @default(0) @map("experience_years")
-  currentCompany  String?  @map("current_company")
+  experienceYears Float   @default(0) @map("experience_years")
+  currentCompany  String? @map("current_company")
   location        String
-  currentCtc      String?  @map("current_ctc")
-  expectedCtc     String?  @map("expected_ctc")
-  noticePeriod    String?  @map("notice_period")
+  currentCtc      String? @map("current_ctc")
+  expectedCtc     String? @map("expected_ctc")
+  noticePeriod    String? @map("notice_period")
   source          String
   availability    String?
-  skills          Json     @default("[]")
-  resumeUrl       String?  @map("resume_url")
+  skills          Json    @default("[]")
+  resumeUrl       String? @map("resume_url")
   score           Int?
-  
-  // Enhanced fields for comprehensive candidate display
-  age             Int?
-  industry        String?
-  jobDomain       String?  @map("job_domain")
-  candidateSummary String? @map("candidate_summary") @db.Text
-  tags            Json     @default("[]")
-  title           String?  // Current job title
-  department      String?  // Current department
-  internalMobility Boolean @default(false) @map("internal_mobility")
-  
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  company       Company              @relation(fields: [companyId], references: [id])
+  // Enhanced fields for comprehensive candidate display
+  age              Int?
+  industry         String?
+  jobDomain        String? @map("job_domain")
+  candidateSummary String? @map("candidate_summary") @db.Text
+  tags             Json    @default("[]")
+  title            String? // Current job title
+  department       String? // Current department
+  internalMobility Boolean @default(false) @map("internal_mobility")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company       Company               @relation(fields: [companyId], references: [id])
   jobCandidates JobCandidate[]
   activities    CandidateActivity[]
+  notes         CandidateNote[]
+  attachments   CandidateAttachment[]
 
   @@map("candidates")
 }
@@ -226,6 +236,7 @@ model JobCandidate {
   candidate    Candidate           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   currentStage PipelineStage       @relation(fields: [currentStageId], references: [id])
   activities   CandidateActivity[]
+  stageHistory StageHistory[]
 
   @@unique([jobId, candidateId])
   @@map("job_candidates")
@@ -254,4 +265,104 @@ model CandidateActivity {
   jobCandidate JobCandidate? @relation(fields: [jobCandidateId], references: [id], onDelete: Cascade)
 
   @@map("candidate_activities")
+}
+
+// Phase 2: Stage History - tracks time spent in each stage (Requirements 2.1, 2.2, 11.2)
+model StageHistory {
+  id             String    @id @default(uuid())
+  jobCandidateId String    @map("job_candidate_id")
+  stageId        String    @map("stage_id")
+  stageName      String    @map("stage_name")
+  enteredAt      DateTime  @default(now()) @map("entered_at")
+  exitedAt       DateTime? @map("exited_at")
+  durationHours  Float?    @map("duration_hours")
+  comment        String?   @db.Text
+  movedBy        String?   @map("moved_by")
+
+  jobCandidate JobCandidate  @relation(fields: [jobCandidateId], references: [id], onDelete: Cascade)
+  stage        PipelineStage @relation(fields: [stageId], references: [id])
+  user         User?         @relation("StageHistoryMovedBy", fields: [movedBy], references: [id])
+
+  @@index([jobCandidateId])
+  @@index([stageId])
+  @@map("stage_history")
+}
+
+// Phase 2: Candidate Notes (Requirements 6.1, 6.2)
+model CandidateNote {
+  id          String   @id @default(uuid())
+  candidateId String   @map("candidate_id")
+  content     String   @db.Text
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  author    User      @relation("CandidateNoteAuthor", fields: [createdBy], references: [id])
+
+  @@index([candidateId])
+  @@map("candidate_notes")
+}
+
+// Phase 2: Candidate Attachments (Requirements 6.4, 6.5)
+model CandidateAttachment {
+  id          String   @id @default(uuid())
+  candidateId String   @map("candidate_id")
+  fileName    String   @map("file_name")
+  fileUrl     String   @map("file_url")
+  fileType    String   @map("file_type")
+  fileSize    Int      @map("file_size")
+  uploadedBy  String   @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  uploader  User      @relation("CandidateAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([candidateId])
+  @@map("candidate_attachments")
+}
+
+// Phase 2: Notification Type Enum (Requirements 8.1, 11.1)
+enum NotificationType {
+  stage_change
+  feedback_pending
+  sla_breach
+  interview_scheduled
+  offer_pending
+
+  @@map("notification_type")
+}
+
+// Phase 2: Notifications (Requirements 8.1, 11.1)
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String           @map("user_id")
+  type       NotificationType
+  title      String
+  message    String
+  entityType String?          @map("entity_type") // 'candidate', 'job', 'interview'
+  entityId   String?          @map("entity_id")
+  isRead     Boolean          @default(false) @map("is_read")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// Phase 2: SLA Configuration (Requirements 10.5)
+model SLAConfig {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  stageName     String   @map("stage_name")
+  thresholdDays Int      @map("threshold_days")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, stageName])
+  @@map("sla_configs")
 }

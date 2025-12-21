@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import jobService from '../services/job.service.js';
 import pipelineService from '../services/pipeline.service.js';
+import stageHistoryService from '../services/stageHistory.service.js';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
@@ -24,7 +25,7 @@ const pipelineStageSchema = z.object({
 // Validation schemas with all new fields (Requirements 1.1)
 const createJobSchema = z.object({
     title: z.string().min(1, 'Title is required'),
-    department: z.string().min(1, 'Department is required'),
+    department: z.string().optional(), // Made optional - jobDomain is used instead
     // Experience range (Requirements 1.2)
     experienceMin: z.number().min(0).optional(),
     experienceMax: z.number().min(0).optional(),
@@ -56,7 +57,7 @@ const createJobSchema = z.object({
 });
 const updateJobSchema = z.object({
     title: z.string().min(1, 'Title is required').optional(),
-    department: z.string().min(1, 'Department is required').optional(),
+    department: z.string().nullable().optional(), // Made optional - jobDomain is used instead
     // Experience range
     experienceMin: z.number().min(0).nullable().optional(),
     experienceMax: z.number().min(0).nullable().optional(),
@@ -185,6 +186,21 @@ router.get('/:id/candidates', authenticate, requireJobAccess(), async (req, res,
             } : null,
         }));
         res.json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * GET /api/jobs/:id/candidates/:jobCandidateId/stage-history
+ * Get stage history for a specific job candidate with duration calculations
+ * Requirements: 2.3
+ */
+router.get('/:id/candidates/:jobCandidateId/stage-history', authenticate, requireJobAccess(), async (req, res, next) => {
+    try {
+        const { jobCandidateId } = req.params;
+        const stageHistory = await stageHistoryService.getStageHistory(jobCandidateId);
+        res.json(stageHistory);
     }
     catch (error) {
         next(error);

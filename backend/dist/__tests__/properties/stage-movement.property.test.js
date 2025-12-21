@@ -26,17 +26,25 @@ vi.mock('../../lib/prisma.js', () => {
         create: vi.fn(),
         findMany: vi.fn(),
     };
+    const mockPrismaStageHistory = {
+        create: vi.fn(),
+        findFirst: vi.fn(),
+        update: vi.fn(),
+        findMany: vi.fn(),
+    };
     return {
         default: {
             jobCandidate: mockPrismaJobCandidate,
             candidate: mockPrismaCandidate,
             candidateActivity: mockPrismaCandidateActivity,
+            stageHistory: mockPrismaStageHistory,
             $transaction: vi.fn(),
         },
         prisma: {
             jobCandidate: mockPrismaJobCandidate,
             candidate: mockPrismaCandidate,
             candidateActivity: mockPrismaCandidateActivity,
+            stageHistory: mockPrismaStageHistory,
             $transaction: vi.fn(),
         },
     };
@@ -114,6 +122,7 @@ describe('Property 21: Stage change updates timestamp and creates activity', () 
             mockTransaction.mockImplementationOnce(async (callback) => {
                 const txMock = {
                     jobCandidate: {
+                        findUnique: vi.fn().mockResolvedValue(mockJobCandidate),
                         update: vi.fn().mockImplementation(async (args) => {
                             updatedJobCandidate = {
                                 ...mockJobCandidate,
@@ -132,6 +141,15 @@ describe('Property 21: Stage change updates timestamp and creates activity', () 
                             };
                             return createdActivity;
                         }),
+                    },
+                    stageHistory: {
+                        findFirst: vi.fn().mockResolvedValue(null), // No previous stage history entry
+                        create: vi.fn().mockImplementation(async (args) => ({
+                            id: 'stage-history-1',
+                            ...args.data,
+                            user: null,
+                        })),
+                        update: vi.fn().mockResolvedValue(null),
                     },
                 };
                 return callback(txMock);
@@ -239,6 +257,7 @@ describe('Property 21: Stage change updates timestamp and creates activity', () 
             mockTransaction.mockImplementationOnce(async (callback) => {
                 const txMock = {
                     jobCandidate: {
+                        findUnique: vi.fn().mockResolvedValue(mockJobCandidate),
                         update: vi.fn().mockResolvedValue({
                             ...mockJobCandidate,
                             currentStageId: rejectedStageId,
@@ -251,6 +270,15 @@ describe('Property 21: Stage change updates timestamp and creates activity', () 
                             ...args.data,
                             createdAt: new Date(),
                         })),
+                    },
+                    stageHistory: {
+                        findFirst: vi.fn().mockResolvedValue(null),
+                        create: vi.fn().mockImplementation(async (args) => ({
+                            id: 'stage-history-1',
+                            ...args.data,
+                            user: null,
+                        })),
+                        update: vi.fn().mockResolvedValue(null),
                     },
                 };
                 return callback(txMock);

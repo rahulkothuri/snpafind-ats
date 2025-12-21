@@ -27,6 +27,19 @@ export interface PipelineStage {
   candidateCount?: number;
 }
 
+export interface StageMetric {
+  stageId: string;
+  stageName: string;
+  candidateCount: number;
+  avgDaysInStage: number;
+  slaBreachCount: number;
+}
+
+export interface PipelineAnalytics {
+  stageMetrics: StageMetric[];
+  overallTAT: number;
+}
+
 export interface CreateJobData {
   title: string;
   department: string;
@@ -64,6 +77,15 @@ export const jobsService = {
 
   async getPipelineStages(jobId: string): Promise<PipelineStage[]> {
     const response = await api.get(`/jobs/${jobId}/pipeline`);
+    return response.data;
+  },
+
+  /**
+   * Get pipeline analytics including stage metrics with counts and TAT
+   * Requirements: 2.4, 4.1
+   */
+  async getPipelineAnalytics(jobId: string): Promise<PipelineAnalytics> {
+    const response = await api.get(`/jobs/${jobId}/pipeline/analytics`);
     return response.data;
   },
 };

@@ -6,6 +6,9 @@ import jobRoutes from './job.routes.js';
 import candidateRoutes from './candidate.routes.js';
 import publicRoutes from './public.routes.js';
 import stageTemplateRoutes from './stageTemplates.js';
+import pipelineRoutes from './pipeline.routes.js';
+import notificationRoutes from './notification.routes.js';
+import slaRoutes from './sla.routes.js';
 
 const router = Router();
 
@@ -24,5 +27,9 @@ router.use('/users', userRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/candidates', candidateRoutes);
 router.use('/stage-templates', stageTemplateRoutes);
+router.use('/pipeline', pipelineRoutes);
+router.use('/notifications', notificationRoutes);
+// SLA routes - mounted at root to support /api/alerts and /api/settings/sla
+router.use('/', slaRoutes);
 
 export default router;

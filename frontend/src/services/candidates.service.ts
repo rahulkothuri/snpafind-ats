@@ -29,6 +29,45 @@ export interface Candidate {
   title?: string;
   department?: string;
   internalMobility?: boolean;
+  education?: string;
+}
+
+// Stage History Entry - Requirements 2.1, 2.2, 2.3
+export interface StageHistoryEntry {
+  id: string;
+  jobCandidateId: string;
+  stageId: string;
+  stageName: string;
+  enteredAt: string;
+  exitedAt?: string;
+  durationHours?: number;
+  comment?: string;
+  movedBy?: string;
+  movedByName?: string;
+}
+
+// Candidate Note - Requirements 6.1, 6.2, 6.3
+export interface CandidateNote {
+  id: string;
+  candidateId: string;
+  content: string;
+  createdBy: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Candidate Attachment - Requirements 6.4, 6.5
+export interface CandidateAttachment {
+  id: string;
+  candidateId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploaderName: string;
+  createdAt: string;
 }
 
 export interface JobCandidate {
@@ -123,6 +162,62 @@ export const candidatesService = {
 
   async getByJob(jobId: string): Promise<JobCandidate[]> {
     const response = await api.get(`/jobs/${jobId}/candidates`);
+    return response.data;
+  },
+
+  // Stage History - Requirements 2.1, 2.2, 2.3
+  async getStageHistory(candidateId: string): Promise<StageHistoryEntry[]> {
+    const response = await api.get(`/candidates/${candidateId}/stage-history`);
+    return response.data;
+  },
+
+  // Notes - Requirements 6.1, 6.2, 6.3
+  async getNotes(candidateId: string): Promise<CandidateNote[]> {
+    const response = await api.get(`/candidates/${candidateId}/notes`);
+    return response.data;
+  },
+
+  async createNote(candidateId: string, content: string): Promise<CandidateNote> {
+    const response = await api.post(`/candidates/${candidateId}/notes`, { content });
+    return response.data;
+  },
+
+  async deleteNote(candidateId: string, noteId: string): Promise<void> {
+    await api.delete(`/candidates/${candidateId}/notes/${noteId}`);
+  },
+
+  // Attachments - Requirements 6.4, 6.5
+  async getAttachments(candidateId: string): Promise<CandidateAttachment[]> {
+    const response = await api.get(`/candidates/${candidateId}/attachments`);
+    return response.data;
+  },
+
+  async uploadAttachment(candidateId: string, file: File): Promise<CandidateAttachment> {
+    const formData = new FormData();
+    formData.append('attachment', file);
+    const response = await api.post(`/candidates/${candidateId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  async deleteAttachment(candidateId: string, attachmentId: string): Promise<void> {
+    await api.delete(`/candidates/${candidateId}/attachments/${attachmentId}`);
+  },
+
+  // Tags - Requirements 7.2, 7.5
+  async addTag(candidateId: string, tag: string): Promise<Candidate> {
+    const response = await api.post(`/candidates/${candidateId}/tags`, { tag });
+    return response.data;
+  },
+
+  async removeTag(candidateId: string, tag: string): Promise<Candidate> {
+    const response = await api.delete(`/candidates/${candidateId}/tags/${encodeURIComponent(tag)}`);
+    return response.data;
+  },
+
+  async getAllTags(): Promise<string[]> {
+    const response = await api.get('/candidates/tags/all');
     return response.data;
   },
 };

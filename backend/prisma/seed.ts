@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, JobStatus, ActivityType } from '@prisma/client';
+import { PrismaClient, UserRole, JobStatus, ActivityType, NotificationType } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcrypt';
@@ -28,7 +28,12 @@ const DEFAULT_STAGES = [
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // Clean existing data
+  // Clean existing data (Phase 2 models first due to foreign keys)
+  await prisma.notification.deleteMany();
+  await prisma.sLAConfig.deleteMany();
+  await prisma.stageHistory.deleteMany();
+  await prisma.candidateNote.deleteMany();
+  await prisma.candidateAttachment.deleteMany();
   await prisma.candidateActivity.deleteMany();
   await prisma.jobCandidate.deleteMany();
   await prisma.pipelineStage.deleteMany();
@@ -935,6 +940,205 @@ async function main() {
   }
   console.log('🔗 Created', publicApplicationAssociations.length, 'public application job associations');
 
+  // ============================================
+  // Phase 2: Stage History Data (Requirements 2.1, 2.2)
+  // ============================================
+  
+  // Get all job candidates for stage history creation
+  const allJobCandidates = await prisma.jobCandidate.findMany({
+    include: {
+      job: {
+        include: {
+          pipelineStages: true,
+        },
+      },
+      candidate: true,
+    },
+  });
+
+  // Create stage history entries with various durations for TAT testing
+  const stageHistoryEntries: Array<{
+    jobCandidateId: string;
+    stageId: string;
+    stageName: string;
+    enteredAt: Date;
+    exitedAt: Date | null;
+    durationHours: number | null;
+    comment: string | null;
+    movedBy: string | null;
+  }> = [];
+
+  const now = new Date();
+  const recruiterUser = users.find(u => u.role === UserRole.recruiter);
+  const adminUser = users.find(u => u.role === UserRole.admin);
+
+  for (const jc of allJobCandidates) {
+    const stages = jc.job.pipelineStages.sort((a, b) => a.position - b.position);
+    const currentStageIndex = stages.findIndex(s => s.id === jc.currentStageId);
+    
+    // Create history for all stages up to and including current stage
+    let cumulativeHours = 0;
+    for (let i = 0; i <= currentStageIndex; i++) {
+      const stage = stages[i];
+      const isCurrentStage = i === currentStageIndex;
+      
+      // Vary durations: earlier stages have longer durations (simulating realistic flow)
+      const baseDuration = isCurrentStage ? 0 : Math.floor(Math.random() * 72) + 24; // 24-96 hours
+      const enteredAt = new Date(now.getTime() - (cumulativeHours + baseDuration) * 60 * 60 * 1000);
+      const exitedAt = isCurrentStage ? null : new Date(now.getTime() - cumulativeHours * 60 * 60 * 1000);
+      
+      const comments = [
+        'Good fit for the role',
+        'Strong technical skills demonstrated',
+        'Excellent communication',
+        'Needs further evaluation',
+        'Recommended for next round',
+        'Passed initial screening',
+        null,
+      ];
+      
+      stageHistoryEntries.push({
+        jobCandidateId: jc.id,
+        stageId: stage.id,
+        stageName: stage.name,
+        enteredAt,
+        exitedAt,
+        durationHours: isCurrentStage ? null : baseDuration,
+        comment: isCurrentStage ? null : comments[Math.floor(Math.random() * comments.length)],
+        movedBy: isCurrentStage ? null : (Math.random() > 0.5 ? recruiterUser?.id : adminUser?.id) || null,
+      });
+      
+      cumulativeHours += baseDuration;
+    }
+  }
+
+  // Create stage history records
+  for (const entry of stageHistoryEntries) {
+    await prisma.stageHistory.create({
+      data: entry,
+    });
+  }
+  console.log('📊 Created', stageHistoryEntries.length, 'stage history entries');
+
+  // ============================================
+  // Phase 2: Sample Notifications (Requirements 8.1)
+  // ============================================
+  
+  const notificationData: Array<{
+    userId: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    entityType: string | null;
+    entityId: string | null;
+    isRead: boolean;
+    createdAt: Date;
+  }> = [];
+
+  // Create notifications for each user
+  for (const user of users) {
+    // Stage change notifications (mix of read and unread)
+    for (let i = 0; i < 3; i++) {
+      const jc = allJobCandidates[Math.floor(Math.random() * allJobCandidates.length)];
+      const hoursAgo = Math.floor(Math.random() * 72) + 1;
+      
+      notificationData.push({
+        userId: user.id,
+        type: NotificationType.stage_change,
+        title: 'Candidate Stage Updated',
+        message: `${jc.candidate.name} has been moved to ${jc.job.pipelineStages.find(s => s.id === jc.currentStageId)?.name || 'new stage'} for ${jc.job.title}`,
+        entityType: 'candidate',
+        entityId: jc.candidateId,
+        isRead: Math.random() > 0.5, // 50% read
+        createdAt: new Date(now.getTime() - hoursAgo * 60 * 60 * 1000),
+      });
+    }
+
+    // SLA breach notifications (mostly unread)
+    if (Math.random() > 0.3) {
+      const jc = allJobCandidates[Math.floor(Math.random() * allJobCandidates.length)];
+      notificationData.push({
+        userId: user.id,
+        type: NotificationType.sla_breach,
+        title: 'SLA Breach Alert',
+        message: `${jc.candidate.name} has exceeded the SLA threshold in ${jc.job.pipelineStages.find(s => s.id === jc.currentStageId)?.name || 'current stage'}`,
+        entityType: 'candidate',
+        entityId: jc.candidateId,
+        isRead: Math.random() > 0.8, // 20% read
+        createdAt: new Date(now.getTime() - Math.floor(Math.random() * 24) * 60 * 60 * 1000),
+      });
+    }
+
+    // Feedback pending notifications
+    if (Math.random() > 0.5) {
+      const jc = allJobCandidates[Math.floor(Math.random() * allJobCandidates.length)];
+      notificationData.push({
+        userId: user.id,
+        type: NotificationType.feedback_pending,
+        title: 'Feedback Pending',
+        message: `Interview feedback is pending for ${jc.candidate.name} - ${jc.job.title}`,
+        entityType: 'candidate',
+        entityId: jc.candidateId,
+        isRead: Math.random() > 0.6, // 40% read
+        createdAt: new Date(now.getTime() - Math.floor(Math.random() * 48) * 60 * 60 * 1000),
+      });
+    }
+
+    // Offer pending notifications (for hiring managers and admins)
+    if (user.role === UserRole.hiring_manager || user.role === UserRole.admin) {
+      const offerCandidates = allJobCandidates.filter(jc => 
+        jc.job.pipelineStages.find(s => s.id === jc.currentStageId)?.name === 'Offer'
+      );
+      if (offerCandidates.length > 0) {
+        const jc = offerCandidates[0];
+        notificationData.push({
+          userId: user.id,
+          type: NotificationType.offer_pending,
+          title: 'Offer Approval Required',
+          message: `Offer approval is pending for ${jc.candidate.name} - ${jc.job.title}`,
+          entityType: 'candidate',
+          entityId: jc.candidateId,
+          isRead: false,
+          createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000),
+        });
+      }
+    }
+  }
+
+  // Create notifications
+  for (const notification of notificationData) {
+    await prisma.notification.create({
+      data: notification,
+    });
+  }
+  console.log('🔔 Created', notificationData.length, 'notifications');
+
+  // ============================================
+  // Phase 2: SLA Configurations (Requirements 10.5)
+  // ============================================
+  
+  const slaConfigs = [
+    { stageName: 'Queue', thresholdDays: 1 },
+    { stageName: 'Applied', thresholdDays: 2 },
+    { stageName: 'Screening', thresholdDays: 3 },
+    { stageName: 'Shortlisted', thresholdDays: 5 },
+    { stageName: 'Interview', thresholdDays: 7 },
+    { stageName: 'Selected', thresholdDays: 3 },
+    { stageName: 'Offer', thresholdDays: 5 },
+    { stageName: 'Hired', thresholdDays: 10 },
+  ];
+
+  for (const config of slaConfigs) {
+    await prisma.sLAConfig.create({
+      data: {
+        companyId: company.id,
+        stageName: config.stageName,
+        thresholdDays: config.thresholdDays,
+      },
+    });
+  }
+  console.log('⏱️ Created', slaConfigs.length, 'SLA configurations');
+
   console.log('✅ Seed completed successfully!');
   console.log('\n📊 Summary:');
   console.log(`   - 1 Company: ${company.name}`);
@@ -943,6 +1147,9 @@ async function main() {
   console.log(`   - ${candidates.length + additionalCandidates.length + publicCandidates.length} Candidates total`);
   console.log(`   - ${publicCandidates.length} Candidates from public applications`);
   console.log(`   - ${jobCandidateAssociations.length + publicApplicationAssociations.length} Job-Candidate associations`);
+  console.log(`   - ${stageHistoryEntries.length} Stage history entries`);
+  console.log(`   - ${notificationData.length} Notifications`);
+  console.log(`   - ${slaConfigs.length} SLA configurations`);
   console.log('\n🔑 Login credentials:');
   console.log('   Email: tushar@acmetech.com');
   console.log('   Password: password123');

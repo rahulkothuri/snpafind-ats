@@ -79,3 +79,132 @@ export function filterCandidatesBySearch<T extends FilterableCandidate>(
     candidate.name.toLowerCase().includes(lowerQuery)
   );
 }
+
+// Advanced filter types - Requirements 4.3
+export interface AdvancedFilterableCandidate extends FilterableCandidate {
+  skills: string[];
+  experience: number;
+  source: string;
+}
+
+export interface AdvancedFilters {
+  skills: string[];
+  experienceMin: number | null;
+  experienceMax: number | null;
+  source: string | null;
+}
+
+/**
+ * Filters candidates by skills (must have all selected skills)
+ * Requirements: 4.3 - WHEN viewing the pipeline THEN the Pipeline_Module SHALL 
+ * provide filters for skills
+ * 
+ * @param candidates - Array of candidates to filter
+ * @param skills - Array of required skills
+ * @returns Filtered array of candidates who have all the required skills
+ */
+export function filterCandidatesBySkills<T extends AdvancedFilterableCandidate>(
+  candidates: T[],
+  skills: string[]
+): T[] {
+  if (skills.length === 0) return candidates;
+  return candidates.filter((candidate) =>
+    skills.every((skill) =>
+      candidate.skills.some((s) => s.toLowerCase() === skill.toLowerCase())
+    )
+  );
+}
+
+/**
+ * Filters candidates by experience range
+ * Requirements: 4.3 - WHEN viewing the pipeline THEN the Pipeline_Module SHALL 
+ * provide filters for experience range
+ * 
+ * @param candidates - Array of candidates to filter
+ * @param min - Minimum experience (null for no minimum)
+ * @param max - Maximum experience (null for no maximum)
+ * @returns Filtered array of candidates within the experience range
+ */
+export function filterCandidatesByExperience<T extends AdvancedFilterableCandidate>(
+  candidates: T[],
+  min: number | null,
+  max: number | null
+): T[] {
+  if (min === null && max === null) return candidates;
+  return candidates.filter((candidate) => {
+    if (min !== null && candidate.experience < min) return false;
+    if (max !== null && candidate.experience > max) return false;
+    return true;
+  });
+}
+
+/**
+ * Filters candidates by source
+ * Requirements: 4.3 - WHEN viewing the pipeline THEN the Pipeline_Module SHALL 
+ * provide filters for source
+ * 
+ * @param candidates - Array of candidates to filter
+ * @param source - Source to filter by (null for all sources)
+ * @returns Filtered array of candidates from the specified source
+ */
+export function filterCandidatesBySource<T extends AdvancedFilterableCandidate>(
+  candidates: T[],
+  source: string | null
+): T[] {
+  if (!source) return candidates;
+  return candidates.filter((candidate) =>
+    candidate.source.toLowerCase() === source.toLowerCase()
+  );
+}
+
+/**
+ * Applies all advanced filters to candidates
+ * Requirements: 4.3, 4.4 - WHEN applying filters THEN the Pipeline_Module SHALL 
+ * update both stage counts and candidate list in real-time
+ * 
+ * @param candidates - Array of candidates to filter
+ * @param filters - Advanced filter settings
+ * @returns Filtered array of candidates matching all filter criteria
+ */
+export function applyAdvancedFilters<T extends AdvancedFilterableCandidate>(
+  candidates: T[],
+  filters: AdvancedFilters
+): T[] {
+  let result = candidates;
+  result = filterCandidatesBySkills(result, filters.skills);
+  result = filterCandidatesByExperience(result, filters.experienceMin, filters.experienceMax);
+  result = filterCandidatesBySource(result, filters.source);
+  return result;
+}
+
+/**
+ * Extracts unique skills from a list of candidates
+ * @param candidates - Array of candidates
+ * @returns Array of unique skills sorted alphabetically
+ */
+export function extractUniqueSkills<T extends AdvancedFilterableCandidate>(
+  candidates: T[]
+): string[] {
+  const skillSet = new Set<string>();
+  candidates.forEach((candidate) => {
+    candidate.skills.forEach((skill) => skillSet.add(skill));
+  });
+  return Array.from(skillSet).sort();
+}
+
+/**
+ * Extracts unique sources from a list of candidates
+ * @param candidates - Array of candidates
+ * @returns Array of unique sources sorted alphabetically
+ */
+export function extractUniqueSources<T extends AdvancedFilterableCandidate>(
+  candidates: T[]
+): string[] {
+  const sourceSet = new Set<string>();
+  candidates.forEach((candidate) => {
+    if (candidate.source) {
+      sourceSet.add(candidate.source);
+    }
+  });
+  return Array.from(sourceSet).sort();
+}
