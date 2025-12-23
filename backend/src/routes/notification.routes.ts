@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { notificationService } from '../services/notification.service.js';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth.js';
+import { requireMinimumRole } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -26,6 +27,85 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     });
 
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/notifications/pending-feedback
+ * Get interviews with pending feedback for the company
+ * Requirements: 14.2
+ */
+router.get('/pending-feedback', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const companyId = authReq.user!.companyId;
+
+    const pendingFeedback = await notificationService.getPendingFeedbackInterviews(companyId);
+
+    res.json({ pendingFeedback });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/notifications/feedback-status/:interviewId
+ * Get feedback completion status for a specific interview
+ * Requirements: 14.5
+ */
+router.get('/feedback-status/:interviewId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { interviewId } = req.params;
+
+    const status = await notificationService.getFeedbackCompletionStatus(interviewId);
+
+    res.json(status);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/notifications/process-feedback-reminders
+ * Process and send feedback pending notifications (admin only)
+ * Requirements: 14.1, 14.3
+ */
+router.post(
+  '/process-feedback-reminders',
+  requireMinimumRole('admin'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const hoursThreshold = req.body.hoursThreshold || 24;
+
+      const result = await notificationService.processFeedbackPendingNotifications(hoursThreshold);
+
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/notifications/check-feedback-complete/:interviewId
+ * Check and mark interview as feedback complete if all feedback is submitted
+ * Requirements: 14.4
+ */
+router.post('/check-feedback-complete/:interviewId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { interviewId } = req.params;
+
+    const result = await notificationService.checkAndMarkFeedbackComplete(interviewId);
+
+    res.json({
+      success: true,
+      ...result,
+    });
   } catch (error) {
     next(error);
   }

@@ -16,11 +16,11 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, AdvancedFilters } from './index';
+import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, AdvancedFilters, InterviewScheduleModal } from './index';
 import type { Column } from './Table';
 import type { AdvancedFiltersState } from './AdvancedFilters';
 import { pipelineService, jobsService } from '../services';
-import type { BulkMoveResult, PipelineAnalytics } from '../services';
+import type { BulkMoveResult, PipelineAnalytics, Interview } from '../services';
 import { extractUniqueSkills, extractUniqueSources, applyAdvancedFilters } from '../utils/filters';
 
 // Types
@@ -187,11 +187,13 @@ function CandidateTableView({
   onCandidateClick,
   selectedCandidates,
   onSelectionChange,
+  onScheduleInterview,
 }: { 
   candidates: PipelineCandidate[]; 
   onCandidateClick: (candidate: PipelineCandidate) => void;
   selectedCandidates: string[];
   onSelectionChange: (candidateIds: string[]) => void;
+  onScheduleInterview: (candidate: PipelineCandidate) => void;
 }) {
   const allSelected = candidates.length > 0 && candidates.every(c => selectedCandidates.includes(c.jobCandidateId || c.id));
   const someSelected = candidates.some(c => selectedCandidates.includes(c.jobCandidateId || c.id)) && !allSelected;
@@ -305,14 +307,19 @@ function CandidateTableView({
       key: 'actions',
       header: 'Actions',
       width: '120px',
-      render: () => (
-        <div className="grid grid-cols-2 gap-1">
-          <Button variant="mini" miniColor="note" onClick={() => {}}>Note</Button>
-          <Button variant="mini" miniColor="move" onClick={() => {}}>Move</Button>
-          <Button variant="mini" miniColor="schedule" onClick={() => {}}>Sched</Button>
-          <Button variant="mini" miniColor="cv" onClick={() => {}}>CV</Button>
-        </div>
-      ),
+      render: (row) => {
+        const handleScheduleClick = () => {
+          onScheduleInterview(row);
+        };
+        return (
+          <div className="grid grid-cols-2 gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button variant="mini" miniColor="note" onClick={() => {}}>Note</Button>
+            <Button variant="mini" miniColor="move" onClick={() => {}}>Move</Button>
+            <Button variant="mini" miniColor="schedule" onClick={handleScheduleClick}>Sched</Button>
+            <Button variant="mini" miniColor="cv" onClick={() => {}}>CV</Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -338,6 +345,7 @@ function KanbanCard({
   isDragging,
   onDragStart,
   onDragEnd,
+  onScheduleInterview,
 }: { 
   candidate: PipelineCandidate; 
   onClick: () => void;
@@ -346,6 +354,7 @@ function KanbanCard({
   isDragging?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
+  onScheduleInterview: () => void;
 }) {
   return (
     <div
@@ -397,10 +406,10 @@ function KanbanCard({
         )}
       </div>
       
-      <div className="flex gap-1">
+      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         <Button variant="mini" miniColor="note">Note</Button>
         <Button variant="mini" miniColor="move">Move</Button>
-        <Button variant="mini" miniColor="schedule">Sched</Button>
+        <Button variant="mini" miniColor="schedule" onClick={onScheduleInterview}>Sched</Button>
         <Button variant="mini" miniColor="cv">CV</Button>
       </div>
     </div>
@@ -429,6 +438,7 @@ function KanbanBoardView({
   onSelectionChange,
   onCandidateDrop,
   isMoving,
+  onScheduleInterview,
 }: { 
   candidates: PipelineCandidate[]; 
   stages: string[];
@@ -438,6 +448,7 @@ function KanbanBoardView({
   onSelectionChange: (candidateIds: string[]) => void;
   onCandidateDrop: (candidateId: string, targetStageId: string, targetStageName: string) => void;
   isMoving: boolean;
+  onScheduleInterview: (candidate: PipelineCandidate) => void;
 }) {
   const [draggingCandidateId, setDraggingCandidateId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
@@ -561,6 +572,7 @@ function KanbanBoardView({
                   isDragging={draggingCandidateId === (candidate.jobCandidateId || candidate.id)}
                   onDragStart={(e) => handleDragStart(e, candidate)}
                   onDragEnd={handleDragEnd}
+                  onScheduleInterview={() => onScheduleInterview(candidate)}
                 />
               ))}
               {stageCandidates.length === 0 && (
@@ -611,6 +623,10 @@ export function JobDetailsRightPanel({
   
   // Pipeline analytics state - Requirements 4.1, 4.5
   const [pipelineAnalytics, setPipelineAnalytics] = useState<PipelineAnalytics | null>(null);
+
+  // Interview scheduling state - Requirements 1.1
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [selectedCandidateForInterview, setSelectedCandidateForInterview] = useState<PipelineCandidate | null>(null);
 
   // Advanced filters state - Requirements 4.3
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
@@ -735,6 +751,19 @@ export function JobDetailsRightPanel({
   // Clear selection handler
   const handleClearSelection = useCallback(() => {
     setSelectedCandidates([]);
+  }, []);
+
+  // Handle opening interview schedule modal - Requirements 1.1
+  const handleScheduleInterview = useCallback((candidate: PipelineCandidate) => {
+    setSelectedCandidateForInterview(candidate);
+    setIsScheduleModalOpen(true);
+  }, []);
+
+  // Handle interview scheduled success
+  const handleInterviewScheduled = useCallback((_interview: Interview) => {
+    setIsScheduleModalOpen(false);
+    setSelectedCandidateForInterview(null);
+    // Optionally refresh data or show success message
   }, []);
 
   // Handle single candidate drag-drop move
@@ -935,6 +964,7 @@ export function JobDetailsRightPanel({
           onCandidateClick={onCandidateClick}
           selectedCandidates={selectedCandidates}
           onSelectionChange={setSelectedCandidates}
+          onScheduleInterview={handleScheduleInterview}
         />
       ) : (
         <KanbanBoardView
@@ -946,6 +976,22 @@ export function JobDetailsRightPanel({
           onSelectionChange={setSelectedCandidates}
           onCandidateDrop={handleCandidateDrop}
           isMoving={isDragMoving}
+          onScheduleInterview={handleScheduleInterview}
+        />
+      )}
+
+      {/* Interview Schedule Modal - Requirements 1.1 */}
+      {selectedCandidateForInterview && role && (
+        <InterviewScheduleModal
+          isOpen={isScheduleModalOpen}
+          onClose={() => {
+            setIsScheduleModalOpen(false);
+            setSelectedCandidateForInterview(null);
+          }}
+          onSuccess={handleInterviewScheduled}
+          jobCandidateId={selectedCandidateForInterview.jobCandidateId || selectedCandidateForInterview.id}
+          candidateName={selectedCandidateForInterview.name}
+          jobTitle={role.title}
         />
       )}
     </div>

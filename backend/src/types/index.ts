@@ -195,7 +195,15 @@ export interface JobCandidate {
 }
 
 // Activity types
-export type ActivityType = 'stage_change' | 'note_added' | 'resume_uploaded' | 'interview_scheduled' | 'score_updated';
+export type ActivityType = 
+  | 'stage_change' 
+  | 'note_added' 
+  | 'resume_uploaded' 
+  | 'interview_scheduled' 
+  | 'interview_rescheduled'
+  | 'interview_cancelled'
+  | 'interview_feedback'
+  | 'score_updated';
 
 export interface CandidateActivity {
   id: string;
@@ -217,4 +225,209 @@ export interface JWTPayload {
 export interface AuthResponse {
   token: string;
   user: Omit<User, 'passwordHash'>;
+}
+
+// Phase 3: Interview Management Types
+
+// Interview mode enum (Requirements 2.1)
+export type InterviewMode = 'google_meet' | 'microsoft_teams' | 'in_person';
+
+// Interview status enum (Requirements 1.3, 8.5)
+export type InterviewStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+
+// Interview recommendation enum (Requirements 9.4)
+export type InterviewRecommendation = 'strong_hire' | 'hire' | 'no_hire' | 'strong_no_hire';
+
+// Interview panel member
+export interface InterviewPanelMember {
+  id: string;
+  interviewId: string;
+  userId: string;
+  user?: User;
+  createdAt: Date;
+}
+
+// Interview feedback rating
+export interface FeedbackRating {
+  criterion: string;
+  score: number; // 1-5
+  comments?: string;
+}
+
+// Interview feedback (Requirements 9.1, 9.5)
+export interface InterviewFeedback {
+  id: string;
+  interviewId: string;
+  panelMemberId: string;
+  ratings: FeedbackRating[];
+  overallComments: string;
+  recommendation: InterviewRecommendation;
+  submittedAt: Date;
+  panelMember?: User;
+}
+
+// Main Interview type (Requirements 1.3, 1.4, 17.1)
+export interface Interview {
+  id: string;
+  jobCandidateId: string;
+  scheduledAt: Date;
+  duration: number; // minutes
+  timezone: string;
+  mode: InterviewMode;
+  meetingLink?: string;
+  location?: string;
+  status: InterviewStatus;
+  notes?: string;
+  cancelReason?: string;
+  scheduledBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // Relations
+  jobCandidate?: JobCandidate & {
+    candidate?: Candidate;
+    job?: Job;
+  };
+  scheduler?: User;
+  panelMembers?: InterviewPanelMember[];
+  feedback?: InterviewFeedback[];
+}
+
+// Create interview input (Requirements 1.3, 1.4)
+export interface CreateInterviewInput {
+  jobCandidateId: string;
+  scheduledAt: Date;
+  duration: number; // minutes
+  timezone: string; // IANA timezone (e.g., 'Asia/Kolkata')
+  mode: InterviewMode;
+  location?: string; // Required for in_person
+  panelMemberIds: string[]; // User IDs of interviewers
+  notes?: string;
+  scheduledBy: string; // User ID
+}
+
+// Update interview input (Requirements 8.2, 8.3)
+export interface UpdateInterviewInput {
+  scheduledAt?: Date;
+  duration?: number;
+  timezone?: string;
+  mode?: InterviewMode;
+  location?: string;
+  panelMemberIds?: string[];
+  notes?: string;
+}
+
+// Interview filters for querying (Requirements 17.2)
+export interface InterviewFilters {
+  companyId?: string;
+  jobId?: string;
+  candidateId?: string;
+  panelMemberId?: string;
+  status?: InterviewStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+  mode?: InterviewMode;
+  jobCandidateId?: string;
+}
+
+// Dashboard interviews response (Requirements 11.1, 11.2, 12.1)
+export interface DashboardInterviews {
+  today: Interview[];
+  tomorrow: Interview[];
+  thisWeek: Interview[];
+  pendingFeedback: Interview[];
+}
+
+// Panel load distribution (Requirements 13.1, 13.2)
+export interface PanelLoad {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  interviewCount: number;
+  averageLoad: number;
+}
+
+
+// Phase 3: Calendar Integration Types
+
+// OAuth provider type
+export type OAuthProvider = 'google' | 'microsoft';
+
+// OAuth token data for storage
+export interface OAuthTokenData {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: Date;
+  scope?: string;
+}
+
+// Stored OAuth token
+export interface StoredOAuthToken {
+  id: string;
+  userId: string;
+  provider: OAuthProvider;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: Date;
+  scope?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Calendar event result
+export interface CalendarEventResult {
+  provider: OAuthProvider;
+  eventId: string;
+  meetingLink?: string;
+}
+
+// Calendar event input for creation
+export interface CalendarEventInput {
+  interviewId: string;
+  title: string;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  timezone: string;
+  attendees: Array<{ email: string; name?: string }>;
+  createMeetingLink: boolean;
+}
+
+// Calendar event update input
+export interface CalendarEventUpdateInput {
+  title?: string;
+  description?: string;
+  startTime?: Date;
+  endTime?: Date;
+  timezone?: string;
+  attendees?: Array<{ email: string; name?: string }>;
+}
+
+// Calendar connection status
+export interface CalendarConnectionStatus {
+  google: boolean;
+  microsoft: boolean;
+}
+
+
+// Phase 3: Timezone Types
+
+/**
+ * Timezone option for selection lists
+ * Requirements: 3.1 - Allow selection of timezone from standard timezone list (IANA format)
+ */
+export interface TimezoneOption {
+  value: string;      // IANA timezone identifier
+  label: string;      // Human-readable label
+  offset: string;     // UTC offset string (e.g., "+05:30")
+  region: string;     // Geographic region
+}
+
+/**
+ * Formatted time display for different contexts
+ */
+export interface FormattedDateTime {
+  date: string;       // Formatted date string
+  time: string;       // Formatted time string
+  full: string;       // Full date and time string
+  timezone: string;   // Timezone abbreviation
 }

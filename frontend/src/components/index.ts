@@ -97,3 +97,33 @@ export type { AlertsPanelProps } from './AlertsPanel';
 // SLA Configuration Component - Requirements 10.5
 export { SLAConfigSection } from './SLAConfigSection';
 export type { default as SLAConfigSectionDefault } from './SLAConfigSection';
+
+// Interview Scheduling Components - Requirements 1.1, 1.2, 2.1, 3.1
+export { InterviewScheduleModal } from './InterviewScheduleModal';
+export type { InterviewScheduleModalProps } from './InterviewScheduleModal';
+
+// Interview Dashboard Components - Requirements 11.1-11.5, 12.1-12.5, 13.1-13.4
+export { InterviewCard } from './InterviewCard';
+export type { InterviewCardProps } from './InterviewCard';
+export { PanelLoadChart } from './PanelLoadChart';
+export type { PanelLoadChartProps } from './PanelLoadChart';
+export { InterviewDashboardFilters } from './InterviewDashboardFilters';
+export type { InterviewDashboardFiltersProps } from './InterviewDashboardFilters';
+
+// Interview Feedback Components - Requirements 9.1-9.4, 14.5
+export { FeedbackScorecard, DEFAULT_CRITERIA } from './FeedbackScorecard';
+export type { FeedbackScorecardProps, FeedbackSubmission } from './FeedbackScorecard';
+export { FeedbackSummary } from './FeedbackSummary';
+export type { FeedbackSummaryProps } from './FeedbackSummary';
+export { InterviewDetailModal } from './InterviewDetailModal';
+export type { InterviewDetailModalProps } from './InterviewDetailModal';
+
+// Calendar Integration Components - Requirements 4.1, 5.1
+export { CalendarConnectionSettings } from './CalendarConnectionSettings';
+export type { CalendarConnectionSettingsProps } from './CalendarConnectionSettings';
+
+// Interview Reschedule and Cancel Components - Requirements 8.1, 8.2, 8.4
+export { RescheduleModal } from './RescheduleModal';
+export type { RescheduleModalProps } from './RescheduleModal';
+export { CancelConfirmationModal } from './CancelConfirmationModal';
+export type { CancelConfirmationModalProps } from './CancelConfirmationModal';

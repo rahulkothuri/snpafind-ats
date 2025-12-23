@@ -10,6 +10,10 @@ import pipelineRoutes from './pipeline.routes.js';
 import notificationRoutes from './notification.routes.js';
 import slaRoutes from './sla.routes.js';
 import taskRoutes from './task.routes.js';
+import calendarRoutes from './calendar.routes.js';
+import timezoneRoutes from './timezone.routes.js';
+import interviewRoutes from './interview.routes.js';
+import emailTemplateRoutes from './emailTemplate.routes.js';
 
 const router = Router();
 
@@ -31,6 +35,10 @@ router.use('/stage-templates', stageTemplateRoutes);
 router.use('/pipeline', pipelineRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/tasks', taskRoutes);
+router.use('/calendar', calendarRoutes);
+router.use('/timezones', timezoneRoutes);
+router.use('/interviews', interviewRoutes);
+router.use('/email-templates', emailTemplateRoutes);
 // SLA routes - mounted at root to support /api/alerts and /api/settings/sla
 router.use('/', slaRoutes);
 

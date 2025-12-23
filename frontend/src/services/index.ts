@@ -9,6 +9,8 @@ export { default as pipelineService } from './pipeline.service';
 export { default as notificationsService } from './notifications.service';
 export { default as alertsService } from './alerts.service';
 export { default as tasksService } from './tasks.service';
+export { default as interviewsService } from './interviews.service';
+export { default as calendarService } from './calendar.service';
 
 export type { Job, PipelineStage, CreateJobData, StageMetric, PipelineAnalytics } from './jobs.service';
 export type { Candidate, JobCandidate, CandidateActivity, CreateCandidateData, CandidateSearchParams } from './candidates.service';
@@ -19,3 +21,18 @@ export type { BulkMoveRequest, BulkMoveResult, BulkMoveFailure } from './pipelin
 export type { Notification, NotificationType, NotificationsResponse, GetNotificationsOptions } from './notifications.service';
 export type { SLABreachAlert, PendingFeedbackAlert, AlertsResponse, AlertType, SLAConfig, SLAConfigResponse, UpdateSLAConfigData } from './alerts.service';
 export type { Task, TaskType, TaskSeverity, TaskStatus, CreateTaskData, UpdateTaskData } from './tasks.service';
+export type { 
+  Interview, 
+  InterviewMode, 
+  InterviewStatus, 
+  InterviewRecommendation,
+  CreateInterviewInput, 
+  UpdateInterviewInput, 
+  InterviewFilters,
+  DashboardInterviews,
+  PanelLoad,
+  InterviewFeedback,
+  FeedbackRating,
+  TimezoneOption
+} from './interviews.service';
+export type { CalendarProvider, CalendarConnectionStatus, OAuthUrlResponse, ConnectedProvidersResponse } from './calendar.service';

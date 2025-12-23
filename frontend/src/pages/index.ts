@@ -9,3 +9,5 @@ export { JobCreationPage } from './JobCreationPage';
 export { JobDetailsPage } from './JobDetailsPage';
 export { ApplicationPage } from './ApplicationPage';
 export { CandidateProfilePage } from './CandidateProfilePage';
+export { InterviewDashboardPage } from './InterviewDashboardPage';
+export { GoogleOAuthCallbackPage, MicrosoftOAuthCallbackPage, OAuthCallbackPage } from './OAuthCallbackPage';

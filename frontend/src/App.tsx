@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage, CandidateProfilePage } from './pages';
+import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage, CandidateProfilePage, InterviewDashboardPage, GoogleOAuthCallbackPage, MicrosoftOAuthCallbackPage } from './pages';
 import { useAuth } from './hooks/useAuth';
 import { JobProtectedRoute, RoleProtectedRoute } from './components';
 
@@ -89,6 +89,15 @@ function App() {
               <CandidateProfilePage />
             </ProtectedRoute>
           } />
+          {/* Interview Dashboard Page - Requirements 11.1-11.5, 12.1-12.5, 13.1-13.4 */}
+          <Route path="/interviews" element={
+            <ProtectedRoute>
+              <InterviewDashboardPage />
+            </ProtectedRoute>
+          } />
+          {/* OAuth Callback Pages - Requirements 4.1, 5.1 */}
+          <Route path="/oauth/google/callback" element={<GoogleOAuthCallbackPage />} />
+          <Route path="/oauth/microsoft/callback" element={<MicrosoftOAuthCallbackPage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

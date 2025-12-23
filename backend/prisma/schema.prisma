@@ -45,6 +45,11 @@ model Company {
   slaConfigs     SLAConfig[]
   tasks          Task[]
 
+  // Phase 3 relations (Interview Management)
+  emailTemplates     EmailTemplate[]
+  scorecardTemplates ScorecardTemplate[]
+  companySettings    CompanySettings?
+
   @@map("companies")
 }
 
@@ -77,6 +82,13 @@ model User {
   candidateAttachments CandidateAttachment[] @relation("CandidateAttachmentUploader")
   notifications        Notification[]
   tasks                Task[]
+
+  // Phase 3 relations (Interview Management)
+  scheduledInterviews Interview[]         @relation("InterviewScheduler")
+  interviewPanels     InterviewPanel[]
+  interviewFeedback   InterviewFeedback[] @relation("FeedbackAuthor")
+  calendarEvents      CalendarEvent[]     @relation("UserCalendarEvents")
+  oauthTokens         OAuthToken[]
 
   @@map("users")
 }
@@ -246,6 +258,9 @@ model JobCandidate {
   activities   CandidateActivity[]
   stageHistory StageHistory[]
 
+  // Phase 3 relations (Interview Management)
+  interviews Interview[]
+
   @@unique([jobId, candidateId])
   @@map("job_candidates")
 }
@@ -255,6 +270,9 @@ enum ActivityType {
   note_added
   resume_uploaded
   interview_scheduled
+  interview_rescheduled
+  interview_cancelled
+  interview_feedback
   score_updated
 
   @@map("activity_type")
@@ -385,6 +403,36 @@ enum TaskType {
   @@map("task_type")
 }
 
+// Phase 3: Interview Mode Enum (Requirements 2.1)
+enum InterviewMode {
+  google_meet
+  microsoft_teams
+  in_person
+
+  @@map("interview_mode")
+}
+
+// Phase 3: Interview Status Enum (Requirements 1.3, 8.5)
+enum InterviewStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
+  no_show
+
+  @@map("interview_status")
+}
+
+// Phase 3: Interview Recommendation Enum (Requirements 9.4)
+enum InterviewRecommendation {
+  strong_hire
+  hire
+  no_hire
+  strong_no_hire
+
+  @@map("interview_recommendation")
+}
+
 // Task Severity Enum
 enum TaskSeverity {
   high
@@ -421,4 +469,146 @@ model Task {
   @@index([companyId, userId])
   @@index([status])
   @@map("tasks")
+}
+
+
+// Phase 3: Interview Model (Requirements 1.3, 1.4, 17.1)
+model Interview {
+  id             String          @id @default(uuid())
+  jobCandidateId String          @map("job_candidate_id")
+  scheduledAt    DateTime        @map("scheduled_at")
+  duration       Int             // minutes
+  timezone       String          @default("UTC")
+  mode           InterviewMode
+  meetingLink    String?         @map("meeting_link")
+  location       String?
+  status         InterviewStatus @default(scheduled)
+  notes          String?         @db.Text
+  cancelReason   String?         @map("cancel_reason") @db.Text
+  scheduledBy    String          @map("scheduled_by")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  jobCandidate   JobCandidate        @relation(fields: [jobCandidateId], references: [id], onDelete: Cascade)
+  scheduler      User                @relation("InterviewScheduler", fields: [scheduledBy], references: [id])
+  panelMembers   InterviewPanel[]
+  feedback       InterviewFeedback[]
+  calendarEvents CalendarEvent[]
+
+  @@index([jobCandidateId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("interviews")
+}
+
+// Phase 3: Interview Panel - Many-to-Many: Interview <-> User (Requirements 1.2)
+model InterviewPanel {
+  id          String   @id @default(uuid())
+  interviewId String   @map("interview_id")
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([interviewId, userId])
+  @@map("interview_panels")
+}
+
+// Phase 3: Interview Feedback/Scorecard (Requirements 9.1, 9.5)
+model InterviewFeedback {
+  id              String                  @id @default(uuid())
+  interviewId     String                  @map("interview_id")
+  panelMemberId   String                  @map("panel_member_id")
+  ratings         Json                    // Array of {criterion, score, comments}
+  overallComments String                  @map("overall_comments") @db.Text
+  recommendation  InterviewRecommendation
+  submittedAt     DateTime                @default(now()) @map("submitted_at")
+
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  panelMember User      @relation("FeedbackAuthor", fields: [panelMemberId], references: [id])
+
+  @@unique([interviewId, panelMemberId])
+  @@index([interviewId])
+  @@map("interview_feedback")
+}
+
+// Phase 3: Calendar Event Sync Tracking (Requirements 4.2, 5.2)
+model CalendarEvent {
+  id          String   @id @default(uuid())
+  interviewId String   @map("interview_id")
+  userId      String   @map("user_id")
+  provider    String   // 'google' or 'microsoft'
+  externalId  String   @map("external_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user      User      @relation("UserCalendarEvents", fields: [userId], references: [id])
+
+  @@unique([interviewId, userId, provider])
+  @@map("calendar_events")
+}
+
+// Phase 3: OAuth Token Storage (Requirements 4.1, 5.1)
+model OAuthToken {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  provider     String   // 'google' or 'microsoft'
+  accessToken  String   @map("access_token") @db.Text
+  refreshToken String?  @map("refresh_token") @db.Text
+  expiresAt    DateTime @map("expires_at")
+  scope        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("oauth_tokens")
+}
+
+// Phase 3: Email Template Storage (Requirements 16.1, 16.4)
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  companyId   String?  @map("company_id") // null = system default
+  templateKey String   @map("template_key")
+  subject     String
+  htmlContent String   @map("html_content") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, templateKey])
+  @@map("email_templates")
+}
+
+// Phase 3: Scorecard Template (Requirements 9.1)
+model ScorecardTemplate {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  name      String
+  criteria  Json     // Array of {name, description, weight}
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("scorecard_templates")
+}
+
+// Phase 3: Company Settings (Requirements 10.5)
+model CompanySettings {
+  id                       String   @id @default(uuid())
+  companyId                String   @unique @map("company_id")
+  autoStageMovementEnabled Boolean  @default(true) @map("auto_stage_movement_enabled")
+  feedbackReminderHours    Int      @default(24) @map("feedback_reminder_hours")
+  preferredCalendarProvider String? @map("preferred_calendar_provider")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_settings")
 }

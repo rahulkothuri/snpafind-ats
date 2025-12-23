@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout, Button, Badge, Table, LoadingSpinner, ErrorMessage, SLAConfigSection } from '../components';
+import { Layout, Button, Badge, Table, LoadingSpinner, ErrorMessage, SLAConfigSection, CalendarConnectionSettings } from '../components';
 import type { Column } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useUsers, useCreateUser, useToggleUserStatus } from '../hooks/useUsers';
@@ -16,7 +16,7 @@ import type { User } from '../services';
  * - Role configuration display with permissions
  */
 
-type TabId = 'company' | 'users' | 'roles' | 'sla';
+type TabId = 'company' | 'users' | 'roles' | 'sla' | 'calendar';
 
 interface Tab {
   id: TabId;
@@ -28,6 +28,7 @@ const tabs: Tab[] = [
   { id: 'users', label: 'User Management' },
   { id: 'roles', label: 'Role Configuration' },
   { id: 'sla', label: 'SLA Settings' },
+  { id: 'calendar', label: 'Calendar Integration' },
 ];
 
 // Company size options - Requirement 2.2
@@ -1080,6 +1081,16 @@ function SLAConfigTab() {
 }
 
 
+// Calendar Integration Tab Component - Requirements 4.1, 5.1
+function CalendarIntegrationTab() {
+  return (
+    <div className="space-y-6">
+      <CalendarConnectionSettings />
+    </div>
+  );
+}
+
+
 // Main Settings Page Component - Requirement 19.1
 export function SettingsPage() {
   const { user, logout } = useAuth();
@@ -1095,6 +1106,8 @@ export function SettingsPage() {
         return <RoleConfigurationTab />;
       case 'sla':
         return <SLAConfigTab />;
+      case 'calendar':
+        return <CalendarIntegrationTab />;
       default:
         return null;
     }
