@@ -8,10 +8,11 @@
  * - Salary information (current and expected)
  * - Age, industry, and job domain fields
  * - Skills display with overflow handling (+X more)
- * - 5-6 line candidate summary with proper formatting
+ * - Collapsible candidate summary with "Read more" toggle
  * - Action buttons (CV, Add to Job, Share, More Actions)
  */
 
+import { useState } from 'react';
 import { Button } from './';
 
 interface DatabaseCandidate {
@@ -77,6 +78,8 @@ export function EnhancedCandidateCard({
   onClick,
   isSelected,
 }: EnhancedCandidateCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const handleCardClick = () => {
     onClick(candidate);
   };
@@ -84,6 +87,11 @@ export function EnhancedCandidateCard({
   const handleActionClick = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation(); // Prevent card click when clicking action buttons
     action();
+  };
+
+  const handleToggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when toggling expand
+    setIsExpanded(!isExpanded);
   };
 
   const handleViewCV = () => {
@@ -187,14 +195,44 @@ export function EnhancedCandidateCard({
         )}
       </div>
 
-      {/* Summary Row - Show complete summary */}
+      {/* Summary Row - Collapsible with "Read more" */}
       <div className="text-[11px] mb-1.5">
         <span className="text-[#64748b]">Summary: </span>
-        <span className="font-medium text-[#374151]">
-          {candidate.candidateSummary && candidate.candidateSummary.trim() 
-            ? candidate.candidateSummary
-            : 'No summary available'}
-        </span>
+        {candidate.candidateSummary && candidate.candidateSummary.trim() ? (
+          <>
+            {isExpanded ? (
+              <>
+                <span className="font-medium text-[#374151]">
+                  {candidate.candidateSummary}
+                </span>
+                <button
+                  onClick={handleToggleExpand}
+                  className="ml-1 text-[#0b6cf0] hover:text-[#0952b8] font-medium hover:underline"
+                >
+                  Show less
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-[#374151]">
+                  {candidate.candidateSummary.length > 100 
+                    ? `${candidate.candidateSummary.substring(0, 100).trim()}...`
+                    : candidate.candidateSummary}
+                </span>
+                {candidate.candidateSummary.length > 100 && (
+                  <button
+                    onClick={handleToggleExpand}
+                    className="ml-1 text-[#0b6cf0] hover:text-[#0952b8] font-medium hover:underline"
+                  >
+                    Read more
+                  </button>
+                )}
+              </>
+            )}
+          </>
+        ) : (
+          <span className="font-medium text-[#374151]">No summary available</span>
+        )}
       </div>
 
       {/* Action Buttons */}

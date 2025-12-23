@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Layout, 
   Button, 
@@ -151,6 +152,7 @@ function CandidateDetailContent({
 export function RolesPage() {
   const { user, logout } = useAuth();
   const { data: apiJobs, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useJobs();
+  const navigate = useNavigate();
   
   // Role selection and filtering state
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -228,6 +230,18 @@ export function RolesPage() {
     } finally {
       setJobDescriptionLoading(false);
     }
+  };
+
+  // Handler to navigate to Edit JD page - Requirements 1.2, 1.4
+  const handleEditJobDescription = () => {
+    if (!selectedRole) return;
+    navigate(`/jobs/${selectedRole.id}/edit`);
+  };
+
+  // Handler to navigate to candidate profile page - Requirements 3.2, 3.3, 3.5
+  const handleMoreInfo = (candidateId: string) => {
+    setSelectedCandidate(null); // Close sidebar first
+    navigate(`/candidates/${candidateId}`);
   };
 
   // Map API jobs to local format - Requirements 4.1, 4.3, 4.4
@@ -442,6 +456,7 @@ export function RolesPage() {
               isLoading={candidatesLoading}
               onViewJobDescription={handleViewJobDescription}
               jobDescriptionLoading={jobDescriptionLoading}
+              onEditJobDescription={handleEditJobDescription}
               pipelineStages={pipelineStages}
               onCandidatesMoved={handleCandidatesMoved}
             />
@@ -455,6 +470,7 @@ export function RolesPage() {
         onClose={() => setSelectedCandidate(null)}
         title={selectedCandidate?.name || ''}
         subtitle={selectedCandidate ? `${selectedCandidate.title} · ${selectedCandidate.location} · ${selectedCandidate.stage}` : ''}
+        onMoreInfo={selectedCandidate ? () => handleMoreInfo(selectedCandidate.id) : undefined}
       >
         {selectedCandidate && (
           <CandidateDetailContent candidate={selectedCandidate} />

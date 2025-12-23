@@ -32,6 +32,25 @@ export interface Company {
     careersPageUrl?: string;
     brandColor?: string;
 }
+export interface MandatoryCriteria {
+    title: string;
+    intro: string;
+    criteria: string[];
+    note: string;
+}
+export type ScreeningQuestionType = 'text' | 'textarea' | 'single_choice' | 'multiple_choice' | 'yes_no' | 'number';
+export interface ScreeningQuestion {
+    id: string;
+    question: string;
+    type: ScreeningQuestionType;
+    required: boolean;
+    options?: string[];
+    idealAnswer?: string | string[];
+}
+export interface ScreeningQuestionAnswer {
+    questionId: string;
+    answer: string | string[] | number | boolean;
+}
 export type JobStatus = 'active' | 'paused' | 'closed';
 export type WorkMode = 'Onsite' | 'WFH' | 'Hybrid' | 'C2C' | 'C2H';
 export type JobPriority = 'Low' | 'Medium' | 'High';
@@ -55,6 +74,8 @@ export interface Job {
     jobDomain?: string;
     assignedRecruiterId?: string;
     description: string;
+    mandatoryCriteria?: MandatoryCriteria;
+    screeningQuestions?: ScreeningQuestion[];
     status: JobStatus;
     openings: number;
     createdAt: Date;

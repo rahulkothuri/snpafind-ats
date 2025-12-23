@@ -38,6 +38,31 @@ export interface Company {
   brandColor?: string;
 }
 
+// Mandatory Criteria structure for job screening
+export interface MandatoryCriteria {
+  title: string;
+  intro: string;
+  criteria: string[];
+  note: string;
+}
+
+// Screening Question types for job applications
+export type ScreeningQuestionType = 'text' | 'textarea' | 'single_choice' | 'multiple_choice' | 'yes_no' | 'number';
+
+export interface ScreeningQuestion {
+  id: string;
+  question: string;
+  type: ScreeningQuestionType;
+  required: boolean;
+  options?: string[]; // For single_choice and multiple_choice types
+  idealAnswer?: string | string[]; // For knockout/scoring purposes
+}
+
+export interface ScreeningQuestionAnswer {
+  questionId: string;
+  answer: string | string[] | number | boolean;
+}
+
 // Job types
 export type JobStatus = 'active' | 'paused' | 'closed';
 export type WorkMode = 'Onsite' | 'WFH' | 'Hybrid' | 'C2C' | 'C2H';
@@ -73,6 +98,8 @@ export interface Job {
   priority?: JobPriority;
   jobDomain?: string;
   assignedRecruiterId?: string;
+  mandatoryCriteria?: MandatoryCriteria;
+  screeningQuestions?: ScreeningQuestion[];
 }
 
 // Job form data for creating/editing jobs

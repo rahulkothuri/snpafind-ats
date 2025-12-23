@@ -43,6 +43,7 @@ model Company {
   candidates     Candidate[]
   stageTemplates PipelineStageTemplate[]
   slaConfigs     SLAConfig[]
+  tasks          Task[]
 
   @@map("companies")
 }
@@ -75,6 +76,7 @@ model User {
   candidateNotes       CandidateNote[]       @relation("CandidateNoteAuthor")
   candidateAttachments CandidateAttachment[] @relation("CandidateAttachmentUploader")
   notifications        Notification[]
+  tasks                Task[]
 
   @@map("users")
 }
@@ -119,6 +121,12 @@ model Job {
 
   // Content
   description String? @db.Text
+
+  // Mandatory Criteria - editable screening criteria for the job
+  mandatoryCriteria Json? @default("{}") @map("mandatory_criteria")
+
+  // Screening Questions - questions candidates must answer before applying
+  screeningQuestions Json? @default("[]") @map("screening_questions")
 
   // Existing fields
   status    JobStatus @default(active)
@@ -365,4 +373,52 @@ model SLAConfig {
 
   @@unique([companyId, stageName])
   @@map("sla_configs")
+}
+
+// Task Type Enum
+enum TaskType {
+  feedback
+  approval
+  reminder
+  pipeline
+
+  @@map("task_type")
+}
+
+// Task Severity Enum
+enum TaskSeverity {
+  high
+  medium
+  low
+
+  @@map("task_severity")
+}
+
+// Task Status Enum
+enum TaskStatus {
+  open
+  closed
+
+  @@map("task_status")
+}
+
+// Tasks for dashboard task management
+model Task {
+  id          String       @id @default(uuid())
+  companyId   String       @map("company_id")
+  userId      String       @map("user_id")
+  type        TaskType
+  text        String
+  severity    TaskSeverity @default(medium)
+  status      TaskStatus   @default(open)
+  completedAt DateTime?    @map("completed_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, userId])
+  @@index([status])
+  @@map("tasks")
 }

@@ -38,6 +38,7 @@ export {
 
 // Job Form Components
 export { MandatoryCriteriaSection, MANDATORY_CRITERIA_CONTENT } from './MandatoryCriteriaSection';
+export { ScreeningQuestionsSection } from './ScreeningQuestionsSection';
 export { PipelineStageConfigurator, DEFAULT_PIPELINE_STAGES } from './PipelineStageConfigurator';
 export { MultiSelect } from './MultiSelect';
 export type { MultiSelectOption, MultiSelectProps } from './MultiSelect';

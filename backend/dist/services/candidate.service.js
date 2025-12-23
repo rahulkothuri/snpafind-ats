@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/errorHandler.js';
 import { stageHistoryService } from './stageHistory.service.js';
+import { notificationService } from './notification.service.js';
 function mapPrismaCandidateToCandidate(candidate) {
     return {
         id: candidate.id,
@@ -339,6 +340,23 @@ export const candidateService = {
             });
             return { updatedJobCandidate, activity };
         });
+        // Create notifications for stage change (Requirements 8.1)
+        // This is done outside the transaction to not block the main operation
+        try {
+            await notificationService.createStageChangeNotifications({
+                candidateId: jobCandidate.candidateId,
+                candidateName: jobCandidate.candidate.name,
+                jobId: jobCandidate.jobId,
+                jobTitle: jobCandidate.job.title,
+                fromStageName: oldStageName,
+                toStageName: newStageName,
+                movedByUserId: data.movedBy,
+            });
+        }
+        catch (notificationError) {
+            // Log but don't fail the stage change if notification fails
+            console.error('Failed to create stage change notifications:', notificationError);
+        }
         return {
             jobCandidate: {
                 id: result.updatedJobCandidate.id,

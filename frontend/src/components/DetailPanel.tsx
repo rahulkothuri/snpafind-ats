@@ -23,6 +23,7 @@ interface DetailPanelProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  onMoreInfo?: () => void;  // Optional callback for More Info button navigation
 }
 
 export function DetailPanel({
@@ -31,6 +32,7 @@ export function DetailPanel({
   title,
   subtitle,
   children,
+  onMoreInfo,
 }: DetailPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -93,15 +95,25 @@ export function DetailPanel({
               </p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="ml-3 p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
-            aria-label="Close panel"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2 ml-3">
+            {onMoreInfo && (
+              <button
+                onClick={onMoreInfo}
+                className="px-3 py-1.5 text-xs font-semibold text-[#0b6cf0] bg-white hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                More Info
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+              aria-label="Close panel"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Content - White background with subtle blue accents */}

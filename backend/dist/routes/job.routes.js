@@ -3,6 +3,7 @@ import { z } from 'zod';
 import jobService from '../services/job.service.js';
 import pipelineService from '../services/pipeline.service.js';
 import stageHistoryService from '../services/stageHistory.service.js';
+import pipelineAnalyticsService from '../services/pipelineAnalytics.service.js';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
@@ -201,6 +202,20 @@ router.get('/:id/candidates/:jobCandidateId/stage-history', authenticate, requir
         const { jobCandidateId } = req.params;
         const stageHistory = await stageHistoryService.getStageHistory(jobCandidateId);
         res.json(stageHistory);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * GET /api/jobs/:id/pipeline/analytics
+ * Get pipeline analytics including stage metrics with counts and TAT
+ * Requirements: 2.4, 4.1
+ */
+router.get('/:id/pipeline/analytics', authenticate, requireJobAccess(), async (req, res, next) => {
+    try {
+        const analytics = await pipelineAnalyticsService.getStageMetrics(req.params.id);
+        res.json(analytics);
     }
     catch (error) {
         next(error);

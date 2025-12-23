@@ -77,6 +77,10 @@ export const jobService = {
                     description: data.description,
                     openings: data.openings ?? 1,
                     status: 'active',
+                    // Mandatory criteria
+                    mandatoryCriteria: data.mandatoryCriteria || {},
+                    // Screening questions
+                    screeningQuestions: data.screeningQuestions || [],
                     // Legacy fields
                     location: data.location || (data.locations && data.locations.length > 0 ? data.locations[0] : ''),
                     employmentType: data.employmentType,
@@ -338,6 +342,10 @@ export const jobService = {
                     description: data.description,
                     status: data.status,
                     openings: data.openings,
+                    // Mandatory criteria
+                    mandatoryCriteria: data.mandatoryCriteria,
+                    // Screening questions
+                    screeningQuestions: data.screeningQuestions,
                     // Legacy fields
                     location: data.location,
                     employmentType: data.employmentType,
@@ -451,6 +459,10 @@ export const jobService = {
             openings: job.openings,
             createdAt: job.createdAt,
             updatedAt: job.updatedAt,
+            // Mandatory criteria
+            mandatoryCriteria: job.mandatoryCriteria,
+            // Screening questions
+            screeningQuestions: job.screeningQuestions,
             // Legacy fields
             location: job.location ?? undefined,
             employmentType: job.employmentType ?? undefined,

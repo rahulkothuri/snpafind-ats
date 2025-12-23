@@ -51,6 +51,12 @@ export interface CreateJobData {
   description?: string;
   openings?: number;
   
+  // Mandatory criteria - editable screening criteria
+  mandatoryCriteria?: MandatoryCriteria;
+  
+  // Screening questions - questions candidates must answer before applying
+  screeningQuestions?: ScreeningQuestion[];
+  
   // Pipeline stages configuration (Requirements 4.1)
   pipelineStages?: PipelineStageConfig[];
   
@@ -58,6 +64,26 @@ export interface CreateJobData {
   location?: string;
   employmentType?: string;
   salaryRange?: string;
+}
+
+// Mandatory criteria structure
+export interface MandatoryCriteria {
+  title: string;
+  intro: string;
+  criteria: string[];
+  note: string;
+}
+
+// Screening question types
+export type ScreeningQuestionType = 'text' | 'textarea' | 'single_choice' | 'multiple_choice' | 'yes_no' | 'number';
+
+export interface ScreeningQuestion {
+  id: string;
+  question: string;
+  type: ScreeningQuestionType;
+  required: boolean;
+  options?: string[];
+  idealAnswer?: string | string[];
 }
 
 export interface UpdateJobData {
@@ -92,6 +118,12 @@ export interface UpdateJobData {
   description?: string | null;
   status?: 'active' | 'paused' | 'closed';
   openings?: number;
+  
+  // Mandatory criteria - editable screening criteria
+  mandatoryCriteria?: MandatoryCriteria | null;
+  
+  // Screening questions - questions candidates must answer before applying
+  screeningQuestions?: ScreeningQuestion[] | null;
   
   // Pipeline stages configuration
   pipelineStages?: PipelineStageConfig[];
@@ -182,6 +214,12 @@ export const jobService = {
           description: data.description,
           openings: data.openings ?? 1,
           status: 'active',
+          
+          // Mandatory criteria
+          mandatoryCriteria: data.mandatoryCriteria || {},
+          
+          // Screening questions
+          screeningQuestions: data.screeningQuestions || [],
           
           // Legacy fields
           location: data.location || (data.locations && data.locations.length > 0 ? data.locations[0] : ''),
@@ -481,6 +519,12 @@ export const jobService = {
           status: data.status,
           openings: data.openings,
           
+          // Mandatory criteria
+          mandatoryCriteria: data.mandatoryCriteria,
+          
+          // Screening questions
+          screeningQuestions: data.screeningQuestions,
+          
           // Legacy fields
           location: data.location,
           employmentType: data.employmentType,
@@ -603,6 +647,8 @@ export const jobService = {
       location: string | null;
       employmentType: string | null;
       salaryRange: string | null;
+      mandatoryCriteria?: unknown;
+      screeningQuestions?: unknown;
     },
     stages?: Array<{
       id: string;
@@ -660,6 +706,12 @@ export const jobService = {
       openings: job.openings,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
+      
+      // Mandatory criteria
+      mandatoryCriteria: job.mandatoryCriteria as MandatoryCriteria | undefined,
+      
+      // Screening questions
+      screeningQuestions: job.screeningQuestions as ScreeningQuestion[] | undefined,
       
       // Legacy fields
       location: job.location ?? undefined,

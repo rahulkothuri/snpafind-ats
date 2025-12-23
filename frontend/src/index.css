@@ -60,7 +60,7 @@
   --sidebar-collapsed-width: 60px;
   --header-height: 64px;
   --footer-height: 48px;
-  --detail-panel-width: 400px;
+  --detail-panel-width: 500px;
   
   /* Border radius */
   --radius-sm: 6px;
@@ -464,6 +464,11 @@ body {
 
 /* Mobile layout (< 768px) - Requirement 5.1 */
 @media (max-width: 767px) {
+  /* Full-width detail panel for mobile - Requirement 2.4 */
+  :root {
+    --detail-panel-width: 100vw;
+  }
+  
   /* Stack content vertically */
   .application-page-layout {
     flex-direction: column !important;

@@ -8,6 +8,7 @@ export { default as dashboardService } from './dashboard.service';
 export { default as pipelineService } from './pipeline.service';
 export { default as notificationsService } from './notifications.service';
 export { default as alertsService } from './alerts.service';
+export { default as tasksService } from './tasks.service';
 
 export type { Job, PipelineStage, CreateJobData, StageMetric, PipelineAnalytics } from './jobs.service';
 export type { Candidate, JobCandidate, CandidateActivity, CreateCandidateData, CandidateSearchParams } from './candidates.service';
@@ -17,3 +18,4 @@ export type { DashboardMetrics, RolePipeline, FunnelStage, SourcePerformance, Re
 export type { BulkMoveRequest, BulkMoveResult, BulkMoveFailure } from './pipeline.service';
 export type { Notification, NotificationType, NotificationsResponse, GetNotificationsOptions } from './notifications.service';
 export type { SLABreachAlert, PendingFeedbackAlert, AlertsResponse, AlertType, SLAConfig, SLAConfigResponse, UpdateSLAConfigData } from './alerts.service';
+export type { Task, TaskType, TaskSeverity, TaskStatus, CreateTaskData, UpdateTaskData } from './tasks.service';

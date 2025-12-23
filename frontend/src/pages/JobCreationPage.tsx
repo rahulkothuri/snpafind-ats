@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout, Button, MultiSelect, MandatoryCriteriaSection, PipelineStageConfigurator, JobShareModal, StageImportModal } from '../components';
+import { Layout, Button, MultiSelect, MandatoryCriteriaSection, ScreeningQuestionsSection, PipelineStageConfigurator, JobShareModal, StageImportModal } from '../components';
+import { DEFAULT_MANDATORY_CRITERIA } from '../components/MandatoryCriteriaSection';
 import { DEFAULT_PIPELINE_STAGES, type EnhancedPipelineStageConfig } from '../components/PipelineStageConfigurator';
 import { useAuth } from '../hooks/useAuth';
 import { useUsers } from '../hooks/useUsers';
 import api from '../services/api';
-import type { Job, WorkMode, JobPriority, PipelineStageConfig } from '../types';
+import type { Job, WorkMode, JobPriority, PipelineStageConfig, MandatoryCriteria, ScreeningQuestion } from '../types';
 import { EDUCATION_QUALIFICATIONS, SKILLS, INDUSTRIES, WORK_MODES, CITIES, JOB_PRIORITIES, JOB_DOMAINS } from '../constants/jobFormOptions';
 
 /**
@@ -39,6 +40,8 @@ interface JobFormData {
   jobDomain: string;
   assignedRecruiterId: string;
   pipelineStages: EnhancedPipelineStageConfig[];
+  mandatoryCriteria: MandatoryCriteria;
+  screeningQuestions: ScreeningQuestion[];
 }
 
 const initialFormData: JobFormData = {
@@ -60,6 +63,8 @@ const initialFormData: JobFormData = {
   jobDomain: '',
   assignedRecruiterId: '',
   pipelineStages: DEFAULT_PIPELINE_STAGES,
+  mandatoryCriteria: DEFAULT_MANDATORY_CRITERIA,
+  screeningQuestions: [],
 };
 
 /**
@@ -156,6 +161,8 @@ export function JobCreationPage() {
             jobDomain: job.jobDomain || '',
             assignedRecruiterId: job.assignedRecruiterId || '',
             pipelineStages,
+            mandatoryCriteria: job.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA,
+            screeningQuestions: job.screeningQuestions || [],
           });
         })
         .catch((err) => {
@@ -166,7 +173,7 @@ export function JobCreationPage() {
     }
   }, [isEditMode, id]);
 
-  const handleChange = (field: keyof JobFormData, value: string | number | '' | string[] | WorkMode | JobPriority | EnhancedPipelineStageConfig[]) => {
+  const handleChange = (field: keyof JobFormData, value: string | number | '' | string[] | WorkMode | JobPriority | EnhancedPipelineStageConfig[] | MandatoryCriteria | ScreeningQuestion[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: '' }));
     setSubmitError(null);
@@ -274,6 +281,10 @@ export function JobCreationPage() {
         assignedRecruiterId: formData.assignedRecruiterId || undefined,
         // Pipeline stages configuration - Requirement 4.1
         pipelineStages: formData.pipelineStages,
+        // Mandatory criteria - editable screening criteria
+        mandatoryCriteria: formData.mandatoryCriteria,
+        // Screening questions - questions candidates must answer before applying
+        screeningQuestions: formData.screeningQuestions,
       };
 
       if (isEditMode && id) {
@@ -836,7 +847,16 @@ Describe the position and its importance to the team...
           </div>
 
           {/* Mandatory Criteria Section - Requirement 3.1 */}
-          <MandatoryCriteriaSection />
+          <MandatoryCriteriaSection 
+            value={formData.mandatoryCriteria}
+            onChange={(criteria) => handleChange('mandatoryCriteria', criteria)}
+          />
+
+          {/* Screening Questions Section */}
+          <ScreeningQuestionsSection
+            value={formData.screeningQuestions}
+            onChange={(questions) => handleChange('screeningQuestions', questions)}
+          />
 
           {/* Pipeline Stage Configuration - Requirement 4.1 */}
           <div className="form-section">

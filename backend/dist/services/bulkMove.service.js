@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { ValidationError, NotFoundError } from '../middleware/errorHandler.js';
 import { stageHistoryService } from './stageHistory.service.js';
+import { notificationService } from './notification.service.js';
 /**
  * Check if a stage is a rejection stage
  */
@@ -166,6 +167,30 @@ export const bulkMoveService = {
                 },
             });
         });
+        // Create notifications for stage change (Requirements 8.1)
+        // This is done outside the transaction to not block the main operation
+        try {
+            // Get job title for notification
+            const job = await prisma.job.findUnique({
+                where: { id: jobId },
+                select: { title: true },
+            });
+            if (job) {
+                await notificationService.createStageChangeNotifications({
+                    candidateId: jobCandidate.candidateId,
+                    candidateName: jobCandidate.candidate.name,
+                    jobId,
+                    jobTitle: job.title,
+                    fromStageName: oldStageName,
+                    toStageName: targetStageName,
+                    movedByUserId: movedBy,
+                });
+            }
+        }
+        catch (notificationError) {
+            // Log but don't fail the stage change if notification fails
+            console.error('Failed to create stage change notifications:', notificationError);
+        }
     },
 };
 export default bulkMoveService;

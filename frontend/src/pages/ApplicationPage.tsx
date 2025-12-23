@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type FormEvent, type DragEvent, type Chang
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { JobDetailsPanel } from '../components/JobDetailsPanel';
+import type { ScreeningQuestion } from '../types';
 
 // Types for the application form - enhanced with all new job fields
 interface JobDetails {
@@ -32,6 +33,8 @@ interface JobDetails {
   responsibilities?: string;
   requirements?: string;
   benefits?: string;
+  // Screening questions
+  screeningQuestions?: ScreeningQuestion[];
 }
 
 interface ApplicationFormData {
@@ -46,6 +49,7 @@ interface ApplicationFormData {
   desiredSalary: string;
   workAuthorization: 'yes' | 'no' | null;
   agreedToTerms: boolean;
+  screeningAnswers: Record<string, string | string[] | number | boolean>;
 }
 
 interface FormErrors {
@@ -53,8 +57,9 @@ interface FormErrors {
 }
 
 const formSteps = [
-  { id: 1, title: 'Personal Information & Resume', progress: 50 },
-  { id: 2, title: 'Review & Submit', progress: 100 },
+  { id: 1, title: 'Screening Questions', progress: 33 },
+  { id: 2, title: 'Personal Information & Resume', progress: 66 },
+  { id: 3, title: 'Review & Submit', progress: 100 },
 ];
 
 const initialFormData: ApplicationFormData = {
@@ -69,6 +74,7 @@ const initialFormData: ApplicationFormData = {
   desiredSalary: '',
   workAuthorization: null,
   agreedToTerms: false,
+  screeningAnswers: {},
 };
 
 export function ApplicationPage() {
@@ -136,6 +142,19 @@ export function ApplicationPage() {
     const newErrors: FormErrors = {};
     
     if (step === 1) {
+      // Screening Questions validation
+      const screeningQuestions = job?.screeningQuestions || [];
+      for (const question of screeningQuestions) {
+        if (question.required) {
+          const answer = formData.screeningAnswers[question.id];
+          if (answer === undefined || answer === '' || (Array.isArray(answer) && answer.length === 0)) {
+            newErrors[`screening_${question.id}`] = 'This question is required';
+          }
+        }
+      }
+    }
+    
+    if (step === 2) {
       // Personal Information validation
       if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
       if (!formData.email.trim()) {
@@ -150,7 +169,7 @@ export function ApplicationPage() {
       if (!formData.resumeFile) newErrors.resumeFile = 'Resume is required';
     }
     
-    if (step === 2) {
+    if (step === 3) {
       if (!formData.agreedToTerms) newErrors.agreedToTerms = 'You must agree to the terms';
     }
     
@@ -160,7 +179,7 @@ export function ApplicationPage() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 2));
+      setCurrentStep(prev => Math.min(prev + 1, 3));
     }
   };
 
@@ -222,7 +241,7 @@ export function ApplicationPage() {
   // Form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!validateStep(2) || !jobId) return;
+    if (!validateStep(3) || !jobId) return;
     
     setIsSubmitting(true);
     setErrors({});
@@ -242,6 +261,11 @@ export function ApplicationPage() {
       if (formData.coverLetter) submitData.append('coverLetter', formData.coverLetter);
       if (formData.desiredSalary) submitData.append('desiredSalary', formData.desiredSalary);
       if (formData.resumeFile) submitData.append('resume', formData.resumeFile);
+      
+      // Add screening answers as JSON string
+      if (Object.keys(formData.screeningAnswers).length > 0) {
+        submitData.append('screeningAnswers', JSON.stringify(formData.screeningAnswers));
+      }
       
       await api.post('/public/applications', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -305,10 +329,10 @@ export function ApplicationPage() {
 
   // Step indicator component - Responsive with accessibility
   const StepIndicator = () => (
-    <div className="mb-6 sm:mb-8" role="progressbar" aria-valuenow={formSteps[currentStep - 1].progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Application progress: Step ${currentStep} of 2`}>
+    <div className="mb-6 sm:mb-8" role="progressbar" aria-valuenow={formSteps[currentStep - 1].progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Application progress: Step ${currentStep} of 3`}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs sm:text-sm font-medium text-[#374151]">
-          Step {currentStep} of 2: {formSteps[currentStep - 1].title}
+          Step {currentStep} of 3: {formSteps[currentStep - 1].title}
         </span>
         <span className="text-xs sm:text-sm text-[#64748b]" aria-hidden="true">{formSteps[currentStep - 1].progress}%</span>
       </div>
@@ -321,7 +345,168 @@ export function ApplicationPage() {
     </div>
   );
 
-  // Step 1: Personal Information, Resume, and Additional Information (Combined)
+  // Helper function to update screening answer
+  const updateScreeningAnswer = (questionId: string, value: string | string[] | number | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      screeningAnswers: {
+        ...prev.screeningAnswers,
+        [questionId]: value,
+      },
+    }));
+    // Clear error for this question
+    if (errors[`screening_${questionId}`]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[`screening_${questionId}`];
+        return newErrors;
+      });
+    }
+  };
+
+  // Step 1: Screening Questions
+  const renderScreeningQuestions = () => {
+    const screeningQuestions = job?.screeningQuestions || [];
+    
+    if (screeningQuestions.length === 0) {
+      // Skip to next step if no screening questions
+      return (
+        <div className="text-center py-8">
+          <svg className="w-12 h-12 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-[#374151] font-medium">No screening questions for this position</p>
+          <p className="text-sm text-[#64748b] mt-1">Click Next to continue with your application</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-blue-800">Screening Questions</p>
+              <p className="text-sm text-blue-700 mt-1">Please answer the following questions to help us understand your qualifications better.</p>
+            </div>
+          </div>
+        </div>
+
+        {screeningQuestions.map((question, index) => (
+          <div key={question.id} className="form-group">
+            <label className="form-label">
+              {index + 1}. {question.question} {question.required && <span className="text-red-500">*</span>}
+            </label>
+            
+            {question.type === 'text' && (
+              <input
+                type="text"
+                value={(formData.screeningAnswers[question.id] as string) || ''}
+                onChange={(e) => updateScreeningAnswer(question.id, e.target.value)}
+                className={`form-input min-h-[44px] ${errors[`screening_${question.id}`] ? 'error' : ''}`}
+                placeholder="Enter your answer..."
+              />
+            )}
+            
+            {question.type === 'textarea' && (
+              <textarea
+                value={(formData.screeningAnswers[question.id] as string) || ''}
+                onChange={(e) => updateScreeningAnswer(question.id, e.target.value)}
+                className={`form-input min-h-[100px] ${errors[`screening_${question.id}`] ? 'error' : ''}`}
+                placeholder="Enter your answer..."
+              />
+            )}
+            
+            {question.type === 'number' && (
+              <input
+                type="number"
+                value={(formData.screeningAnswers[question.id] as number) || ''}
+                onChange={(e) => updateScreeningAnswer(question.id, e.target.value ? Number(e.target.value) : '')}
+                className={`form-input min-h-[44px] ${errors[`screening_${question.id}`] ? 'error' : ''}`}
+                placeholder="Enter a number..."
+              />
+            )}
+            
+            {question.type === 'yes_no' && (
+              <div className="flex gap-4 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                  <input
+                    type="radio"
+                    name={`screening_${question.id}`}
+                    checked={formData.screeningAnswers[question.id] === 'yes'}
+                    onChange={() => updateScreeningAnswer(question.id, 'yes')}
+                    className="w-5 h-5 text-[#0b6cf0]"
+                  />
+                  <span className="text-[#374151]">Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                  <input
+                    type="radio"
+                    name={`screening_${question.id}`}
+                    checked={formData.screeningAnswers[question.id] === 'no'}
+                    onChange={() => updateScreeningAnswer(question.id, 'no')}
+                    className="w-5 h-5 text-[#0b6cf0]"
+                  />
+                  <span className="text-[#374151]">No</span>
+                </label>
+              </div>
+            )}
+            
+            {question.type === 'single_choice' && question.options && (
+              <div className="space-y-2 mt-2">
+                {question.options.map((option, optIndex) => (
+                  <label key={optIndex} className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                    <input
+                      type="radio"
+                      name={`screening_${question.id}`}
+                      checked={formData.screeningAnswers[question.id] === option}
+                      onChange={() => updateScreeningAnswer(question.id, option)}
+                      className="w-5 h-5 text-[#0b6cf0]"
+                    />
+                    <span className="text-[#374151]">{option}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            
+            {question.type === 'multiple_choice' && question.options && (
+              <div className="space-y-2 mt-2">
+                {question.options.map((option, optIndex) => {
+                  const currentAnswers = (formData.screeningAnswers[question.id] as string[]) || [];
+                  const isChecked = currentAnswers.includes(option);
+                  return (
+                    <label key={optIndex} className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          const newAnswers = isChecked
+                            ? currentAnswers.filter(a => a !== option)
+                            : [...currentAnswers, option];
+                          updateScreeningAnswer(question.id, newAnswers);
+                        }}
+                        className="w-5 h-5 text-[#0b6cf0] rounded"
+                      />
+                      <span className="text-[#374151]">{option}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+            
+            {errors[`screening_${question.id}`] && (
+              <p className="form-error mt-1">{errors[`screening_${question.id}`]}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Step 2: Personal Information, Resume, and Additional Information (Combined)
   // Responsive: Full-width fields on mobile, two-column grid on tablet/desktop
   const renderStep1 = () => (
     <div className="space-y-6 sm:space-y-8 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
@@ -541,12 +726,46 @@ export function ApplicationPage() {
   );
 
   // Step 2: Review and Submit (formerly step 4)
+  // Step 3: Review and Submit
   // Responsive: Adjusted grid and spacing for different screen sizes
-  const renderStep2 = () => (
-    <div className="space-y-4 sm:space-y-6">
+  const renderStep2 = () => {
+    const screeningQuestions = job?.screeningQuestions || [];
+    
+    return (
+    <div className="space-y-4 sm:space-y-6 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
       <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4">Review Your Application</h2>
       
       <div className="bg-[#f8fafc] rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
+        {/* Screening Questions Review */}
+        {screeningQuestions.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-[#64748b] mb-2">Screening Questions</h3>
+            <div className="space-y-2 text-sm">
+              {screeningQuestions.map((question, index) => {
+                const answer = formData.screeningAnswers[question.id];
+                let displayAnswer = 'Not answered';
+                if (answer !== undefined && answer !== '') {
+                  if (Array.isArray(answer)) {
+                    displayAnswer = answer.join(', ');
+                  } else {
+                    displayAnswer = String(answer);
+                  }
+                }
+                return (
+                  <div key={question.id} className="pb-2 border-b border-[#e2e8f0] last:border-0">
+                    <p className="text-[#64748b]">{index + 1}. {question.question}</p>
+                    <p className="text-[#111827] mt-1">{displayAnswer}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
+        {screeningQuestions.length > 0 && (
+          <div className="border-t border-[#e2e8f0] pt-3 sm:pt-4" />
+        )}
+        
         <div>
           <h3 className="text-sm font-medium text-[#64748b] mb-2">Personal Information</h3>
           {/* Responsive grid: 1 column on mobile, 2 columns on tablet+ */}
@@ -601,6 +820,7 @@ export function ApplicationPage() {
       )}
     </div>
   );
+  };
 
   // Main render - Responsive layout (Requirements 5.1, 5.2, 5.3, 5.4, 5.5)
   // Mobile (< 768px): Stack content vertically, full-width form fields, touch-friendly buttons
@@ -704,8 +924,9 @@ export function ApplicationPage() {
           <StepIndicator />
           
           <form onSubmit={handleSubmit}>
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
+            {currentStep === 1 && renderScreeningQuestions()}
+            {currentStep === 2 && renderStep1()}
+            {currentStep === 3 && renderStep2()}
             
             {/* Navigation Buttons - Touch-friendly (min 44px) - Requirement 5.5 */}
             <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 sm:gap-0 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-[#e2e8f0]">
@@ -721,7 +942,7 @@ export function ApplicationPage() {
                 <div className="hidden sm:block" />
               )}
               
-              {currentStep < 2 ? (
+              {currentStep < 3 ? (
                 <button
                   type="button"
                   onClick={handleNext}

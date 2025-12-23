@@ -9,6 +9,7 @@ import stageTemplateRoutes from './stageTemplates.js';
 import pipelineRoutes from './pipeline.routes.js';
 import notificationRoutes from './notification.routes.js';
 import slaRoutes from './sla.routes.js';
+import taskRoutes from './task.routes.js';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use('/candidates', candidateRoutes);
 router.use('/stage-templates', stageTemplateRoutes);
 router.use('/pipeline', pipelineRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/tasks', taskRoutes);
 // SLA routes - mounted at root to support /api/alerts and /api/settings/sla
 router.use('/', slaRoutes);
 

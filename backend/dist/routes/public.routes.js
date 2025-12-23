@@ -61,6 +61,7 @@ const publicApplicationSchema = z.object({
     desiredSalary: z.string().optional(),
     workAuthorization: z.enum(['yes', 'no']),
     agreedToTerms: z.boolean(),
+    screeningAnswers: z.string().optional(), // JSON string of screening question answers
 });
 /**
  * Validate resume file format and size for public applications
@@ -150,6 +151,8 @@ router.get('/jobs/:id', async (req, res, next) => {
             // Content (Requirements 5.4)
             description: job.description,
             openings: job.openings,
+            // Screening questions for application form
+            screeningQuestions: job.screeningQuestions || [],
             // Legacy fields (kept for compatibility)
             location: job.location,
             employmentType: job.employmentType,
@@ -200,6 +203,7 @@ router.post('/applications', (req, res, next) => {
                 desiredSalary: req.body.desiredSalary,
                 workAuthorization: req.body.workAuthorization,
                 agreedToTerms: req.body.agreedToTerms === 'true' || req.body.agreedToTerms === true,
+                screeningAnswers: req.body.screeningAnswers,
             };
             const result = publicApplicationSchema.safeParse(formData);
             if (!result.success) {
@@ -307,6 +311,16 @@ router.post('/applications', (req, res, next) => {
                 },
             });
             // Create activity record for the application
+            // Parse screening answers if provided
+            let screeningAnswers = null;
+            if (data.screeningAnswers) {
+                try {
+                    screeningAnswers = JSON.parse(data.screeningAnswers);
+                }
+                catch {
+                    // Invalid JSON, ignore
+                }
+            }
             await prisma.candidateActivity.create({
                 data: {
                     candidateId: candidate.id,
@@ -319,6 +333,7 @@ router.post('/applications', (req, res, next) => {
                         coverLetter: data.coverLetter,
                         desiredSalary: data.desiredSalary,
                         workAuthorization: data.workAuthorization,
+                        screeningAnswers: screeningAnswers,
                     },
                 },
             });

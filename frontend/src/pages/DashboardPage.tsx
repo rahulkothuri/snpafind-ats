@@ -2,7 +2,9 @@ import { Layout, KPICard, Badge, Button, Table, LoadingSpinner, ErrorMessage, Al
 import { useAuth } from '../hooks/useAuth';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { tasksService } from '../services';
+import type { Task as ApiTask, TaskType, TaskSeverity } from '../services';
 
 /**
  * Dashboard Page - Requirements 15.1-15.10, 22.1-22.3
@@ -63,6 +65,43 @@ interface Task {
   text: string;
   age: string;
   severity: 'high' | 'medium' | 'low';
+  status: 'open' | 'closed';
+  completedAt?: string;
+}
+
+// Map API task type to display type
+function mapTaskType(type: TaskType): Task['type'] {
+  const typeMap: Record<TaskType, Task['type']> = {
+    feedback: 'Feedback',
+    approval: 'Approval',
+    reminder: 'Reminder',
+    pipeline: 'Pipeline',
+  };
+  return typeMap[type];
+}
+
+// Map display type to API task type
+function mapToApiTaskType(type: Task['type']): TaskType {
+  const typeMap: Record<Task['type'], TaskType> = {
+    Feedback: 'feedback',
+    Approval: 'approval',
+    Reminder: 'reminder',
+    Pipeline: 'pipeline',
+  };
+  return typeMap[type];
+}
+
+// Map API task to display task
+function mapApiTaskToTask(apiTask: ApiTask): Task {
+  return {
+    id: apiTask.id,
+    type: mapTaskType(apiTask.type),
+    text: apiTask.text,
+    age: apiTask.age,
+    severity: apiTask.severity,
+    status: apiTask.status,
+    completedAt: apiTask.completedAt,
+  };
 }
 
 interface SourcePerformance {
@@ -172,10 +211,10 @@ function getLimitedInterviews(interviews: Interview[], maxCount: number = 5): In
 }
 
 const sampleTasks: Task[] = [
-  { id: '1', type: 'Feedback', text: 'Submit feedback for Priya Sharma - Backend round', age: '2h', severity: 'high' },
-  { id: '2', type: 'Approval', text: 'Approve offer letter for Vikram Singh', age: '1d', severity: 'high' },
-  { id: '3', type: 'Reminder', text: 'Follow up with Ankit Patel on offer decision', age: '3d', severity: 'medium' },
-  { id: '4', type: 'Pipeline', text: 'Review 12 new applications for Data Analyst', age: '4h', severity: 'medium' },
+  { id: '1', type: 'Feedback', text: 'Submit feedback for Priya Sharma - Backend round', age: '2h', severity: 'high', status: 'open' },
+  { id: '2', type: 'Approval', text: 'Approve offer letter for Vikram Singh', age: '1d', severity: 'high', status: 'open' },
+  { id: '3', type: 'Reminder', text: 'Follow up with Ankit Patel on offer decision', age: '3d', severity: 'medium', status: 'open' },
+  { id: '4', type: 'Pipeline', text: 'Review 12 new applications for Data Analyst', age: '4h', severity: 'medium', status: 'open' },
 ];
 
 const sampleSources: SourcePerformance[] = [
@@ -328,8 +367,30 @@ function UpcomingInterviews({
 }
 
 
-// Tasks Section Component
-function TasksSection({ tasks }: { tasks: Task[] }) {
+// Tasks Section Component with Add/Complete functionality
+function TasksSection({ 
+  tasks, 
+  onAddTask, 
+  onCompleteTask,
+  onReopenTask,
+}: { 
+  tasks: Task[];
+  onAddTask: (task: Omit<Task, 'id' | 'age' | 'status'>) => void;
+  onCompleteTask: (taskId: string) => void;
+  onReopenTask: (taskId: string) => void;
+}) {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [viewMode, setViewMode] = useState<'open' | 'closed'>('open');
+  const [newTask, setNewTask] = useState({
+    type: 'Reminder' as Task['type'],
+    text: '',
+    severity: 'medium' as Task['severity'],
+  });
+
+  const filteredTasks = tasks.filter(task => task.status === viewMode);
+  const openCount = tasks.filter(t => t.status === 'open').length;
+  const closedCount = tasks.filter(t => t.status === 'closed').length;
+
   const severityVariant = (severity: Task['severity']) => {
     switch (severity) {
       case 'high': return 'red';
@@ -360,53 +421,181 @@ function TasksSection({ tasks }: { tasks: Task[] }) {
     }
   };
 
-  // Handle keyboard navigation - Requirements 4.4
-  const handleKeyDown = (event: React.KeyboardEvent, taskId: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      console.log('Task selected:', taskId);
+  const handleAddTask = () => {
+    if (newTask.text.trim()) {
+      onAddTask(newTask);
+      setNewTask({ type: 'Reminder', text: '', severity: 'medium' });
+      setShowAddForm(false);
     }
+  };
+
+  const handleCompleteClick = (e: React.MouseEvent, taskId: string) => {
+    e.stopPropagation();
+    onCompleteTask(taskId);
+  };
+
+  const handleReopenClick = (e: React.MouseEvent, taskId: string) => {
+    e.stopPropagation();
+    onReopenTask(taskId);
   };
 
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 
-        className="text-sm font-semibold text-[#111827] mb-4"
-        id="tasks-section-heading"
-      >
-        Open Tasks
-      </h3>
+      {/* Header with tabs and add button */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewMode('open')}
+            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+              viewMode === 'open'
+                ? 'bg-[#0b6cf0] text-white'
+                : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+            }`}
+          >
+            Open ({openCount})
+          </button>
+          <button
+            onClick={() => setViewMode('closed')}
+            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+              viewMode === 'closed'
+                ? 'bg-[#0b6cf0] text-white'
+                : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+            }`}
+          >
+            Closed ({closedCount})
+          </button>
+        </div>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#0b6cf0] hover:bg-[#e8f2fe] rounded-lg transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Task
+        </button>
+      </div>
+
+      {/* Add Task Form */}
+      {showAddForm && (
+        <div className="mb-4 p-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-[#374151] mb-1">Task Description</label>
+              <input
+                type="text"
+                value={newTask.text}
+                onChange={(e) => setNewTask({ ...newTask, text: e.target.value })}
+                placeholder="Enter task description..."
+                className="w-full px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b6cf0]"
+              />
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-[#374151] mb-1">Type</label>
+                <select
+                  value={newTask.type}
+                  onChange={(e) => setNewTask({ ...newTask, type: e.target.value as Task['type'] })}
+                  className="w-full px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b6cf0]"
+                >
+                  <option value="Feedback">Feedback</option>
+                  <option value="Approval">Approval</option>
+                  <option value="Reminder">Reminder</option>
+                  <option value="Pipeline">Pipeline</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-[#374151] mb-1">Priority</label>
+                <select
+                  value={newTask.severity}
+                  onChange={(e) => setNewTask({ ...newTask, severity: e.target.value as Task['severity'] })}
+                  className="w-full px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0b6cf0]"
+                >
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="px-3 py-1.5 text-xs font-medium text-[#64748b] hover:bg-[#e2e8f0] rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddTask}
+                disabled={!newTask.text.trim()}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-[#0b6cf0] hover:bg-[#0952b8] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task List */}
       <div 
         className="space-y-2"
         role="list"
         aria-labelledby="tasks-section-heading"
       >
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            className="group flex items-start gap-3 p-3 bg-[#f8fafc] border border-[#e2e8f0] hover:border-[#cbd5e1] rounded-lg transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-            role="listitem"
-            tabIndex={0}
-            aria-label={`${task.type} task: ${task.text}, severity: ${task.severity}, age: ${task.age}`}
-            onKeyDown={(e) => handleKeyDown(e, task.id)}
-          >
-            <div 
-              className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${typeIconBg(task.type)}`}
-              aria-hidden="true"
-            >
-              {typeIcon(task.type)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium text-[#111827] leading-tight mb-1 line-clamp-2">
-                {task.text}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-[#64748b]">{task.type} • {task.age}</span>
-              </div>
-            </div>
-            <Badge text={task.severity} variant={severityVariant(task.severity)} />
+        {filteredTasks.length === 0 ? (
+          <div className="text-center py-6 text-sm text-[#64748b]">
+            {viewMode === 'open' ? 'No open tasks' : 'No closed tasks'}
           </div>
-        ))}
+        ) : (
+          filteredTasks.map((task) => (
+            <div
+              key={task.id}
+              className={`group flex items-start gap-3 p-3 border rounded-lg transition-all duration-200 ${
+                task.status === 'closed'
+                  ? 'bg-[#f1f5f9] border-[#e2e8f0] opacity-75'
+                  : 'bg-[#f8fafc] border-[#e2e8f0] hover:border-[#cbd5e1] cursor-pointer'
+              }`}
+              role="listitem"
+            >
+              {/* Complete/Reopen checkbox */}
+              <button
+                onClick={(e) => task.status === 'open' ? handleCompleteClick(e, task.id) : handleReopenClick(e, task.id)}
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                  task.status === 'closed'
+                    ? 'bg-[#10b981] border-[#10b981] text-white'
+                    : 'border-[#cbd5e1] hover:border-[#0b6cf0] hover:bg-[#e8f2fe]'
+                }`}
+                title={task.status === 'open' ? 'Mark as complete' : 'Reopen task'}
+              >
+                {task.status === 'closed' && (
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+
+              <div 
+                className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${typeIconBg(task.type)}`}
+                aria-hidden="true"
+              >
+                {typeIcon(task.type)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className={`text-xs font-medium leading-tight mb-1 line-clamp-2 ${
+                  task.status === 'closed' ? 'text-[#64748b] line-through' : 'text-[#111827]'
+                }`}>
+                  {task.text}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#64748b]">
+                    {task.type} • {task.status === 'closed' && task.completedAt ? `Completed ${task.completedAt}` : task.age}
+                  </span>
+                </div>
+              </div>
+              <Badge text={task.severity} variant={severityVariant(task.severity)} />
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -492,6 +681,71 @@ export function DashboardPage() {
   const { user, logout } = useAuth();
   const { data: dashboardData, isLoading, error, refetch } = useDashboard();
   const navigate = useNavigate();
+
+  // Task state management with API
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
+
+  // Fetch tasks from API
+  const fetchTasks = useCallback(async () => {
+    try {
+      setTasksLoading(true);
+      setTasksError(null);
+      const apiTasks = await tasksService.getAll();
+      setTasks(apiTasks.map(mapApiTaskToTask));
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
+      setTasksError('Failed to load tasks');
+      // Fall back to sample tasks on error
+      setTasks(sampleTasks);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, []);
+
+  // Load tasks on mount
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Add new task handler
+  const handleAddTask = async (newTask: Omit<Task, 'id' | 'age' | 'status'>) => {
+    try {
+      const apiTask = await tasksService.create({
+        type: mapToApiTaskType(newTask.type),
+        text: newTask.text,
+        severity: newTask.severity as TaskSeverity,
+      });
+      setTasks(prev => [mapApiTaskToTask(apiTask), ...prev]);
+    } catch (err) {
+      console.error('Failed to create task:', err);
+    }
+  };
+
+  // Complete task handler
+  const handleCompleteTask = async (taskId: string) => {
+    try {
+      const apiTask = await tasksService.complete(taskId);
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? mapApiTaskToTask(apiTask) : task
+      ));
+    } catch (err) {
+      console.error('Failed to complete task:', err);
+    }
+  };
+
+  // Reopen task handler
+  const handleReopenTask = async (taskId: string) => {
+    try {
+      const apiTask = await tasksService.reopen(taskId);
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? mapApiTaskToTask(apiTask) : task
+      ));
+    } catch (err) {
+      console.error('Failed to reopen task:', err);
+    }
+  };
 
   // Generate role-specific table columns - Requirements 5.2
   const getRoleSpecificColumns = useMemo(() => {
@@ -692,7 +946,12 @@ export function DashboardPage() {
         <div className="space-y-6">
           {/* Tasks and Alerts Section - Moved to top right position per Requirement 1.1 */}
           <div className="grid grid-cols-1 gap-4">
-            <TasksSection tasks={sampleTasks} />
+            <TasksSection 
+              tasks={tasks} 
+              onAddTask={handleAddTask}
+              onCompleteTask={handleCompleteTask}
+              onReopenTask={handleReopenTask}
+            />
             {/* AlertsPanel - Requirements 9.2, 10.2 - Fetches alerts on mount */}
             <AlertsPanel maxAlerts={5} />
           </div>

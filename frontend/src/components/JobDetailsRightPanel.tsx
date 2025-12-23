@@ -79,6 +79,8 @@ export interface JobDetailsRightPanelProps {
   isLoading: boolean;
   onViewJobDescription?: () => void;
   jobDescriptionLoading?: boolean;
+  /** Callback for Edit JD button - Requirements 1.1 */
+  onEditJobDescription?: () => void;
   pipelineStages?: { id: string; name: string; position: number }[];
   onCandidatesMoved?: () => void;
   /** Enable enhanced pipeline view with stage cards - Requirements 4.1, 4.5 */
@@ -327,22 +329,35 @@ function CandidateTableView({
 }
 
 
-// Kanban Card Component with checkbox selection - Requirements 1.1
+// Kanban Card Component with checkbox selection and drag support - Requirements 1.1
 function KanbanCard({ 
   candidate, 
   onClick,
   isSelected,
   onSelect,
+  isDragging,
+  onDragStart,
+  onDragEnd,
 }: { 
   candidate: PipelineCandidate; 
   onClick: () => void;
   isSelected: boolean;
   onSelect: (e: React.MouseEvent) => void;
+  isDragging?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }) {
   return (
     <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`bg-white rounded-xl border ${isSelected ? 'border-[#0b6cf0] ring-2 ring-[#0b6cf0]/20' : 'border-[#e2e8f0]'} p-3 shadow-sm hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5`}
+      className={`
+        bg-white rounded-xl border p-3 shadow-sm transition-all cursor-grab active:cursor-grabbing
+        ${isSelected ? 'border-[#0b6cf0] ring-2 ring-[#0b6cf0]/20' : 'border-[#e2e8f0]'}
+        ${isDragging ? 'opacity-50 scale-95 shadow-lg ring-2 ring-[#0b6cf0]' : 'hover:shadow-lg hover:-translate-y-0.5'}
+      `}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -404,24 +419,39 @@ const stageColors: Record<string, { bg: string; border: string; indicator: strin
   'Rejected': { bg: 'bg-[#fee2e2]', border: 'border-[#fecaca]', indicator: 'bg-[#ef4444]' },
 };
 
-// Kanban Board View Component with checkbox selection - Requirements 1.1
+// Kanban Board View Component with checkbox selection and drag-drop - Requirements 1.1
 function KanbanBoardView({ 
   candidates, 
   stages,
+  pipelineStages,
   onCandidateClick,
   selectedCandidates,
   onSelectionChange,
+  onCandidateDrop,
+  isMoving,
 }: { 
   candidates: PipelineCandidate[]; 
   stages: string[];
+  pipelineStages: { id: string; name: string; position: number }[];
   onCandidateClick: (candidate: PipelineCandidate) => void;
   selectedCandidates: string[];
   onSelectionChange: (candidateIds: string[]) => void;
+  onCandidateDrop: (candidateId: string, targetStageId: string, targetStageName: string) => void;
+  isMoving: boolean;
 }) {
+  const [draggingCandidateId, setDraggingCandidateId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+
   const getCandidatesByStage = (stage: string) => 
     candidates.filter((c) => c.stage === stage);
 
   const getStageStyle = (stage: string) => stageColors[stage] || stageColors['Queue'];
+
+  // Get stage ID from name
+  const getStageId = (stageName: string): string => {
+    const stage = pipelineStages.find(s => s.name === stageName);
+    return stage?.id || stageName;
+  };
 
   const handleSelectCandidate = (candidate: PipelineCandidate, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -433,27 +463,94 @@ function KanbanBoardView({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, candidate: PipelineCandidate) => {
+    const candidateId = candidate.jobCandidateId || candidate.id;
+    setDraggingCandidateId(candidateId);
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      candidateId,
+      candidateName: candidate.name,
+      fromStage: candidate.stage,
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggingCandidateId(null);
+    setDragOverStage(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stageName: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStage(stageName);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear if leaving the stage column entirely
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      setDragOverStage(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStageName: string) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    
+    if (isMoving) return;
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const { candidateId, fromStage } = data;
+      
+      // Don't do anything if dropping on the same stage
+      if (fromStage === targetStageName) {
+        return;
+      }
+
+      const targetStageId = getStageId(targetStageName);
+      onCandidateDrop(candidateId, targetStageId, targetStageName);
+    } catch (error) {
+      console.error('Failed to parse drag data:', error);
+    }
+  };
+
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
       {stages.filter(s => s !== 'Rejected').map((stage) => {
         const stageCandidates = getCandidatesByStage(stage);
         const stageStyle = getStageStyle(stage);
+        const isDragOver = dragOverStage === stage;
+        
         return (
           <div
             key={stage}
-            className={`flex-shrink-0 w-[280px] ${stageStyle.bg} rounded-xl p-3 border ${stageStyle.border}`}
+            onDragOver={(e) => handleDragOver(e, stage)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, stage)}
+            className={`
+              flex-shrink-0 w-[280px] rounded-xl p-3 border transition-all duration-200
+              ${stageStyle.bg} ${stageStyle.border}
+              ${isDragOver ? 'ring-2 ring-[#0b6cf0] ring-offset-2 border-[#0b6cf0] scale-[1.02]' : ''}
+            `}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${stageStyle.indicator}`}></div>
                 <h4 className="text-sm font-semibold text-[#374151]">{stage}</h4>
               </div>
-              <span className="px-2 py-0.5 bg-white rounded-full text-xs font-medium text-[#64748b] border border-[#e2e8f0] shadow-sm">
+              <span className={`
+                px-2 py-0.5 rounded-full text-xs font-medium border shadow-sm
+                ${isDragOver ? 'bg-[#0b6cf0] text-white border-[#0b6cf0]' : 'bg-white text-[#64748b] border-[#e2e8f0]'}
+              `}>
                 {stageCandidates.length}
               </span>
             </div>
             
-            <div className="space-y-3 min-h-[200px] max-h-[calc(100vh-500px)] overflow-y-auto">
+            <div className={`
+              space-y-3 min-h-[200px] max-h-[calc(100vh-500px)] overflow-y-auto rounded-lg p-1 transition-colors
+              ${isDragOver ? 'bg-[#0b6cf0]/5' : ''}
+            `}>
               {stageCandidates.map((candidate) => (
                 <KanbanCard
                   key={candidate.id}
@@ -461,11 +558,17 @@ function KanbanBoardView({
                   onClick={() => onCandidateClick(candidate)}
                   isSelected={selectedCandidates.includes(candidate.jobCandidateId || candidate.id)}
                   onSelect={(e) => handleSelectCandidate(candidate, e)}
+                  isDragging={draggingCandidateId === (candidate.jobCandidateId || candidate.id)}
+                  onDragStart={(e) => handleDragStart(e, candidate)}
+                  onDragEnd={handleDragEnd}
                 />
               ))}
               {stageCandidates.length === 0 && (
-                <div className="text-center py-8 text-xs text-[#94a3b8]">
-                  No candidates
+                <div className={`
+                  text-center py-8 text-xs rounded-lg border-2 border-dashed transition-colors
+                  ${isDragOver ? 'border-[#0b6cf0] bg-[#0b6cf0]/10 text-[#0b6cf0]' : 'border-transparent text-[#94a3b8]'}
+                `}>
+                  {isDragOver ? 'Drop here' : 'No candidates'}
                 </div>
               )}
             </div>
@@ -491,6 +594,7 @@ export function JobDetailsRightPanel({
   isLoading,
   onViewJobDescription,
   jobDescriptionLoading = false,
+  onEditJobDescription,
   pipelineStages = [],
   onCandidatesMoved,
   showEnhancedPipeline = true,
@@ -501,6 +605,9 @@ export function JobDetailsRightPanel({
   // Selection state for bulk operations - Requirements 1.1, 1.2
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [isBulkMoving, setIsBulkMoving] = useState(false);
+  
+  // Drag-drop state for single candidate moves
+  const [isDragMoving, setIsDragMoving] = useState(false);
   
   // Pipeline analytics state - Requirements 4.1, 4.5
   const [pipelineAnalytics, setPipelineAnalytics] = useState<PipelineAnalytics | null>(null);
@@ -630,6 +737,29 @@ export function JobDetailsRightPanel({
     setSelectedCandidates([]);
   }, []);
 
+  // Handle single candidate drag-drop move
+  const handleCandidateDrop = useCallback(async (candidateId: string, targetStageId: string, _targetStageName: string) => {
+    if (!role || isDragMoving) return;
+
+    setIsDragMoving(true);
+    try {
+      await pipelineService.bulkMove({
+        candidateIds: [candidateId],
+        targetStageId,
+        jobId: role.id,
+      });
+
+      // Refresh candidates list after successful move
+      if (onCandidatesMoved) {
+        onCandidatesMoved();
+      }
+    } catch (error) {
+      console.error('Failed to move candidate:', error);
+    } finally {
+      setIsDragMoving(false);
+    }
+  }, [role, isDragMoving, onCandidatesMoved]);
+
   // Get pipeline stages for bulk move dropdown
   const bulkMoveStages = pipelineStages.length > 0 
     ? pipelineStages 
@@ -667,13 +797,23 @@ export function JobDetailsRightPanel({
             {onViewJobDescription && (
               <Button 
                 variant="outline" 
+                size="sm"
                 onClick={onViewJobDescription}
                 disabled={jobDescriptionLoading}
               >
                 {jobDescriptionLoading ? 'Loading...' : 'View JD'}
               </Button>
             )}
-            <Button variant="primary">+ Add candidate</Button>
+            {onEditJobDescription && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onEditJobDescription}
+              >
+                Edit JD
+              </Button>
+            )}
+            <Button variant="primary" size="sm">+ Add candidate</Button>
           </div>
         </div>
       </div>
@@ -800,9 +940,12 @@ export function JobDetailsRightPanel({
         <KanbanBoardView
           candidates={filteredByAdvanced}
           stages={defaultStages}
+          pipelineStages={pipelineStages}
           onCandidateClick={onCandidateClick}
           selectedCandidates={selectedCandidates}
           onSelectionChange={setSelectedCandidates}
+          onCandidateDrop={handleCandidateDrop}
+          isMoving={isDragMoving}
         />
       )}
     </div>

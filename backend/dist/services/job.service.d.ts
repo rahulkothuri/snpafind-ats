@@ -19,10 +19,27 @@ export interface CreateJobData {
     assignedRecruiterId?: string;
     description?: string;
     openings?: number;
+    mandatoryCriteria?: MandatoryCriteria;
+    screeningQuestions?: ScreeningQuestion[];
     pipelineStages?: PipelineStageConfig[];
     location?: string;
     employmentType?: string;
     salaryRange?: string;
+}
+export interface MandatoryCriteria {
+    title: string;
+    intro: string;
+    criteria: string[];
+    note: string;
+}
+export type ScreeningQuestionType = 'text' | 'textarea' | 'single_choice' | 'multiple_choice' | 'yes_no' | 'number';
+export interface ScreeningQuestion {
+    id: string;
+    question: string;
+    type: ScreeningQuestionType;
+    required: boolean;
+    options?: string[];
+    idealAnswer?: string | string[];
 }
 export interface UpdateJobData {
     title?: string;
@@ -44,6 +61,8 @@ export interface UpdateJobData {
     description?: string | null;
     status?: 'active' | 'paused' | 'closed';
     openings?: number;
+    mandatoryCriteria?: MandatoryCriteria | null;
+    screeningQuestions?: ScreeningQuestion[] | null;
     pipelineStages?: PipelineStageConfig[];
     location?: string | null;
     employmentType?: string | null;
@@ -128,6 +147,8 @@ export declare const jobService: {
         location: string | null;
         employmentType: string | null;
         salaryRange: string | null;
+        mandatoryCriteria?: unknown;
+        screeningQuestions?: unknown;
     }, stages?: Array<{
         id: string;
         jobId: string;

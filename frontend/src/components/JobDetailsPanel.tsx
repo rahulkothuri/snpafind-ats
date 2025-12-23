@@ -13,7 +13,8 @@
  */
 
 import ReactMarkdown from 'react-markdown';
-import { MANDATORY_CRITERIA_CONTENT } from './MandatoryCriteriaSection';
+import { DEFAULT_MANDATORY_CRITERIA } from './MandatoryCriteriaSection';
+import type { MandatoryCriteria } from '../types';
 
 export interface JobDetailsPanelProps {
   job: {
@@ -36,6 +37,8 @@ export interface JobDetailsPanelProps {
     locations?: string[];
     priority?: string;
     jobDomain?: string;
+    // Mandatory criteria
+    mandatoryCriteria?: MandatoryCriteria;
     // Additional job description sections (Requirement 1.3)
     responsibilities?: string;
     requirements?: string;
@@ -75,6 +78,9 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
+  // Use job's mandatory criteria or fall back to default
+  const mandatoryCriteria = job.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA;
+
   // Format experience range
   const experienceRange = job.experienceMin !== undefined && job.experienceMax !== undefined
     ? `${job.experienceMin} - ${job.experienceMax} years`
@@ -263,7 +269,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
           </div>
           <div>
             <h3 className="text-base font-bold text-[#92400e]">
-              {MANDATORY_CRITERIA_CONTENT.title}
+              {mandatoryCriteria.title}
             </h3>
             <p className="text-xs text-[#b45309]">Please review before applying</p>
           </div>
@@ -271,12 +277,12 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
 
         <div className="bg-white/50 rounded-lg p-4 mb-4 border border-[#fcd34d]">
           <p className="text-sm text-[#78350f] font-semibold">
-            {MANDATORY_CRITERIA_CONTENT.intro}
+            {mandatoryCriteria.intro}
           </p>
         </div>
 
         <ol className="space-y-3 mb-4">
-          {MANDATORY_CRITERIA_CONTENT.criteria.map((criterion, index) => (
+          {mandatoryCriteria.criteria.map((criterion, index) => (
             <li 
               key={index} 
               className="flex gap-3 text-sm text-[#78350f] bg-white/30 rounded-lg p-3 border border-[#fde68a]"
@@ -295,7 +301,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             <p className="text-sm font-bold text-[#92400e] uppercase tracking-wide">
-              {MANDATORY_CRITERIA_CONTENT.note}
+              {mandatoryCriteria.note}
             </p>
           </div>
         </div>

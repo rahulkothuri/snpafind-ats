@@ -29,6 +29,7 @@ async function main() {
   console.log('🌱 Starting seed...');
 
   // Clean existing data (Phase 2 models first due to foreign keys)
+  await prisma.task.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.sLAConfig.deleteMany();
   await prisma.stageHistory.deleteMany();
@@ -37,6 +38,7 @@ async function main() {
   await prisma.candidateActivity.deleteMany();
   await prisma.jobCandidate.deleteMany();
   await prisma.pipelineStage.deleteMany();
+  await prisma.pipelineStageTemplate.deleteMany();
   await prisma.candidate.deleteMany();
   await prisma.job.deleteMany();
   await prisma.user.deleteMany();
@@ -1139,6 +1141,28 @@ async function main() {
   }
   console.log('⏱️ Created', slaConfigs.length, 'SLA configurations');
 
+  // Create sample tasks for the admin user
+  const sampleTasks = [
+    { type: 'feedback' as const, text: 'Submit feedback for Priya Sharma - Backend round', severity: 'high' as const },
+    { type: 'approval' as const, text: 'Approve offer letter for Vikram Singh', severity: 'high' as const },
+    { type: 'reminder' as const, text: 'Follow up with Ankit Patel on offer decision', severity: 'medium' as const },
+    { type: 'pipeline' as const, text: 'Review 12 new applications for Data Analyst', severity: 'medium' as const },
+  ];
+
+  for (const taskData of sampleTasks) {
+    await prisma.task.create({
+      data: {
+        companyId: company.id,
+        userId: adminUser.id,
+        type: taskData.type,
+        text: taskData.text,
+        severity: taskData.severity,
+        status: 'open',
+      },
+    });
+  }
+  console.log('📋 Created', sampleTasks.length, 'sample tasks');
+
   console.log('✅ Seed completed successfully!');
   console.log('\n📊 Summary:');
   console.log(`   - 1 Company: ${company.name}`);
@@ -1150,6 +1174,7 @@ async function main() {
   console.log(`   - ${stageHistoryEntries.length} Stage history entries`);
   console.log(`   - ${notificationData.length} Notifications`);
   console.log(`   - ${slaConfigs.length} SLA configurations`);
+  console.log(`   - ${sampleTasks.length} Sample tasks`);
   console.log('\n🔑 Login credentials:');
   console.log('   Email: tushar@acmetech.com');
   console.log('   Password: password123');
