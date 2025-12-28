@@ -323,17 +323,25 @@ export const calendarService = {
    * Get calendar connection status for a user
    */
   async getConnectionStatus(userId: string): Promise<{
-    google: boolean;
-    microsoft: boolean;
+    google: { connected: boolean; email?: string; connectedAt?: string };
+    microsoft: { connected: boolean; email?: string; connectedAt?: string };
   }> {
-    const [googleConnected, microsoftConnected] = await Promise.all([
-      oauthService.hasValidToken(userId, 'google'),
-      oauthService.hasValidToken(userId, 'microsoft'),
+    const [googleToken, microsoftToken] = await Promise.all([
+      oauthService.getToken(userId, 'google'),
+      oauthService.getToken(userId, 'microsoft'),
     ]);
 
     return {
-      google: googleConnected,
-      microsoft: microsoftConnected,
+      google: {
+        connected: !!googleToken,
+        email: googleToken?.scope?.includes('@') ? undefined : undefined, // Email not stored in token
+        connectedAt: googleToken?.createdAt?.toISOString(),
+      },
+      microsoft: {
+        connected: !!microsoftToken,
+        email: undefined, // Email not stored in token
+        connectedAt: microsoftToken?.createdAt?.toISOString(),
+      },
     };
   },
 
@@ -848,7 +856,7 @@ export const calendarService = {
       const connectionStatus = await this.getConnectionStatus(userId);
 
       // Try Google Calendar first
-      if (connectionStatus.google) {
+      if (connectionStatus.google.connected) {
         try {
           const result = await this.createGoogleCalendarEvent(userId, {
             ...input,
@@ -863,7 +871,7 @@ export const calendarService = {
       }
 
       // Try Microsoft Calendar
-      if (connectionStatus.microsoft) {
+      if (connectionStatus.microsoft.connected) {
         try {
           const result = await this.createMicrosoftCalendarEvent(userId, {
             ...input,
@@ -966,7 +974,7 @@ export const calendarService = {
     const connectionStatus = await this.getConnectionStatus(schedulerUserId);
 
     if (mode === 'google_meet') {
-      if (!connectionStatus.google) {
+      if (!connectionStatus.google.connected) {
         console.warn('Google Calendar not connected for meeting link generation');
         return undefined;
       }
@@ -985,7 +993,7 @@ export const calendarService = {
     }
 
     if (mode === 'microsoft_teams') {
-      if (!connectionStatus.microsoft) {
+      if (!connectionStatus.microsoft.connected) {
         console.warn('Microsoft Calendar not connected for meeting link generation');
         return undefined;
       }

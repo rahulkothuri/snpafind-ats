@@ -39,8 +39,8 @@ router.get('/settings/sla', async (req: Request, res: Response, next: NextFuncti
 
     const configs = await slaService.getSLAConfig(companyId);
 
-    // Also return default thresholds for reference
-    const defaults = slaService.getDefaultThresholds();
+    // Get stored system defaults (or fallback to hardcoded)
+    const defaults = await slaService.getStoredSystemDefaults();
 
     res.json({
       configs,
@@ -107,8 +107,29 @@ router.delete('/settings/sla/:stageName', async (req: Request, res: Response, ne
  */
 router.get('/settings/sla/defaults', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const defaults = slaService.getDefaultThresholds();
+    const defaults = await slaService.getStoredSystemDefaults();
     res.json({ defaults });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/settings/sla/defaults
+ * Update system default SLA thresholds
+ * Requirements: 10.5
+ */
+router.put('/settings/sla/defaults', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { configs } = req.body;
+
+    if (!Array.isArray(configs)) {
+      return res.status(400).json({ error: 'configs must be an array' });
+    }
+
+    const updatedDefaults = await slaService.updateSystemDefaults(configs);
+
+    res.json({ success: true, defaults: updatedDefaults });
   } catch (error) {
     next(error);
   }
@@ -124,7 +145,7 @@ router.post('/settings/sla/apply-defaults', async (req: Request, res: Response, 
     const authReq = req as AuthenticatedRequest;
     const companyId = authReq.user!.companyId;
 
-    const defaults = slaService.getDefaultThresholds();
+    const defaults = await slaService.getStoredSystemDefaults();
     const results = await slaService.updateSLAConfigs(companyId, defaults);
 
     res.json({ success: true, configs: results });

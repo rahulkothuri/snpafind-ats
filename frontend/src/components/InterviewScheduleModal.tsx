@@ -42,6 +42,7 @@ interface InterviewFormData {
   timezone: string;
   mode: InterviewMode;
   location: string;
+  customUrl: string;
   panelMemberIds: string[];
   notes: string;
 }
@@ -57,14 +58,21 @@ const MODE_OPTIONS: { value: InterviewMode; label: string; icon: string }[] = [
   { value: 'google_meet', label: 'Google Meet', icon: '🎥' },
   { value: 'microsoft_teams', label: 'Microsoft Teams', icon: '📹' },
   { value: 'in_person', label: 'In-Person', icon: '🏢' },
+  { value: 'custom_url', label: 'Custom URL', icon: '🔗' },
 ];
 
-// Get user's timezone or default to UTC
+// Get user's timezone or default to IST (Asia/Kolkata)
 function getDefaultTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // If user is in India or timezone detection fails, default to IST
+    if (userTimezone.includes('Kolkata') || userTimezone.includes('India')) {
+      return 'Asia/Kolkata';
+    }
+    // For other users, still default to IST for consistency
+    return 'Asia/Kolkata';
   } catch {
-    return 'UTC';
+    return 'Asia/Kolkata';
   }
 }
 
@@ -98,6 +106,7 @@ export function InterviewScheduleModal({
     timezone: getDefaultTimezone(),
     mode: 'google_meet',
     location: '',
+    customUrl: '',
     panelMemberIds: [],
     notes: '',
   });
@@ -141,6 +150,7 @@ export function InterviewScheduleModal({
         timezone: getDefaultTimezone(),
         mode: 'google_meet',
         location: '',
+        customUrl: '',
         panelMemberIds: [],
         notes: '',
       });
@@ -167,10 +177,14 @@ export function InterviewScheduleModal({
     setFormData(prev => ({ 
       ...prev, 
       mode,
-      location: mode !== 'in_person' ? '' : prev.location 
+      location: mode !== 'in_person' ? '' : prev.location,
+      customUrl: mode !== 'custom_url' ? '' : prev.customUrl
     }));
     if (errors.location) {
       setErrors(prev => ({ ...prev, location: '' }));
+    }
+    if (errors.customUrl) {
+      setErrors(prev => ({ ...prev, customUrl: '' }));
     }
   };
 
@@ -204,6 +218,19 @@ export function InterviewScheduleModal({
       newErrors.location = 'Location is required for in-person interviews';
     }
 
+    if (formData.mode === 'custom_url' && !formData.customUrl.trim()) {
+      newErrors.customUrl = 'Meeting URL is required for custom URL interviews';
+    }
+
+    // Validate custom URL format
+    if (formData.mode === 'custom_url' && formData.customUrl.trim()) {
+      try {
+        new URL(formData.customUrl);
+      } catch {
+        newErrors.customUrl = 'Please enter a valid URL (e.g., https://zoom.us/j/123456789)';
+      }
+    }
+
     // Validate date is not in the past
     const scheduledDateTime = new Date(`${formData.scheduledDate}T${formData.scheduledTime}`);
     if (scheduledDateTime < new Date()) {
@@ -232,7 +259,8 @@ export function InterviewScheduleModal({
         duration: formData.duration,
         timezone: formData.timezone,
         mode: formData.mode,
-        location: formData.mode === 'in_person' ? formData.location : undefined,
+        location: formData.mode === 'in_person' ? formData.location : 
+                 formData.mode === 'custom_url' ? formData.customUrl : undefined,
         panelMemberIds: formData.panelMemberIds,
         notes: formData.notes || undefined,
       };
@@ -435,6 +463,32 @@ export function InterviewScheduleModal({
                   {errors.location && (
                     <p className="text-xs text-red-500 mt-1">{errors.location}</p>
                   )}
+                </div>
+              )}
+
+              {/* Custom URL (for custom meetings) */}
+              {formData.mode === 'custom_url' && (
+                <div>
+                  <label htmlFor="customUrl" className="block text-sm font-medium text-[#374151] mb-1.5">
+                    Meeting URL <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="customUrl"
+                    name="customUrl"
+                    value={formData.customUrl}
+                    onChange={handleInputChange}
+                    placeholder="https://zoom.us/j/123456789 or https://meet.jit.si/room-name"
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${
+                      errors.customUrl ? 'border-red-500' : 'border-[#e2e8f0]'
+                    }`}
+                  />
+                  {errors.customUrl && (
+                    <p className="text-xs text-red-500 mt-1">{errors.customUrl}</p>
+                  )}
+                  <p className="text-xs text-[#64748b] mt-1">
+                    Enter the meeting URL for Zoom, Jitsi Meet, or any other video conferencing platform
+                  </p>
                 </div>
               )}
 

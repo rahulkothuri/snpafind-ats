@@ -16,7 +16,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, AdvancedFilters, InterviewScheduleModal } from './index';
+import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, AdvancedFilters, InterviewScheduleModal, JobActionsDropdown, ShareJobModal } from './index';
 import type { Column } from './Table';
 import type { AdvancedFiltersState } from './AdvancedFilters';
 import { pipelineService, jobsService } from '../services';
@@ -628,6 +628,9 @@ export function JobDetailsRightPanel({
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedCandidateForInterview, setSelectedCandidateForInterview] = useState<PipelineCandidate | null>(null);
 
+  // Share job modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
   // Advanced filters state - Requirements 4.3
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
     skills: [],
@@ -759,6 +762,17 @@ export function JobDetailsRightPanel({
     setIsScheduleModalOpen(true);
   }, []);
 
+  // Handle share job modal
+  const handleShareJob = useCallback(() => {
+    setIsShareModalOpen(true);
+  }, []);
+
+  // Handle bulk import (placeholder)
+  const handleBulkImport = useCallback(() => {
+    // TODO: Implement bulk import functionality
+    console.log('Bulk import clicked for job:', role?.id);
+  }, [role]);
+
   // Handle interview scheduled success
   const handleInterviewScheduled = useCallback((_interview: Interview) => {
     setIsScheduleModalOpen(false);
@@ -843,6 +857,12 @@ export function JobDetailsRightPanel({
               </Button>
             )}
             <Button variant="primary" size="sm">+ Add candidate</Button>
+            <JobActionsDropdown
+              jobId={role.id}
+              jobTitle={role.title}
+              onShareJob={handleShareJob}
+              onBulkImport={handleBulkImport}
+            />
           </div>
         </div>
       </div>
@@ -992,6 +1012,16 @@ export function JobDetailsRightPanel({
           jobCandidateId={selectedCandidateForInterview.jobCandidateId || selectedCandidateForInterview.id}
           candidateName={selectedCandidateForInterview.name}
           jobTitle={role.title}
+        />
+      )}
+
+      {/* Share Job Modal */}
+      {role && (
+        <ShareJobModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          jobTitle={role.title}
+          jobId={role.id}
         />
       )}
     </div>

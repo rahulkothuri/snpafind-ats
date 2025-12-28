@@ -13,14 +13,31 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
 app.use(cors());
 app.use(express.json());
 
+// Special middleware for uploads to allow framing (for resume PDFs in iframes)
+app.use('/uploads', (req, res, next) => {
+  // Remove all frame-related restrictions for uploaded files
+  res.removeHeader('X-Frame-Options');
+  res.removeHeader('Content-Security-Policy');
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  console.log(`Serving upload file: ${req.path}`);
+  next();
+});
+
 // Serve static files from uploads directory (for resume files)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// Apply helmet to all other routes (not uploads)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/uploads')) {
+    return next();
+  }
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })(req, res, next);
+});
 
 // Routes
 app.use('/api', routes);

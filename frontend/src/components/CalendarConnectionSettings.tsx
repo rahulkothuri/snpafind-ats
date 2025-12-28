@@ -17,33 +17,11 @@ export interface CalendarConnectionSettingsProps {
   className?: string;
 }
 
-// Google Calendar icon
-const GoogleCalendarIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18.316 5.684H5.684v12.632h12.632V5.684z" fill="#fff"/>
-    <path d="M18.316 24L24 18.316V5.684L18.316 0H5.684L0 5.684v12.632L5.684 24h12.632z" fill="#4285F4"/>
-    <path d="M18.316 18.316H24V5.684h-5.684v12.632z" fill="#1967D2"/>
-    <path d="M5.684 24v-5.684H0v5.684h5.684z" fill="#1967D2"/>
-    <path d="M18.316 5.684V0H5.684v5.684h12.632z" fill="#34A853"/>
-    <path d="M5.684 18.316H0V5.684h5.684v12.632z" fill="#188038"/>
-    <path d="M18.316 24h5.684v-5.684h-5.684V24z" fill="#FBBC04"/>
-    <path d="M18.316 5.684H24V0h-5.684v5.684z" fill="#EA4335"/>
-    <path d="M5.684 5.684V0H0v5.684h5.684z" fill="#1967D2"/>
-    <path d="M5.684 24h12.632v-5.684H5.684V24z" fill="#34A853"/>
-    <path d="M8.526 15.158l1.263-1.263 2.211 2.21 4.737-4.736 1.263 1.263-6 6-3.474-3.474z" fill="#4285F4"/>
-  </svg>
-);
+// Google Calendar logo URL
+const GOOGLE_CALENDAR_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg';
 
-// Microsoft Outlook icon
-const MicrosoftOutlookIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M24 7.387v10.478c0 .574-.467 1.041-1.041 1.041h-8.438v-11.56h8.438c.574 0 1.041.467 1.041 1.041z" fill="#0364B8"/>
-    <path d="M24 7.387v10.478c0 .574-.467 1.041-1.041 1.041h-5.917V6.346h5.917c.574 0 1.041.467 1.041 1.041z" fill="#0078D4"/>
-    <path d="M17.042 18.906h5.917c.574 0 1.041-.467 1.041-1.041v-2.604h-6.958v3.645z" fill="#28A8EA"/>
-    <path d="M9.563 5.302H1.125C.504 5.302 0 5.806 0 6.427v11.146c0 .621.504 1.125 1.125 1.125h8.438c.621 0 1.125-.504 1.125-1.125V6.427c0-.621-.504-1.125-1.125-1.125z" fill="#0078D4"/>
-    <path d="M5.344 9.521c-2.07 0-3.75 1.68-3.75 3.75s1.68 3.75 3.75 3.75 3.75-1.68 3.75-3.75-1.68-3.75-3.75-3.75zm0 6.094c-1.293 0-2.344-1.05-2.344-2.344 0-1.293 1.05-2.344 2.344-2.344 1.293 0 2.344 1.05 2.344 2.344 0 1.293-1.05 2.344-2.344 2.344z" fill="#fff"/>
-  </svg>
-);
+// Microsoft Outlook logo URL  
+const OUTLOOK_LOGO = 'https://img.icons8.com/fluency/96/microsoft-outlook-2019.png';
 
 export function CalendarConnectionSettings({ className = '' }: CalendarConnectionSettingsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -187,7 +165,7 @@ export function CalendarConnectionSettings({ className = '' }: CalendarConnectio
           provider="google"
           name="Google Calendar"
           description="Sync interviews with Google Calendar and create Google Meet links"
-          icon={<GoogleCalendarIcon />}
+          logoUrl={GOOGLE_CALENDAR_LOGO}
           isConnected={status?.google.connected || false}
           connectedEmail={status?.google.email}
           connectedAt={status?.google.connectedAt}
@@ -202,7 +180,7 @@ export function CalendarConnectionSettings({ className = '' }: CalendarConnectio
           provider="microsoft"
           name="Microsoft Outlook"
           description="Sync interviews with Outlook Calendar and create Teams meeting links"
-          icon={<MicrosoftOutlookIcon />}
+          logoUrl={OUTLOOK_LOGO}
           isConnected={status?.microsoft.connected || false}
           connectedEmail={status?.microsoft.email}
           connectedAt={status?.microsoft.connectedAt}
@@ -237,7 +215,7 @@ interface CalendarProviderCardProps {
   provider: CalendarProvider;
   name: string;
   description: string;
-  icon: React.ReactNode;
+  logoUrl: string;
   isConnected: boolean;
   connectedEmail?: string;
   connectedAt?: string;
@@ -251,7 +229,7 @@ function CalendarProviderCard({
   provider,
   name,
   description,
-  icon,
+  logoUrl,
   isConnected,
   connectedEmail,
   connectedAt,
@@ -273,9 +251,13 @@ function CalendarProviderCard({
     <div className="bg-white border border-[#e2e8f0] rounded-xl p-5 shadow-sm" data-provider={provider}>
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          {/* Provider Icon */}
-          <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center">
-            {icon}
+          {/* Provider Logo */}
+          <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center p-2">
+            <img 
+              src={logoUrl} 
+              alt={`${name} logo`} 
+              className="w-full h-full object-contain"
+            />
           </div>
           
           {/* Provider Info */}

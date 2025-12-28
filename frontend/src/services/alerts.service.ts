@@ -149,6 +149,15 @@ export const alertsService = {
   },
 
   /**
+   * Update system default SLA thresholds
+   * Requirements: 10.5
+   */
+  async updateSystemDefaults(configs: UpdateSLAConfigData[]): Promise<{ success: boolean; defaults: { stageName: string; thresholdDays: number }[] }> {
+    const response = await api.put('/settings/sla/defaults', { configs });
+    return response.data;
+  },
+
+  /**
    * Check SLA status for a specific candidate
    * Requirements: 10.1, 2.5
    */

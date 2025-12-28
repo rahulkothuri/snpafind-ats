@@ -17,6 +17,7 @@ import { Layout, LoadingSpinner, ErrorMessage, CandidateNotesSection, CandidateA
 import { candidatesService, type Candidate, type CandidateActivity, type StageHistoryEntry, type CandidateNote, type CandidateAttachment } from '../services/candidates.service';
 import { useAuth } from '../hooks/useAuth';
 import { useCompany } from '../hooks/useCompany';
+import api from '../services/api';
 import { getResumeUrl } from '../services/api';
 
 // Helper function to format date
@@ -88,7 +89,7 @@ export function CandidateProfilePage() {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'notes' | 'attachments' | 'tags'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'screening' | 'notes' | 'attachments' | 'tags'>('overview');
 
   // Fetch candidate data
   useEffect(() => {
@@ -277,7 +278,7 @@ export function CandidateProfilePage() {
           {/* Tab Navigation */}
           <div className="border-t border-[#e2e8f0] px-6">
             <nav className="flex gap-6">
-              {(['overview', 'timeline', 'notes', 'attachments', 'tags'] as const).map((tab) => (
+              {(['overview', 'timeline', 'screening', 'notes', 'attachments', 'tags'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -309,6 +310,9 @@ export function CandidateProfilePage() {
         )}
         {activeTab === 'timeline' && (
           <TimelineTab activities={activities} stageHistory={stageHistory} />
+        )}
+        {activeTab === 'screening' && (
+          <ScreeningTab activities={activities} />
         )}
         {activeTab === 'notes' && (
           <NotesTab
@@ -375,8 +379,35 @@ interface ResumeViewerProps {
 }
 
 function ResumeViewer({ candidate }: ResumeViewerProps) {
+  const [iframeError, setIframeError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const resumeUrl = candidate.resumeUrl ? getResumeUrl(candidate.resumeUrl) : null;
   const isPdf = candidate.resumeUrl?.toLowerCase().endsWith('.pdf');
+
+  // Debug logging
+  useEffect(() => {
+    if (resumeUrl) {
+      console.log('Resume URL:', resumeUrl);
+      console.log('Is PDF:', isPdf);
+    }
+  }, [resumeUrl, isPdf]);
+
+  // Reset states when resumeUrl changes
+  useEffect(() => {
+    setIframeError(false);
+    setIsLoading(true);
+    
+    // Auto-fallback after 3 seconds if still loading (likely CSP blocked)
+    const fallbackTimer = setTimeout(() => {
+      if (isLoading) {
+        console.log('PDF loading timeout, showing fallback');
+        setIframeError(true);
+        setIsLoading(false);
+      }
+    }, 3000);
+    
+    return () => clearTimeout(fallbackTimer);
+  }, [resumeUrl, isLoading]);
 
   if (!resumeUrl) {
     return (
@@ -389,44 +420,127 @@ function ResumeViewer({ candidate }: ResumeViewerProps) {
     );
   }
 
+  const handleIframeLoad = () => {
+    setIsLoading(false);
+    // Reduce timeout to 500ms for faster fallback detection
+    setTimeout(() => {
+      const iframe = document.querySelector('iframe[title="Resume PDF Viewer"]') as HTMLIFrameElement;
+      const objectEl = document.querySelector('object[data]') as HTMLObjectElement;
+      
+      if (iframe || objectEl) {
+        try {
+          // Try to access iframe content - will throw if blocked by CSP
+          if (iframe) {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iframeDoc) {
+              console.log('Iframe blocked by CSP, showing fallback');
+              setIframeError(true);
+              return;
+            }
+          }
+          
+          // Check if object loaded successfully
+          if (objectEl && objectEl.data) {
+            // Object seems to be working, keep it
+            console.log('PDF loaded successfully via object tag');
+          }
+        } catch (error) {
+          console.log('PDF viewer blocked by CSP, showing fallback');
+          setIframeError(true);
+        }
+      }
+    }, 500); // Reduced from 1000ms to 500ms
+  };
+
+  const handleIframeError = () => {
+    console.log('Iframe failed to load');
+    setIsLoading(false);
+    setIframeError(true);
+  };
+
   return (
     <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-sm overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-[#e2e8f0]">
         <h3 className="text-sm font-semibold text-[#111827]">Resume</h3>
-        <a
-          href={resumeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-4 py-2 text-sm font-medium text-white bg-[#0b6cf0] rounded-lg hover:bg-[#0956c4] transition-colors"
-        >
-          Download
-        </a>
+        <div className="flex gap-2">
+          <a
+            href={resumeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 text-sm font-medium text-[#0b6cf0] border border-[#0b6cf0] rounded-lg hover:bg-[#0b6cf0] hover:text-white transition-colors"
+          >
+            Open in New Tab
+          </a>
+          <a
+            href={resumeUrl}
+            download
+            className="px-3 py-1.5 text-sm font-medium text-white bg-[#0b6cf0] rounded-lg hover:bg-[#0956c4] transition-colors"
+          >
+            Download
+          </a>
+        </div>
       </div>
-      {isPdf ? (
-        <div className="h-[600px]">
+      
+      {isPdf && !iframeError ? (
+        <div className="h-[600px] relative">
+          {/* Simple iframe approach with fast fallback */}
           <iframe
-            src={resumeUrl}
-            className="w-full h-full"
+            src={`${resumeUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+            className="w-full h-full border-0"
             title="Resume PDF Viewer"
+            onError={handleIframeError}
+            onLoad={handleIframeLoad}
+            style={{ display: isLoading ? 'none' : 'block' }}
           />
+          
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0b6cf0] mx-auto mb-2"></div>
+                <p className="text-sm text-gray-500">Loading resume...</p>
+                <p className="text-xs text-gray-400 mt-1">If this takes too long, use the buttons above</p>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-8 text-center">
           <svg className="w-16 h-16 mx-auto text-[#0b6cf0] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p className="text-[#64748b] mb-4">Resume preview not available for this format</p>
-          <a
-            href={resumeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0b6cf0] rounded-lg hover:bg-[#0956c4] transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download Resume
-          </a>
+          <p className="text-[#64748b] mb-2 font-medium">
+            {iframeError ? 'Resume Preview Unavailable' : 'Resume preview not available for this format'}
+          </p>
+          <p className="text-xs text-[#94a3b8] mb-4">
+            {iframeError 
+              ? 'Due to security restrictions, the resume cannot be displayed inline. Use the options below to view it.' 
+              : 'This file format cannot be previewed inline'
+            }
+          </p>
+          <div className="flex gap-2 justify-center">
+            <a
+              href={resumeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0b6cf0] rounded-lg hover:bg-[#0956c4] transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              View Resume
+            </a>
+            <a
+              href={resumeUrl}
+              download
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#0b6cf0] border border-[#0b6cf0] rounded-lg hover:bg-[#0b6cf0] hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download Resume
+            </a>
+          </div>
         </div>
       )}
     </div>
@@ -619,6 +733,21 @@ function TimelineTab({ activities, stageHistory }: TimelineTabProps) {
                       {item.type === 'stage' && item.metadata?.movedBy && (
                         <p className="text-xs text-[#94a3b8] mt-1">by {item.metadata.movedBy as string}</p>
                       )}
+                      {item.type === 'activity' && item.metadata?.screeningAnswers && (
+                        <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-xs font-medium text-blue-800 mb-2">Screening Question Answers:</p>
+                          <div className="space-y-1">
+                            {Object.entries(item.metadata.screeningAnswers as Record<string, any>).map(([questionId, answer]) => (
+                              <div key={questionId} className="text-xs">
+                                <span className="text-blue-700 font-medium">Q{questionId.slice(-1)}:</span>
+                                <span className="text-blue-600 ml-1">
+                                  {Array.isArray(answer) ? answer.join(', ') : String(answer)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <span className="text-xs text-[#94a3b8] whitespace-nowrap">
                       {formatDateTime(item.date)}
@@ -629,6 +758,179 @@ function TimelineTab({ activities, stageHistory }: TimelineTabProps) {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Screening Tab - Shows screening question answers
+interface ScreeningTabProps {
+  activities: CandidateActivity[];
+}
+
+function ScreeningTab({ activities }: ScreeningTabProps) {
+  const { candidateId } = useParams<{ candidateId: string }>();
+  const [jobDetails, setJobDetails] = useState<any>(null);
+  const [loadingJob, setLoadingJob] = useState(false);
+
+  // Find the application activity that contains screening answers
+  const applicationActivity = activities.find(
+    (activity) => activity.activityType === 'stage_change' && 
+    activity.description === 'Applied via public application form' &&
+    activity.metadata?.screeningAnswers
+  );
+
+  const screeningAnswers = applicationActivity?.metadata?.screeningAnswers as Record<string, any> | undefined;
+
+  // Fetch job details to get the screening questions
+  useEffect(() => {
+    const fetchJobWithScreeningQuestions = async () => {
+      if (!candidateId || !screeningAnswers) return;
+      
+      setLoadingJob(true);
+      try {
+        // Get candidate's job applications to find the job ID
+        const candidateResponse = await api.get(`/candidates/${candidateId}`);
+        const candidate = candidateResponse.data;
+        
+        // Get the first job application (assuming the screening answers are for the most recent application)
+        if (candidate.jobCandidates && candidate.jobCandidates.length > 0) {
+          const jobId = candidate.jobCandidates[0].jobId;
+          const jobResponse = await api.get(`/jobs/${jobId}`);
+          setJobDetails(jobResponse.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch job details:', error);
+      } finally {
+        setLoadingJob(false);
+      }
+    };
+
+    fetchJobWithScreeningQuestions();
+  }, [candidateId, screeningAnswers]);
+
+  if (!screeningAnswers || Object.keys(screeningAnswers).length === 0) {
+    return (
+      <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-sm">
+        <div className="p-4 border-b border-[#e2e8f0]">
+          <h3 className="text-sm font-semibold text-[#111827]">Screening Question Answers</h3>
+        </div>
+        <div className="p-8 text-center">
+          <svg className="w-12 h-12 mx-auto text-[#94a3b8] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-[#64748b]">No screening questions were answered</p>
+          <p className="text-sm text-[#94a3b8] mt-1">This candidate may have applied before screening questions were added to the job</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingJob) {
+    return (
+      <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-sm">
+        <div className="p-4 border-b border-[#e2e8f0]">
+          <h3 className="text-sm font-semibold text-[#111827]">Screening Question Answers</h3>
+        </div>
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0b6cf0] mx-auto"></div>
+          <p className="text-[#64748b] mt-4">Loading questions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const screeningQuestions = jobDetails?.screeningQuestions || [];
+
+  return (
+    <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-sm">
+      <div className="p-4 border-b border-[#e2e8f0]">
+        <h3 className="text-sm font-semibold text-[#111827]">Screening Question Answers</h3>
+        <p className="text-xs text-[#64748b] mt-1">
+          Answered on {new Date(applicationActivity.createdAt).toLocaleDateString()}
+          {jobDetails && <span className="ml-2">• Job: {jobDetails.title}</span>}
+        </p>
+      </div>
+      <div className="p-4">
+        {screeningQuestions.length === 0 ? (
+          <div className="text-center py-8">
+            <svg className="w-12 h-12 mx-auto text-[#94a3b8] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-[#64748b]">No screening questions found for this job</p>
+            <p className="text-sm text-[#94a3b8] mt-1">The job may not have had screening questions when this candidate applied</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {screeningQuestions.map((question: any, index: number) => {
+              const answer = screeningAnswers[question.id];
+              
+              return (
+                <div key={question.id} className="p-4 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0b6cf0] text-white text-xs font-semibold flex items-center justify-center">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[#111827] mb-2">
+                        {question.question}
+                        {question.required && <span className="text-red-500 ml-1">*</span>}
+                      </p>
+                      <div className="bg-white rounded-lg p-3 border border-[#e2e8f0]">
+                        <p className="text-sm text-[#374151]">
+                          {answer !== undefined ? (
+                            Array.isArray(answer) ? (
+                              <span>
+                                <strong>Selected:</strong> {answer.join(', ')}
+                              </span>
+                            ) : typeof answer === 'boolean' ? (
+                              <span>
+                                <strong>Answer:</strong> {answer ? 'Yes' : 'No'}
+                              </span>
+                            ) : (
+                              <span>
+                                <strong>Answer:</strong> {String(answer)}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-[#94a3b8] italic">Not answered</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* Show answers that don't have matching questions (in case questions were deleted) */}
+            {Object.entries(screeningAnswers).map(([questionId, answer]) => {
+              const questionExists = screeningQuestions.some((q: any) => q.id === questionId);
+              if (questionExists) return null;
+              
+              return (
+                <div key={questionId} className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-500 text-white text-xs font-semibold flex items-center justify-center">
+                      ?
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-yellow-800 mb-2">
+                        Question (ID: {questionId})
+                        <span className="text-xs text-yellow-600 ml-2">(Question no longer exists)</span>
+                      </p>
+                      <div className="bg-white rounded-lg p-3 border border-yellow-200">
+                        <p className="text-sm text-yellow-700">
+                          <strong>Answer:</strong> {Array.isArray(answer) ? answer.join(', ') : String(answer)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

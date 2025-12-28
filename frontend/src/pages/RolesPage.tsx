@@ -16,6 +16,7 @@ import {
   JobDescriptionModal,
   RolesLeftPanel,
   JobDetailsRightPanel,
+  InterviewScheduleModal,
 } from '../components';
 import type { ViewMode, PipelineCandidate } from '../components';
 import { useAuth } from '../hooks/useAuth';
@@ -76,8 +77,10 @@ const sampleCandidates: PipelineCandidate[] = [
 // Candidate Detail Panel Content
 function CandidateDetailContent({ 
   candidate,
+  onScheduleInterview,
 }: { 
   candidate: PipelineCandidate;
+  onScheduleInterview: () => void;
 }) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -98,7 +101,7 @@ function CandidateDetailContent({
 
   const actions = [
     { label: 'Change Stage', onClick: () => {}, variant: 'secondary' as const },
-    { label: 'Schedule Interview', onClick: () => {}, variant: 'primary' as const },
+    { label: 'Schedule Interview', onClick: onScheduleInterview, variant: 'primary' as const },
     { label: 'Send Email', onClick: () => {}, variant: 'secondary' as const },
     { label: 'Reject', onClick: () => {}, variant: 'danger' as const },
   ];
@@ -173,6 +176,9 @@ export function RolesPage() {
   const [isJobDescriptionModalOpen, setIsJobDescriptionModalOpen] = useState(false);
   const [selectedJobForDescription, setSelectedJobForDescription] = useState<JobType | null>(null);
   const [jobDescriptionLoading, setJobDescriptionLoading] = useState(false);
+
+  // Interview Schedule Modal state (for detail panel)
+  const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
 
   // Resizable splitter state
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
@@ -473,9 +479,27 @@ export function RolesPage() {
         onMoreInfo={selectedCandidate ? () => handleMoreInfo(selectedCandidate.id) : undefined}
       >
         {selectedCandidate && (
-          <CandidateDetailContent candidate={selectedCandidate} />
+          <CandidateDetailContent 
+            candidate={selectedCandidate} 
+            onScheduleInterview={() => setIsInterviewModalOpen(true)}
+          />
         )}
       </DetailPanel>
+
+      {/* Interview Schedule Modal (from detail panel) */}
+      {selectedCandidate && selectedRole && (
+        <InterviewScheduleModal
+          isOpen={isInterviewModalOpen}
+          onClose={() => setIsInterviewModalOpen(false)}
+          onSuccess={() => {
+            setIsInterviewModalOpen(false);
+            setCandidatesRefreshKey(prev => prev + 1);
+          }}
+          jobCandidateId={selectedCandidate.jobCandidateId || selectedCandidate.id}
+          candidateName={selectedCandidate.name}
+          jobTitle={selectedRole.title}
+        />
+      )}
 
       {/* Job Description Modal */}
       <JobDescriptionModal

@@ -393,6 +393,17 @@ model SLAConfig {
   @@map("sla_configs")
 }
 
+// System-wide SLA Defaults (no company constraint)
+model SystemSLADefault {
+  id            String   @id @default(uuid())
+  stageName     String   @unique @map("stage_name")
+  thresholdDays Int      @map("threshold_days")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("system_sla_defaults")
+}
+
 // Task Type Enum
 enum TaskType {
   feedback
@@ -408,6 +419,7 @@ enum InterviewMode {
   google_meet
   microsoft_teams
   in_person
+  custom_url
 
   @@map("interview_mode")
 }

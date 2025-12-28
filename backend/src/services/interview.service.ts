@@ -61,6 +61,20 @@ export const interviewService = {
       errors.location = ['Location is required for in-person interviews'];
     }
 
+    // Validate custom_url mode requires location (used as meeting URL)
+    if (data.mode === 'custom_url' && !data.location) {
+      errors.location = ['Meeting URL is required for custom URL interviews'];
+    }
+
+    // Validate custom URL format
+    if (data.mode === 'custom_url' && data.location) {
+      try {
+        new URL(data.location);
+      } catch {
+        errors.location = ['Please provide a valid URL for the meeting'];
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       throw new ValidationError(errors);
     }
@@ -257,6 +271,8 @@ export const interviewService = {
         return 'Microsoft Teams';
       case 'in_person':
         return 'In-Person';
+      case 'custom_url':
+        return 'Custom URL';
       default:
         return mode;
     }
@@ -295,6 +311,25 @@ export const interviewService = {
       throw new ValidationError({
         location: ['Location is required for in-person interviews'],
       });
+    }
+
+    // Validate custom_url mode requires location (used as meeting URL)
+    if (data.mode === 'custom_url' && !data.location && !existing.location) {
+      throw new ValidationError({
+        location: ['Meeting URL is required for custom URL interviews'],
+      });
+    }
+
+    // Validate custom URL format
+    if (data.mode === 'custom_url' && (data.location || existing.location)) {
+      const urlToValidate = data.location || existing.location;
+      try {
+        new URL(urlToValidate!);
+      } catch {
+        throw new ValidationError({
+          location: ['Please provide a valid URL for the meeting'],
+        });
+      }
     }
 
     // Validate duration if provided

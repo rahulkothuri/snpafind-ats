@@ -51,43 +51,51 @@ export function MandatoryCriteriaSection({
   const [newCriterion, setNewCriterion] = useState('');
   const isEditable = onChange && !readOnly;
 
+  // Ensure we always have a valid criteria object with an array
+  const safeValue = {
+    title: value?.title || DEFAULT_MANDATORY_CRITERIA.title,
+    intro: value?.intro || DEFAULT_MANDATORY_CRITERIA.intro,
+    criteria: Array.isArray(value?.criteria) ? value.criteria : DEFAULT_MANDATORY_CRITERIA.criteria,
+    note: value?.note || DEFAULT_MANDATORY_CRITERIA.note,
+  };
+
   const handleTitleChange = (title: string) => {
     if (onChange) {
-      onChange({ ...value, title });
+      onChange({ ...safeValue, title });
     }
   };
 
   const handleIntroChange = (intro: string) => {
     if (onChange) {
-      onChange({ ...value, intro });
+      onChange({ ...safeValue, intro });
     }
   };
 
   const handleNoteChange = (note: string) => {
     if (onChange) {
-      onChange({ ...value, note });
+      onChange({ ...safeValue, note });
     }
   };
 
   const handleCriterionChange = (index: number, text: string) => {
     if (onChange) {
-      const newCriteria = [...value.criteria];
+      const newCriteria = [...safeValue.criteria];
       newCriteria[index] = text;
-      onChange({ ...value, criteria: newCriteria });
+      onChange({ ...safeValue, criteria: newCriteria });
     }
   };
 
   const handleAddCriterion = () => {
     if (onChange && newCriterion.trim()) {
-      onChange({ ...value, criteria: [...value.criteria, newCriterion.trim()] });
+      onChange({ ...safeValue, criteria: [...safeValue.criteria, newCriterion.trim()] });
       setNewCriterion('');
     }
   };
 
   const handleRemoveCriterion = (index: number) => {
     if (onChange) {
-      const newCriteria = value.criteria.filter((_, i) => i !== index);
-      onChange({ ...value, criteria: newCriteria });
+      const newCriteria = safeValue.criteria.filter((_, i) => i !== index);
+      onChange({ ...safeValue, criteria: newCriteria });
     }
   };
 
@@ -120,14 +128,14 @@ export function MandatoryCriteriaSection({
         {isEditable ? (
           <input
             type="text"
-            value={value.title}
+            value={safeValue.title}
             onChange={(e) => handleTitleChange(e.target.value)}
             className="flex-1 text-base font-semibold text-[#92400e] bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
             placeholder="Section title..."
           />
         ) : (
           <h3 className="text-base font-semibold text-[#92400e]">
-            {value.title}
+            {safeValue.title}
           </h3>
         )}
       </div>
@@ -165,20 +173,20 @@ export function MandatoryCriteriaSection({
       {isEditable ? (
         <input
           type="text"
-          value={value.intro}
+          value={safeValue.intro}
           onChange={(e) => handleIntroChange(e.target.value)}
           className="w-full text-sm text-[#78350f] font-medium bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
           placeholder="Introduction text..."
         />
       ) : (
         <p className="text-sm text-[#78350f] font-medium mb-3">
-          {value.intro}
+          {safeValue.intro}
         </p>
       )}
 
       {/* Numbered criteria list */}
       <ol className="space-y-2 mb-4">
-        {value.criteria.map((criterion, index) => (
+        {safeValue.criteria.map((criterion, index) => (
           <li 
             key={index} 
             className="flex gap-3 text-sm text-[#78350f]"
@@ -239,14 +247,14 @@ export function MandatoryCriteriaSection({
         {isEditable ? (
           <input
             type="text"
-            value={value.note}
+            value={safeValue.note}
             onChange={(e) => handleNoteChange(e.target.value)}
             className="w-full text-sm font-semibold text-[#92400e] uppercase tracking-wide bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
             placeholder="Note..."
           />
         ) : (
           <p className="text-sm font-semibold text-[#92400e] uppercase tracking-wide">
-            {value.note}
+            {safeValue.note}
           </p>
         )}
       </div>

@@ -30,6 +30,11 @@ const pipelineStageSchema = z.object({
   position: z.number().int().min(0),
   isMandatory: z.boolean().default(false),
   subStages: z.array(subStageSchema).optional(),
+  type: z.enum(['shortlisting', 'screening', 'interview', 'offer', 'hired']).optional(),
+  isCustom: z.boolean().optional(),
+  parentStageId: z.string().optional(),
+  requirements: z.array(z.string()).optional(),
+  estimatedDuration: z.number().optional(),
 });
 
 // Validation schemas with all new fields (Requirements 1.1)
@@ -64,6 +69,24 @@ const createJobSchema = z.object({
   // Content
   description: z.string().optional(),
   openings: z.number().int().positive().optional(),
+  
+  // Mandatory criteria - editable screening criteria
+  mandatoryCriteria: z.object({
+    title: z.string(),
+    intro: z.string(),
+    criteria: z.array(z.string()),
+    note: z.string(),
+  }).optional(),
+  
+  // Screening questions - questions candidates must answer before applying
+  screeningQuestions: z.array(z.object({
+    id: z.string().optional(),
+    question: z.string(),
+    type: z.enum(['text', 'textarea', 'single_choice', 'multiple_choice', 'yes_no', 'number']),
+    required: z.boolean(),
+    options: z.array(z.string()).optional(),
+    idealAnswer: z.union([z.string(), z.array(z.string())]).optional(),
+  })).optional(),
   
   // Pipeline stages (Requirements 4.1)
   pipelineStages: z.array(pipelineStageSchema).optional(),
@@ -106,6 +129,24 @@ const updateJobSchema = z.object({
   description: z.string().nullable().optional(),
   status: z.enum(['active', 'paused', 'closed']).optional(),
   openings: z.number().int().positive().optional(),
+  
+  // Mandatory criteria - editable screening criteria
+  mandatoryCriteria: z.object({
+    title: z.string(),
+    intro: z.string(),
+    criteria: z.array(z.string()),
+    note: z.string(),
+  }).nullable().optional().or(z.undefined()),
+  
+  // Screening questions - questions candidates must answer before applying
+  screeningQuestions: z.array(z.object({
+    id: z.string().optional(),
+    question: z.string(),
+    type: z.enum(['text', 'textarea', 'single_choice', 'multiple_choice', 'yes_no', 'number']),
+    required: z.boolean(),
+    options: z.array(z.string()).optional(),
+    idealAnswer: z.union([z.string(), z.array(z.string())]).optional(),
+  })).nullable().optional().or(z.undefined()),
   
   // Pipeline stages
   pipelineStages: z.array(pipelineStageSchema).optional(),
@@ -317,6 +358,7 @@ router.put(
     try {
       const result = updateJobSchema.safeParse(req.body);
       if (!result.success) {
+        console.log('Validation failed for job update:', result.error.issues);
         throw new ValidationError(parseZodErrors(result.error));
       }
 

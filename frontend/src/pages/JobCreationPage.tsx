@@ -250,42 +250,51 @@ export function JobCreationPage() {
     setSubmitError(null);
 
     try {
-      const payload = {
-        ...formData,
+      // Build payload with only non-empty/changed fields
+      const payload: Record<string, unknown> = {
         companyId: user?.companyId || 'default-company-id',
-        // Convert empty strings to undefined for experience range
-        experienceMin: formData.experienceMin === '' ? undefined : formData.experienceMin,
-        experienceMax: formData.experienceMax === '' ? undefined : formData.experienceMax,
-        // Convert empty strings to undefined for salary range - Requirement 1.3
-        salaryMin: formData.salaryMin === '' ? undefined : formData.salaryMin,
-        salaryMax: formData.salaryMax === '' ? undefined : formData.salaryMax,
-        // Convert empty string to undefined for variables - Requirement 1.1
-        variables: formData.variables.trim() || undefined,
-        // Convert empty string to undefined for education qualification - Requirement 1.1
-        educationQualification: formData.educationQualification || undefined,
-        // Convert empty string to undefined for age limit - Requirement 1.1
-        ageUpTo: formData.ageUpTo === '' ? undefined : formData.ageUpTo,
-        // Skills array - Requirement 1.1
-        skills: formData.skills.length > 0 ? formData.skills : undefined,
-        // Convert empty string to undefined for preferred industry - Requirement 1.1
-        preferredIndustry: formData.preferredIndustry || undefined,
-        // Convert empty string to undefined for work mode - Requirement 1.5
-        workMode: formData.workMode || undefined,
-        // Locations array - Requirement 1.4
-        locations: formData.locations.length > 0 ? formData.locations : undefined,
-        // Convert empty string to undefined for priority - Requirement 1.6
-        priority: formData.priority || undefined,
-        // Convert empty string to undefined for job domain - Requirement 1.1
-        jobDomain: formData.jobDomain || undefined,
-        // Convert empty string to undefined for assigned recruiter - Requirement 1.1
-        assignedRecruiterId: formData.assignedRecruiterId || undefined,
-        // Pipeline stages configuration - Requirement 4.1
-        pipelineStages: formData.pipelineStages,
-        // Mandatory criteria - editable screening criteria
-        mandatoryCriteria: formData.mandatoryCriteria,
-        // Screening questions - questions candidates must answer before applying
-        screeningQuestions: formData.screeningQuestions,
       };
+
+      // Only include fields that have values or have been explicitly set
+      if (formData.title.trim()) payload.title = formData.title.trim();
+      if (formData.description.trim()) payload.description = formData.description.trim();
+      if (formData.openings > 0) payload.openings = formData.openings;
+
+      // Experience range - only include if set
+      if (formData.experienceMin !== '') payload.experienceMin = formData.experienceMin;
+      if (formData.experienceMax !== '') payload.experienceMax = formData.experienceMax;
+
+      // Salary range - only include if set
+      if (formData.salaryMin !== '') payload.salaryMin = formData.salaryMin;
+      if (formData.salaryMax !== '') payload.salaryMax = formData.salaryMax;
+
+      // Optional fields - only include if they have values
+      if (formData.variables.trim()) payload.variables = formData.variables.trim();
+      if (formData.educationQualification) payload.educationQualification = formData.educationQualification;
+      if (formData.ageUpTo !== '') payload.ageUpTo = formData.ageUpTo;
+      if (formData.skills.length > 0) payload.skills = formData.skills;
+      if (formData.preferredIndustry) payload.preferredIndustry = formData.preferredIndustry;
+      if (formData.workMode) payload.workMode = formData.workMode;
+      if (formData.locations.length > 0) payload.locations = formData.locations;
+      if (formData.priority) payload.priority = formData.priority;
+      if (formData.jobDomain) payload.jobDomain = formData.jobDomain;
+      if (formData.assignedRecruiterId) payload.assignedRecruiterId = formData.assignedRecruiterId;
+
+      // Always include these complex objects if they exist and have content
+      if (formData.mandatoryCriteria && 
+          formData.mandatoryCriteria.title && 
+          formData.mandatoryCriteria.criteria && 
+          formData.mandatoryCriteria.criteria.length > 0) {
+        payload.mandatoryCriteria = formData.mandatoryCriteria;
+      }
+
+      if (formData.screeningQuestions && formData.screeningQuestions.length > 0) {
+        payload.screeningQuestions = formData.screeningQuestions;
+      }
+
+      if (formData.pipelineStages && formData.pipelineStages.length > 0) {
+        payload.pipelineStages = formData.pipelineStages;
+      }
 
       if (isEditMode && id) {
         await api.put(`/jobs/${id}`, payload);
@@ -848,7 +857,7 @@ Describe the position and its importance to the team...
 
           {/* Mandatory Criteria Section - Requirement 3.1 */}
           <MandatoryCriteriaSection 
-            value={formData.mandatoryCriteria}
+            value={formData.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA}
             onChange={(criteria) => handleChange('mandatoryCriteria', criteria)}
           />
 

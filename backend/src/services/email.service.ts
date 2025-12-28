@@ -12,8 +12,15 @@ import prisma from '../lib/prisma.js';
 import { formatForEmail, formatDateInTimezone, formatTimeInTimezone } from './timezone.service.js';
 import type { Interview, User } from '../types/index.js';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-initialize Resend client to avoid errors when API key is not set (e.g., in tests)
+let resend: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 // Default sender configuration
 const DEFAULT_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@example.com';
@@ -676,7 +683,7 @@ export const emailService = {
     try {
       const from = options.from || `${DEFAULT_FROM_NAME} <${DEFAULT_FROM_EMAIL}>`;
       
-      const result = await resend.emails.send({
+      const result = await getResendClient().emails.send({
         from,
         to: Array.isArray(options.to) ? options.to : [options.to],
         subject: options.subject,

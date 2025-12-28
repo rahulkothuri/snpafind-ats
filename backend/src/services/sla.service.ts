@@ -513,6 +513,56 @@ export const slaService = {
       { stageName: 'Offer', thresholdDays: 3 },
     ];
   },
+
+  /**
+   * Update system default SLA thresholds
+   * This updates the defaults that are shown as reference
+   */
+  async updateSystemDefaults(
+    configs: UpdateSLAConfigData[]
+  ): Promise<{ stageName: string; thresholdDays: number }[]> {
+    // Clear existing system defaults
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (prisma as any).systemSLADefault.deleteMany({});
+
+    // Insert new defaults
+    for (const config of configs) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (prisma as any).systemSLADefault.create({
+        data: {
+          stageName: config.stageName.trim(),
+          thresholdDays: config.thresholdDays,
+        },
+      });
+    }
+
+    return configs.map(c => ({
+      stageName: c.stageName,
+      thresholdDays: c.thresholdDays,
+    }));
+  },
+
+  /**
+   * Get system default thresholds from database
+   * Falls back to hardcoded defaults if none exist
+   */
+  async getStoredSystemDefaults(): Promise<{ stageName: string; thresholdDays: number }[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const storedDefaults = await (prisma as any).systemSLADefault.findMany({
+      orderBy: { stageName: 'asc' },
+    });
+
+    if (storedDefaults.length > 0) {
+      return storedDefaults.map((d: { stageName: string; thresholdDays: number }) => ({
+        stageName: d.stageName,
+        thresholdDays: d.thresholdDays,
+      }));
+    }
+
+    // Fall back to hardcoded defaults
+    return this.getDefaultThresholds();
+  },
 };
+
 
 export default slaService;

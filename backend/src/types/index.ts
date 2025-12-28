@@ -230,7 +230,7 @@ export interface AuthResponse {
 // Phase 3: Interview Management Types
 
 // Interview mode enum (Requirements 2.1)
-export type InterviewMode = 'google_meet' | 'microsoft_teams' | 'in_person';
+export type InterviewMode = 'google_meet' | 'microsoft_teams' | 'in_person' | 'custom_url';
 
 // Interview status enum (Requirements 1.3, 8.5)
 export type InterviewStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';

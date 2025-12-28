@@ -57,8 +57,8 @@ interface FormErrors {
 }
 
 const formSteps = [
-  { id: 1, title: 'Screening Questions', progress: 33 },
-  { id: 2, title: 'Personal Information & Resume', progress: 66 },
+  { id: 1, title: 'Personal Information & Resume', progress: 33 },
+  { id: 2, title: 'Screening Questions', progress: 66 },
   { id: 3, title: 'Review & Submit', progress: 100 },
 ];
 
@@ -142,19 +142,6 @@ export function ApplicationPage() {
     const newErrors: FormErrors = {};
     
     if (step === 1) {
-      // Screening Questions validation
-      const screeningQuestions = job?.screeningQuestions || [];
-      for (const question of screeningQuestions) {
-        if (question.required) {
-          const answer = formData.screeningAnswers[question.id];
-          if (answer === undefined || answer === '' || (Array.isArray(answer) && answer.length === 0)) {
-            newErrors[`screening_${question.id}`] = 'This question is required';
-          }
-        }
-      }
-    }
-    
-    if (step === 2) {
       // Personal Information validation
       if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
       if (!formData.email.trim()) {
@@ -169,6 +156,19 @@ export function ApplicationPage() {
       if (!formData.resumeFile) newErrors.resumeFile = 'Resume is required';
     }
     
+    if (step === 2) {
+      // Screening Questions validation
+      const screeningQuestions = job?.screeningQuestions || [];
+      for (const question of screeningQuestions) {
+        if (question.required) {
+          const answer = formData.screeningAnswers[question.id];
+          if (answer === undefined || answer === '' || (Array.isArray(answer) && answer.length === 0)) {
+            newErrors[`screening_${question.id}`] = 'This question is required';
+          }
+        }
+      }
+    }
+    
     if (step === 3) {
       if (!formData.agreedToTerms) newErrors.agreedToTerms = 'You must agree to the terms';
     }
@@ -179,12 +179,22 @@ export function ApplicationPage() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+      // If we're on step 1 and there are no screening questions, skip to step 3
+      if (currentStep === 1 && (!job?.screeningQuestions || job.screeningQuestions.length === 0)) {
+        setCurrentStep(3);
+      } else {
+        setCurrentStep(prev => Math.min(prev + 1, 3));
+      }
     }
   };
 
   const handleBack = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    // If we're on step 3 and there are no screening questions, go back to step 1
+    if (currentStep === 3 && (!job?.screeningQuestions || job.screeningQuestions.length === 0)) {
+      setCurrentStep(1);
+    } else {
+      setCurrentStep(prev => Math.max(prev - 1, 1));
+    }
   };
 
   // File handling
@@ -924,8 +934,8 @@ export function ApplicationPage() {
           <StepIndicator />
           
           <form onSubmit={handleSubmit}>
-            {currentStep === 1 && renderScreeningQuestions()}
-            {currentStep === 2 && renderStep1()}
+            {currentStep === 1 && renderStep1()}
+            {currentStep === 2 && renderScreeningQuestions()}
             {currentStep === 3 && renderStep2()}
             
             {/* Navigation Buttons - Touch-friendly (min 44px) - Requirement 5.5 */}

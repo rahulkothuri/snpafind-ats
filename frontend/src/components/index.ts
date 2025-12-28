@@ -127,3 +127,7 @@ export { RescheduleModal } from './RescheduleModal';
 export type { RescheduleModalProps } from './RescheduleModal';
 export { CancelConfirmationModal } from './CancelConfirmationModal';
 export type { CancelConfirmationModalProps } from './CancelConfirmationModal';
+
+// Job Actions Components
+export { JobActionsDropdown } from './JobActionsDropdown';
+export { ShareJobModal } from './ShareJobModal';
