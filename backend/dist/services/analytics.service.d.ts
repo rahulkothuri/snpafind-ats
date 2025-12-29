@@ -175,11 +175,11 @@ export declare class AnalyticsService {
      */
     getSourcePerformance(companyId: string, userId: string, userRole: UserRole, filters?: AnalyticsFilters): Promise<SourceData[]>;
     /**
-     * Get recruiter productivity analytics (Requirements 11.1, 11.2, 11.3)
+     * Get recruiter productivity analytics (Requirements 11.1, 11.2, 11.3, 11.4, 11.5)
      */
     getRecruiterProductivity(companyId: string, userId: string, userRole: UserRole, filters?: AnalyticsFilters): Promise<RecruiterData[]>;
     /**
-     * Get panel performance analytics (Requirements 12.1, 12.2, 12.3)
+     * Get panel performance analytics (Requirements 12.1, 12.2, 12.3, 12.4, 12.5, 12.6)
      */
     getPanelPerformance(companyId: string, userId: string, userRole: UserRole, filters?: AnalyticsFilters): Promise<PanelData[]>;
     /**
@@ -195,7 +195,7 @@ export declare class AnalyticsService {
      */
     getOfferAcceptanceRate(companyId: string, userId: string, userRole: UserRole, filters?: AnalyticsFilters): Promise<OfferData>;
     /**
-     * Get SLA status analytics (Requirements 19.1, 19.2)
+     * Get SLA status analytics (Requirements 19.1, 19.2, 19.3, 19.4, 19.5, 19.6)
      */
     getSLAStatus(companyId: string, userId: string, userRole: UserRole, filters?: AnalyticsFilters): Promise<SLAStatusData>;
     /**
@@ -215,7 +215,7 @@ export declare class AnalyticsService {
      */
     private calculateOfferAcceptanceRate;
     /**
-     * Get SLA status summary
+     * Get SLA status summary (Requirements 19.1, 19.2, 19.3, 19.4, 19.5, 19.6)
      */
     private getSLAStatusSummary;
 }

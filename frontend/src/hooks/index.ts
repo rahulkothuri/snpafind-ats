@@ -18,3 +18,42 @@ export {
   useSubmitFeedback,
   interviewKeys 
 } from './useInterviews';
+
+// Analytics hooks
+export {
+  useKPIMetrics,
+  useFunnelAnalytics,
+  useConversionRates,
+  useTimeToFill,
+  useTimeInStage,
+  useSourcePerformance,
+  useRecruiterProductivity,
+  usePanelPerformance,
+  useDropOffAnalysis,
+  useRejectionReasons,
+  useOfferAcceptanceRate,
+  useSLAStatus,
+  useAnalyticsOverview,
+  useAnalyticsExport,
+  useDateRangePresets,
+  useDateRangeValidation,
+  useDashboardAnalytics,
+  useTeamPerformanceAnalytics,
+  useTimeAnalytics,
+  useFunnelAnalyticsComplete,
+  analyticsKeys
+} from './useAnalytics';
+
+// Search hooks
+export {
+  useCandidateSearch,
+  useJobSearch,
+  useSearchSuggestions,
+  useFilterOptions,
+  useBooleanQueryParser,
+  useSearchHistory,
+  useFilterValidation,
+  useUnifiedSearch,
+  useAdvancedSearchState,
+  searchKeys
+} from './useSearch';

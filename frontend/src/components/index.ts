@@ -131,3 +131,9 @@ export type { CancelConfirmationModalProps } from './CancelConfirmationModal';
 // Job Actions Components
 export { JobActionsDropdown } from './JobActionsDropdown';
 export { ShareJobModal } from './ShareJobModal';
+
+// Analytics Chart Components - Requirements 2.1, 2.2, 2.4, 2.5, 5.1, 6.4, 7.2, 10.2, 15.1, 15.2, 14.5, 14.6
+export { FunnelChart } from './FunnelChart';
+export { HorizontalBarChart } from './HorizontalBarChart';
+export { PieChart } from './PieChart';
+export { AnalyticsFilter } from './AnalyticsFilter';

@@ -10,4 +10,6 @@ export { JobDetailsPage } from './JobDetailsPage';
 export { ApplicationPage } from './ApplicationPage';
 export { CandidateProfilePage } from './CandidateProfilePage';
 export { InterviewDashboardPage } from './InterviewDashboardPage';
+export { AnalyticsPage } from './AnalyticsPage';
+export { SearchPage } from './SearchPage';
 export { GoogleOAuthCallbackPage, MicrosoftOAuthCallbackPage, OAuthCallbackPage } from './OAuthCallbackPage';

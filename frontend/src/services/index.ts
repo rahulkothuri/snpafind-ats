@@ -11,18 +11,20 @@ export { default as alertsService } from './alerts.service';
 export { default as tasksService } from './tasks.service';
 export { default as interviewsService } from './interviews.service';
 export { default as calendarService } from './calendar.service';
+export { default as analyticsService } from './analytics.service';
+export { default as searchService } from './search.service';
 
 export type { Job, PipelineStage, CreateJobData, StageMetric, PipelineAnalytics } from './jobs.service';
 export type { Candidate, JobCandidate, CandidateActivity, CreateCandidateData, CandidateSearchParams } from './candidates.service';
 export type { User, UserRole, CreateUserData, UpdateUserData } from './users.service';
 export type { Company, UpdateCompanyData } from './company.service';
-export type { DashboardMetrics, RolePipeline, FunnelStage, SourcePerformance, RecruiterLoad, DashboardData } from './dashboard.service';
+export type { DashboardMetrics, RolePipeline, FunnelStage, SourcePerformance, RecruiterLoad, DashboardData, Interview, ActivityEntry } from './dashboard.service';
 export type { BulkMoveRequest, BulkMoveResult, BulkMoveFailure } from './pipeline.service';
 export type { Notification, NotificationType, NotificationsResponse, GetNotificationsOptions } from './notifications.service';
 export type { SLABreachAlert, PendingFeedbackAlert, AlertsResponse, AlertType, SLAConfig, SLAConfigResponse, UpdateSLAConfigData } from './alerts.service';
 export type { Task, TaskType, TaskSeverity, TaskStatus, CreateTaskData, UpdateTaskData } from './tasks.service';
 export type { 
-  Interview, 
+  Interview as InterviewType, 
   InterviewMode, 
   InterviewStatus, 
   InterviewRecommendation,
@@ -36,3 +38,27 @@ export type {
   TimezoneOption
 } from './interviews.service';
 export type { CalendarProvider, CalendarConnectionStatus, OAuthUrlResponse, ConnectedProvidersResponse } from './calendar.service';
+export type { 
+  AnalyticsFilters,
+  KPIMetrics,
+  FunnelData,
+  ConversionData,
+  TimeToFillData,
+  TimeInStageData,
+  SourceData,
+  RecruiterData,
+  PanelData,
+  DropOffData,
+  RejectionData,
+  OfferData,
+  SLAStatusData,
+  ExportRequest
+} from './analytics.service';
+export type { 
+  SearchQuery,
+  SearchFilters,
+  SearchResult,
+  ParsedQuery,
+  SearchSuggestion,
+  SearchHistoryEntry
+} from './search.service';

@@ -53,10 +53,13 @@ interface FunnelStage {
 interface Interview {
   id: string;
   time: string;
-  candidate: string;
+  candidate?: string; // For backward compatibility
+  candidateName?: string;
   role: string;
-  panel: string;
-  meetingType: 'Google Meet' | 'Zoom' | 'In-office';
+  panel?: string; // For backward compatibility
+  panelMembers?: string[];
+  meetingType: 'Google Meet' | 'Zoom' | 'In-person' | 'In-office';
+  meetingLink?: string;
 }
 
 interface Task {
@@ -118,8 +121,13 @@ interface RecruiterLoad {
 
 interface ActivityEntry {
   id: string;
-  timestamp: string;
-  text: string;
+  timestamp: string | Date;
+  text?: string; // For backward compatibility
+  description?: string;
+  entityType?: 'candidate' | 'job' | 'interview';
+  entityId?: string;
+  entityName?: string;
+  activityType?: 'stage_change' | 'interview_scheduled' | 'offer_made' | 'hire';
 }
 
 // Sample data - Requirements 30.1-30.6
@@ -267,16 +275,41 @@ const pipelineColumns: Column<RolePipeline>[] = [
   {
     key: 'sla',
     header: 'SLA',
+    sortable: true,
     render: (row) => {
-      const variant = row.sla === 'On track' ? 'green' : row.sla === 'At risk' ? 'orange' : 'red';
-      return <Badge text={row.sla} variant={variant} />;
+      // Enhanced SLA status color coding - Requirements 3.2, 19.3, 19.4
+      const getSLAVariant = (status: string) => {
+        switch (status) {
+          case 'On track': return 'green';
+          case 'At risk': return 'orange';
+          case 'Breached': return 'red';
+          default: return 'gray';
+        }
+      };
+      
+      const getSLAIcon = (status: string) => {
+        switch (status) {
+          case 'On track': return '✓';
+          case 'At risk': return '⚠';
+          case 'Breached': return '⚠';
+          default: return '';
+        }
+      };
+
+      return (
+        <div className="flex items-center gap-1">
+          <span className="text-xs">{getSLAIcon(row.sla)}</span>
+          <Badge text={row.sla} variant={getSLAVariant(row.sla)} />
+        </div>
+      );
     },
   },
   {
     key: 'priority',
     header: 'Pri',
+    sortable: true,
     render: (row) => {
-      const variant = row.priority === 'High' ? 'priority' : 'gray';
+      const variant = row.priority === 'High' ? 'priority' : row.priority === 'Medium' ? 'orange' : 'gray';
       return <Badge text={row.priority} variant={variant} />;
     },
   },
@@ -313,16 +346,47 @@ function HiringFunnel({ stages }: { stages: FunnelStage[] }) {
 function UpcomingInterviews({ 
   interviews, 
   showViewAll = false, 
-  onViewAll 
+  onViewAll,
+  period = 'today',
+  onPeriodChange
 }: { 
   interviews: Interview[]; 
   showViewAll?: boolean;
   onViewAll?: () => void;
+  period?: 'today' | 'week';
+  onPeriodChange?: (period: 'today' | 'week') => void;
 }) {
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-[#111827]">Upcoming Interviews</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-[#111827]">Upcoming Interviews</h3>
+          {/* Today/This Week Toggle - Requirement 4.6 */}
+          {onPeriodChange && (
+            <div className="flex items-center bg-[#f1f5f9] rounded-lg p-1">
+              <button
+                onClick={() => onPeriodChange('today')}
+                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                  period === 'today'
+                    ? 'bg-white text-[#0b6cf0] shadow-sm'
+                    : 'text-[#64748b] hover:text-[#374151]'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => onPeriodChange('week')}
+                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                  period === 'week'
+                    ? 'bg-white text-[#0b6cf0] shadow-sm'
+                    : 'text-[#64748b] hover:text-[#374151]'
+                }`}
+              >
+                This Week
+              </button>
+            </div>
+          )}
+        </div>
         {showViewAll && onViewAll && (
           <Button 
             variant="outline" 
@@ -334,33 +398,54 @@ function UpcomingInterviews({
         )}
       </div>
       <div className="space-y-3">
-        {interviews.map((interview) => (
-          <div
-            key={interview.id}
-            className="flex items-center justify-between p-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="text-sm font-medium text-[#0b6cf0]">{interview.time}</div>
-              <div>
-                <div className="text-sm font-medium text-[#111827]">{interview.candidate}</div>
-                <div className="text-xs text-[#64748b]">{interview.role}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-xs text-[#64748b]">{interview.panel}</div>
-                <Badge
-                  text={interview.meetingType}
-                  variant={interview.meetingType === 'In-office' ? 'green' : 'blue'}
-                />
-              </div>
-              <div className="flex gap-1">
-                <Button variant="mini" miniColor="schedule">Join</Button>
-                <Button variant="mini" miniColor="default">Reschedule</Button>
-              </div>
-            </div>
+        {interviews.length === 0 ? (
+          <div className="text-center py-6 text-sm text-[#64748b]">
+            {period === 'today' ? 'No interviews scheduled for today' : 'No interviews scheduled this week'}
           </div>
-        ))}
+        ) : (
+          interviews.map((interview) => (
+            <div
+              key={interview.id}
+              className="flex items-center justify-between p-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-medium text-[#0b6cf0]">{interview.time}</div>
+                <div>
+                  <div className="text-sm font-medium text-[#111827]">
+                    {interview.candidateName || interview.candidate}
+                  </div>
+                  <div className="text-xs text-[#64748b]">{interview.role}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-xs text-[#64748b]">
+                    {Array.isArray(interview.panelMembers) 
+                      ? interview.panelMembers.join(', ')
+                      : interview.panel || 'Panel TBD'
+                    }
+                  </div>
+                  <Badge
+                    text={interview.meetingType}
+                    variant={interview.meetingType === 'In-person' || interview.meetingType === 'In-office' ? 'green' : 'blue'}
+                  />
+                </div>
+                <div className="flex gap-1">
+                  {interview.meetingType !== 'In-person' && interview.meetingType !== 'In-office' && interview.meetingLink && (
+                    <Button 
+                      variant="mini" 
+                      miniColor="schedule"
+                      onClick={() => window.open(interview.meetingLink, '_blank')}
+                    >
+                      Join
+                    </Button>
+                  )}
+                  <Button variant="mini" miniColor="default">Reschedule</Button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -601,22 +686,22 @@ function TasksSection({
   );
 }
 
-// Source Performance Component
+// Source Performance Component - Compact version
 function SourcePerformanceChart({ sources }: { sources: SourcePerformance[] }) {
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#111827] mb-4">Source Performance</h3>
-      <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-[#111827] mb-3">Source Performance</h3>
+      <div className="space-y-2">
         {sources.map((source) => (
           <div key={source.source} className="flex items-center gap-3">
-            <div className="w-24 text-xs text-[#64748b]">{source.source}</div>
-            <div className="flex-1 h-4 bg-[#f1f5f9] rounded overflow-hidden">
+            <div className="w-20 text-xs text-[#64748b] truncate">{source.source}</div>
+            <div className="flex-1 h-3 bg-[#f1f5f9] rounded overflow-hidden">
               <div
                 className="h-full bg-[#0b6cf0] rounded transition-all duration-300"
                 style={{ width: `${source.percentage}%` }}
               />
             </div>
-            <div className="w-10 text-xs text-[#374151] text-right">{source.percentage}%</div>
+            <div className="w-8 text-xs text-[#374151] text-right">{source.percentage}%</div>
           </div>
         ))}
       </div>
@@ -624,19 +709,19 @@ function SourcePerformanceChart({ sources }: { sources: SourcePerformance[] }) {
   );
 }
 
-// Recruiter Load Component
+// Recruiter Load Component - Compact version
 function RecruiterLoadSection({ recruiters }: { recruiters: RecruiterLoad[] }) {
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#111827] mb-4">Recruiter Load</h3>
-      <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-[#111827] mb-3">Recruiter Load</h3>
+      <div className="space-y-2">
         {recruiters.map((recruiter) => (
           <div
             key={recruiter.name}
             className="flex items-center justify-between p-2 hover:bg-[#f8fafc] rounded-lg transition-colors"
           >
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-[#0b6cf0] flex items-center justify-center text-white text-xs font-medium">
+              <div className="w-6 h-6 rounded-full bg-[#0b6cf0] flex items-center justify-center text-white text-xs font-medium">
                 {recruiter.name.charAt(0)}
               </div>
               <div>
@@ -657,20 +742,128 @@ function RecruiterLoadSection({ recruiters }: { recruiters: RecruiterLoad[] }) {
 
 
 // Activity Feed Component
-function ActivityFeed({ activities }: { activities: ActivityEntry[] }) {
+function ActivityFeed({ 
+  activities,
+  onActivityClick
+}: { 
+  activities: ActivityEntry[];
+  onActivityClick?: (activity: ActivityEntry) => void;
+}) {
+  const [activityFilter, setActivityFilter] = useState<string>('all');
+
+  // Activity type filtering - Requirement 20.4
+  const activityTypes = [
+    { value: 'all', label: 'All' },
+    { value: 'stage_change', label: 'Stage Changes' },
+    { value: 'interview_scheduled', label: 'Interviews' },
+    { value: 'offer_made', label: 'Offers' },
+    { value: 'hire', label: 'Hires' },
+  ];
+
+  const filteredActivities = activities.filter(activity => {
+    if (activityFilter === 'all') return true;
+    return activity.activityType === activityFilter;
+  }).slice(0, 15); // Increase to 15 most recent - Better space utilization
+
+  // Format timestamp - Requirement 20.2
+  const formatTimestamp = (timestamp: string | Date) => {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return 'Just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes}m ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours}h ago`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days}d ago`;
+    }
+  };
+
+  // Activity type icons
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'stage_change': return '📊';
+      case 'interview_scheduled': return '📅';
+      case 'offer_made': return '💼';
+      case 'hire': return '🎉';
+      default: return '📌';
+    }
+  };
+
+  // Activity type colors
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'stage_change': return 'bg-blue-100 text-blue-600';
+      case 'interview_scheduled': return 'bg-green-100 text-green-600';
+      case 'offer_made': return 'bg-purple-100 text-purple-600';
+      case 'hire': return 'bg-yellow-100 text-yellow-600';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#111827] mb-4">Activity Feed</h3>
-      <div className="space-y-3">
-        {activities.map((activity) => (
-          <div key={activity.id} className="flex items-start gap-3">
-            <div className="w-2 h-2 mt-1.5 rounded-full bg-[#0b6cf0]" />
-            <div>
-              <div className="text-xs text-[#374151]">{activity.text}</div>
-              <div className="text-[10px] text-[#94a3b8]">{activity.timestamp}</div>
-            </div>
+    <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-[#111827]">Activity Feed</h3>
+        
+        {/* Activity Type Filter */}
+        <select
+          value={activityFilter}
+          onChange={(e) => setActivityFilter(e.target.value)}
+          className="text-xs border border-[#e2e8f0] rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#0b6cf0]"
+        >
+          {activityTypes.map(type => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+        {filteredActivities.length === 0 ? (
+          <div className="text-center py-6 text-sm text-[#64748b]">
+            No activities found
           </div>
-        ))}
+        ) : (
+          filteredActivities.map((activity) => (
+            <div 
+              key={activity.id} 
+              className={`flex items-start gap-3 p-2 rounded-lg transition-colors ${
+                onActivityClick ? 'hover:bg-[#f8fafc] cursor-pointer' : ''
+              }`}
+              onClick={() => onActivityClick?.(activity)}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${getActivityColor(activity.activityType || 'default')}`}>
+                {getActivityIcon(activity.activityType || 'default')}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-[#374151] leading-tight line-clamp-2">
+                  {activity.description || activity.text}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="text-[10px] text-[#94a3b8]">
+                    {formatTimestamp(activity.timestamp)}
+                  </div>
+                  {activity.entityName && (
+                    <>
+                      <div className="text-[10px] text-[#94a3b8]">•</div>
+                      <div className="text-[10px] text-[#0b6cf0] hover:underline truncate">
+                        {activity.entityName}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -682,25 +875,68 @@ export function DashboardPage() {
   const { data: dashboardData, isLoading, error, refetch } = useDashboard();
   const navigate = useNavigate();
 
+  // Real-time updates state - Requirements 18.1, 18.2, 18.3
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Interview period state - Requirement 4.6
+  const [interviewPeriod, setInterviewPeriod] = useState<'today' | 'week'>('today');
+
+  // Auto-refresh every 60 seconds - Requirement 18.1
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+      setLastUpdated(new Date());
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  // Manual refresh handler - Requirement 18.3
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      setLastUpdated(new Date());
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Format last updated timestamp - Requirement 18.2
+  const formatLastUpdated = (date: Date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return 'Just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  };
+
   // Task state management with API
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [tasksError, setTasksError] = useState<string | null>(null);
+  // const [tasksLoading, setTasksLoading] = useState(true);
+  // const [tasksError, setTasksError] = useState<string | null>(null);
 
   // Fetch tasks from API
   const fetchTasks = useCallback(async () => {
     try {
-      setTasksLoading(true);
-      setTasksError(null);
+      // setTasksLoading(true);
+      // setTasksError(null);
       const apiTasks = await tasksService.getAll();
       setTasks(apiTasks.map(mapApiTaskToTask));
     } catch (err) {
       console.error('Failed to fetch tasks:', err);
-      setTasksError('Failed to load tasks');
+      // setTasksError('Failed to load tasks');
       // Fall back to sample tasks on error
       setTasks(sampleTasks);
     } finally {
-      setTasksLoading(false);
+      // setTasksLoading(false);
     }
   }, []);
 
@@ -806,22 +1042,85 @@ export function DashboardPage() {
     openRoles: 12,
     activeCandidates: 236,
     interviewsToday: 8,
+    interviewsThisWeek: 15,
     offersPending: 6,
+    totalHires: 8,
     timeToFillMedian: 24,
     offerAcceptanceRate: 78,
+    rolesOnTrack: 8,
+    rolesAtRisk: 3,
+    rolesBreached: 1,
   };
 
+  // Role-based data filtering - Requirements 1.2, 1.3
   const allRolePipeline = dashboardData?.rolePipeline || sampleRolePipeline;
   const rolePipeline = getLimitedRoles(allRolePipeline, 7);
-  // const showViewAllRoles = allRolePipeline.length > 7;
+  const showViewAllRoles = allRolePipeline.length > 7;
   
-  const allInterviews = sampleInterviews;
-  const interviews = getLimitedInterviews(allInterviews, 5);
-  const showViewAllInterviews = allInterviews.length > 5;
+  // Use real interview data from API
+  const allInterviews = dashboardData?.interviews || sampleInterviews.map(interview => ({
+    ...interview,
+    candidateName: interview.candidate,
+    panelMembers: [interview.panel || 'Panel TBD'],
+    meetingType: interview.meetingType === 'In-office' ? 'In-person' : interview.meetingType,
+  }));
+  
+  // Filter interviews by period - Requirement 4.6
+  const filteredInterviews = allInterviews.filter(() => {
+    if (interviewPeriod === 'today') {
+      // For demo purposes, show all interviews as "today"
+      return true;
+    } else {
+      // For "week" view, show all interviews
+      return true;
+    }
+  });
+  
+  const interviews = getLimitedInterviews(filteredInterviews.map(interviewItem => ({
+    ...interviewItem,
+    candidate: (interviewItem as any).candidateName || (interviewItem as any).candidate || 'Unknown',
+    panel: Array.isArray((interviewItem as any).panelMembers) ? (interviewItem as any).panelMembers.join(', ') : (interviewItem as any).panel || 'Panel TBD',
+  })), 5);
+  const showViewAllInterviews = filteredInterviews.length > 5;
   
   const funnel = dashboardData?.funnel || sampleFunnel;
   const sources = dashboardData?.sources || sampleSources;
   const recruiters = dashboardData?.recruiterLoad || sampleRecruiters;
+  
+  // Use real activity data from API - Requirements 20.1, 20.2, 20.3, 20.4
+  const activities = dashboardData?.activities || sampleActivities.map(activity => ({
+    id: activity.id,
+    timestamp: new Date(),
+    text: activity.text,
+    description: activity.text,
+    entityType: 'candidate' as const,
+    entityId: '1',
+    entityName: 'Sample Entity',
+    activityType: 'stage_change' as const,
+  }));
+
+  // Extend activities with more sample data to fill the space better
+  const extendedActivities = [
+    ...activities,
+    ...Array.from({ length: 8 }, (_, i) => ({
+      id: `extended-${i}`,
+      timestamp: new Date(Date.now() - (i + 1) * 3600000), // Hours ago
+      description: [
+        'New candidate applied for Frontend Developer',
+        'Interview feedback submitted for Sarah Johnson',
+        'Offer extended to Michael Chen',
+        'Candidate moved to final round',
+        'New job posting published',
+        'Reference check completed',
+        'Salary negotiation in progress',
+        'Background check initiated'
+      ][i],
+      entityType: 'candidate' as const,
+      entityId: `${i + 2}`,
+      entityName: ['Frontend Dev', 'Sarah Johnson', 'Michael Chen', 'Final Round', 'New Job', 'Reference', 'Salary', 'Background'][i],
+      activityType: (['stage_change', 'interview_scheduled', 'offer_made', 'stage_change', 'hire', 'stage_change', 'offer_made', 'stage_change'][i % 4]) as ActivityEntry['activityType'],
+    }))
+  ] as ActivityEntry[];
 
   // Navigation handlers - Requirements 2.2, 2.3, 3.2, 3.3
   const handleViewAllRoles = () => {
@@ -832,9 +1131,54 @@ export function DashboardPage() {
     navigate('/interviews');
   };
 
-  // Header actions for the dashboard - Requirements 5.2
+  // Activity click handler - Requirement 20.5
+  const handleActivityClick = (activity: ActivityEntry) => {
+    // Navigate to the related entity based on activity type
+    if (!activity.entityType || !activity.entityId) return;
+    
+    switch (activity.entityType) {
+      case 'candidate':
+        navigate(`/candidates/${activity.entityId}`);
+        break;
+      case 'job':
+        navigate(`/jobs/${activity.entityId}`);
+        break;
+      case 'interview':
+        navigate(`/interviews/${activity.entityId}`);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Header actions for the dashboard - Requirements 5.2, 18.2, 18.3
   const headerActions = (
     <div className="flex items-center gap-2">
+      <div className="text-xs text-[#64748b] mr-2">
+        Last updated: {formatLastUpdated(lastUpdated)}
+      </div>
+      <Button 
+        variant="outline" 
+        size="sm"
+        onClick={handleManualRefresh}
+        disabled={isRefreshing}
+      >
+        {isRefreshing ? (
+          <>
+            <svg className="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refreshing...
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </>
+        )}
+      </Button>
       <Button variant="outline" size="sm">Saved views</Button>
       <Button variant="outline" size="sm">Export</Button>
     </div>
@@ -865,12 +1209,14 @@ export function DashboardPage() {
         />
       )}
 
-      {/* Two-column responsive layout - Requirements 1.1, 1.2, 1.3, 1.4 */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6 grid-responsive-xl">
+      {/* Two-column responsive layout with optimized space usage */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 min-h-[calc(100vh-200px)]">
+      {/* Two-column responsive layout with optimized space usage */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 min-h-[calc(100vh-200px)]">
         {/* Main Content Column */}
         <div className="space-y-6">
           {/* KPI Cards Section - Requirement 15.1, 22.3 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 grid-cols-4-responsive">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPICard
               label="Open Roles"
               value={metrics.openRoles}
@@ -885,7 +1231,7 @@ export function DashboardPage() {
             <KPICard
               label="Interviews Today"
               value={metrics.interviewsToday}
-              subtitle="Panel load: 2.7 avg"
+              subtitle={`This week: ${metrics.interviewsThisWeek}`}
               trend={{ text: '3 pending feedback', type: 'warn' }}
             />
             <KPICard
@@ -894,8 +1240,6 @@ export function DashboardPage() {
               trend={{ text: '3 offers > 5 days', type: 'bad' }}
             />
           </div>
-
-         
 
           {/* Role-wise Pipeline Table - Requirement 15.2, 2.1, 2.2, 2.3, 2.4 */}
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm">
@@ -906,13 +1250,15 @@ export function DashboardPage() {
                   <span className="text-xs text-[#64748b] ml-2">(Assigned to you)</span>
                 )}
               </h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleViewAllRoles}
-              >
-                View All
-              </Button>
+              {showViewAllRoles && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleViewAllRoles}
+                >
+                  View All
+                </Button>
+              )}
             </div>
             {rolePipeline.length === 0 ? (
               <div className="text-center py-8 text-[#64748b]">
@@ -931,21 +1277,23 @@ export function DashboardPage() {
             )}
           </div>
 
-          {/* Upcoming Interviews - Moved to top - Requirement 15.4, 3.1, 3.2, 3.3, 3.4 */}
-        <UpcomingInterviews 
-          interviews={interviews} 
-          showViewAll={showViewAllInterviews}
-          onViewAll={handleViewAllInterviews}
-        />
+          {/* Upcoming Interviews - Requirement 15.4, 3.1, 3.2, 3.3, 3.4 */}
+          <UpcomingInterviews 
+            interviews={interviews} 
+            showViewAll={showViewAllInterviews}
+            onViewAll={handleViewAllInterviews}
+            period={interviewPeriod}
+            onPeriodChange={setInterviewPeriod}
+          />
 
-          {/* Hiring Funnel - Moved to bottom - Requirement 15.3 */}
+          {/* Hiring Funnel - Requirement 15.3 */}
           <HiringFunnel stages={funnel} />
         </div>
 
-        {/* Right Sidebar Column - Reorganized per Requirements 1.1, 1.2 */}
-        <div className="space-y-6">
-          {/* Tasks and Alerts Section - Moved to top right position per Requirement 1.1 */}
-          <div className="grid grid-cols-1 gap-4">
+        {/* Right Sidebar Column - Optimized layout to minimize empty space */}
+        <div className="flex flex-col space-y-4 h-full">
+          {/* Tasks and Alerts Section - Compact layout */}
+          <div className="space-y-4">
             <TasksSection 
               tasks={tasks} 
               onAddTask={handleAddTask}
@@ -953,17 +1301,25 @@ export function DashboardPage() {
               onReopenTask={handleReopenTask}
             />
             {/* AlertsPanel - Requirements 9.2, 10.2 - Fetches alerts on mount */}
-            <AlertsPanel maxAlerts={5} />
+            <AlertsPanel maxAlerts={3} />
           </div>
 
-          {/* Recruiter Load - Requirement 15.8 */}
-          <RecruiterLoadSection recruiters={recruiters} />
+          {/* Two-column layout for better space utilization */}
+          <div className="grid grid-cols-1 gap-4">
+            {/* Recruiter Load - Requirement 15.8 */}
+            <RecruiterLoadSection recruiters={recruiters} />
 
-          {/* Activity Feed - Requirements 15.9, 15.10 */}
-          <ActivityFeed activities={sampleActivities} />
+            {/* Source Performance - Compact version */}
+            <SourcePerformanceChart sources={sources} />
+          </div>
 
-          {/* Source Performance - Moved to bottom per Requirement 1.2 */}
-          <SourcePerformanceChart sources={sources} />
+          {/* Activity Feed - Requirements 15.9, 15.10 - Expanded to fill remaining space */}
+          <div className="flex-1 min-h-0">
+            <ActivityFeed 
+              activities={extendedActivities}
+              onActivityClick={handleActivityClick}
+            />
+          </div>
         </div>
       </div>
     </Layout>

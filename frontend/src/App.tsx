@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage, CandidateProfilePage, InterviewDashboardPage, GoogleOAuthCallbackPage, MicrosoftOAuthCallbackPage } from './pages';
+import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage, CandidateProfilePage, InterviewDashboardPage, AnalyticsPage, GoogleOAuthCallbackPage, MicrosoftOAuthCallbackPage } from './pages';
+import ChartDemoPage from './pages/ChartDemoPage';
 import { useAuth } from './hooks/useAuth';
 import { JobProtectedRoute, RoleProtectedRoute } from './components';
 
@@ -95,9 +96,21 @@ function App() {
               <InterviewDashboardPage />
             </ProtectedRoute>
           } />
+          {/* Analytics Page - Requirements 17.1 */}
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              <AnalyticsPage />
+            </ProtectedRoute>
+          } />
           {/* OAuth Callback Pages - Requirements 4.1, 5.1 */}
           <Route path="/oauth/google/callback" element={<GoogleOAuthCallbackPage />} />
           <Route path="/oauth/microsoft/callback" element={<MicrosoftOAuthCallbackPage />} />
+          {/* Chart Demo Page - Task 15: Frontend Components Checkpoint */}
+          <Route path="/chart-demo" element={
+            <ProtectedRoute>
+              <ChartDemoPage />
+            </ProtectedRoute>
+          } />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

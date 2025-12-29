@@ -16,7 +16,8 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, AdvancedFilters, InterviewScheduleModal, JobActionsDropdown, ShareJobModal } from './index';
+import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, InterviewScheduleModal, JobActionsDropdown, ShareJobModal } from './index';
+import { LegacyAdvancedFilters } from './AdvancedFilters';
 import type { Column } from './Table';
 import type { AdvancedFiltersState } from './AdvancedFilters';
 import { pipelineService, jobsService } from '../services';
@@ -943,7 +944,7 @@ export function JobDetailsRightPanel({
       </div>
 
       {/* Advanced Filters - Requirements 4.3 */}
-      <AdvancedFilters
+      <LegacyAdvancedFilters
         filters={advancedFilters}
         onFiltersChange={setAdvancedFilters}
         availableSkills={availableSkills}

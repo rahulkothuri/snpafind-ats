@@ -12,7 +12,7 @@ export function useDashboard() {
   
   return useQuery({
     queryKey: dashboardKeys.metrics(user?.id),
-    queryFn: () => dashboardService.getMetrics(user || undefined),
+    queryFn: () => dashboardService.getDashboardData(user || undefined),
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // Refetch every minute
     enabled: !!user, // Only fetch when user is available
