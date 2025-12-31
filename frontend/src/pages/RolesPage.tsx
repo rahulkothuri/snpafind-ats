@@ -1,18 +1,18 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Layout, 
-  Button, 
-  DetailPanel, 
-  DetailSection, 
-  SummaryRow, 
-  CVSection, 
-  SkillsTags, 
-  Timeline, 
-  NotesSection, 
-  ActionsSection, 
-  LoadingSpinner, 
-  ErrorMessage, 
+import {
+  Layout,
+  Button,
+  DetailPanel,
+  DetailSection,
+  SummaryRow,
+  CVSection,
+  SkillsTags,
+  Timeline,
+  NotesSection,
+  ActionsSection,
+  LoadingSpinner,
+  ErrorMessage,
   JobDescriptionModal,
   RolesLeftPanel,
   JobDetailsRightPanel,
@@ -75,10 +75,10 @@ const sampleCandidates: PipelineCandidate[] = [
 ];
 
 // Candidate Detail Panel Content
-function CandidateDetailContent({ 
+function CandidateDetailContent({
   candidate,
   onScheduleInterview,
-}: { 
+}: {
   candidate: PipelineCandidate;
   onScheduleInterview: () => void;
 }) {
@@ -100,10 +100,10 @@ function CandidateDetailContent({
   ];
 
   const actions = [
-    { label: 'Change Stage', onClick: () => {}, variant: 'secondary' as const },
+    { label: 'Change Stage', onClick: () => { }, variant: 'secondary' as const },
     { label: 'Schedule Interview', onClick: onScheduleInterview, variant: 'primary' as const },
-    { label: 'Send Email', onClick: () => {}, variant: 'secondary' as const },
-    { label: 'Reject', onClick: () => {}, variant: 'danger' as const },
+    { label: 'Send Email', onClick: () => { }, variant: 'secondary' as const },
+    { label: 'Reject', onClick: () => { }, variant: 'danger' as const },
   ];
 
   return (
@@ -117,7 +117,7 @@ function CandidateDetailContent({
       </DetailSection>
 
       <DetailSection title="CV">
-        <CVSection 
+        <CVSection
           filename={`${candidate.name.replace(' ', '_')}_Resume.pdf`}
           onView={() => window.open(getResumeUrl(candidate.resumeUrl), '_blank')}
         />
@@ -156,12 +156,12 @@ export function RolesPage() {
   const { user, logout } = useAuth();
   const { data: apiJobs, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useJobs();
   const navigate = useNavigate();
-  
+
   // Role selection and filtering state
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roleSearchQuery, setRoleSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'open' | 'closed'>('open');
-  
+
   // Candidate state
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [selectedCandidate, setSelectedCandidate] = useState<PipelineCandidate | null>(null);
@@ -171,7 +171,7 @@ export function RolesPage() {
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string; position: number }[]>([]);
   const [candidatesRefreshKey, setCandidatesRefreshKey] = useState(0);
-  
+
   // Job Description Modal state
   const [isJobDescriptionModalOpen, setIsJobDescriptionModalOpen] = useState(false);
   const [selectedJobForDescription, setSelectedJobForDescription] = useState<JobType | null>(null);
@@ -193,10 +193,10 @@ export function RolesPage() {
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !containerRef.current) return;
-    
+
     const containerRect = containerRef.current.getBoundingClientRect();
     const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-    
+
     // Constrain between 20% and 80%
     const constrainedWidth = Math.min(Math.max(newWidth, 20), 80);
     setLeftPanelWidth(constrainedWidth);
@@ -213,7 +213,7 @@ export function RolesPage() {
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
-      
+
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -256,7 +256,7 @@ export function RolesPage() {
     return apiJobs.map((job: Job, index: number) => {
       const applicantCount = job.candidateCount ?? 0;
       const interviewCount = job.interviewCount ?? 0;
-      
+
       return {
         id: job.id,
         title: job.title,
@@ -316,7 +316,7 @@ export function RolesPage() {
           candidatesService.getByJob(selectedRole.id),
           jobsService.getPipelineStages(selectedRole.id),
         ]);
-        
+
         const mappedCandidates: PipelineCandidate[] = candidates.map((jc: JobCandidate) => ({
           id: jc.candidateId,
           jobCandidateId: jc.id, // Include jobCandidateId for bulk operations
@@ -408,12 +408,12 @@ export function RolesPage() {
 
       {/* Resizable Split Panel Layout - Requirements 5.1, 5.4 */}
       {!jobsLoading && !jobsError && (
-        <div 
+        <div
           ref={containerRef}
           className="flex h-[calc(100vh-160px)] min-h-[500px] gap-0"
         >
           {/* Left Panel - Roles List */}
-          <div 
+          <div
             className="h-full min-h-0 flex flex-col overflow-hidden"
             style={{ width: `${leftPanelWidth}%` }}
           >
@@ -445,8 +445,8 @@ export function RolesPage() {
           </div>
 
           {/* Right Panel - Job Details */}
-          <div 
-            className="h-full min-h-0 overflow-auto pl-4"
+          <div
+            className="h-full min-h-0 overflow-auto pl-1"
             style={{ width: `${100 - leftPanelWidth}%` }}
           >
             <JobDetailsRightPanel
@@ -479,8 +479,8 @@ export function RolesPage() {
         onMoreInfo={selectedCandidate ? () => handleMoreInfo(selectedCandidate.id) : undefined}
       >
         {selectedCandidate && (
-          <CandidateDetailContent 
-            candidate={selectedCandidate} 
+          <CandidateDetailContent
+            candidate={selectedCandidate}
             onScheduleInterview={() => setIsInterviewModalOpen(true)}
           />
         )}

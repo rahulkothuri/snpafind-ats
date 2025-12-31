@@ -176,14 +176,15 @@ export const interviewService = {
 
     // Wire calendar sync (Requirements 4.2, 5.2) - Task 21.1
     try {
-      const panelMemberIds = data.panelMemberIds;
+      // Use scheduler for calendar event creation to ensure they own the event
+      const calendarUserIds = [data.scheduledBy];
       const endTime = new Date(new Date(data.scheduledAt).getTime() + data.duration * 60 * 1000);
       const candidateName = mappedInterview.jobCandidate?.candidate?.name || 'Candidate';
       const jobTitle = mappedInterview.jobCandidate?.job?.title || 'Position';
-      
+
       const meetingLink = await calendarService.createCalendarEventsForInterview(
         mappedInterview.id,
-        panelMemberIds,
+        calendarUserIds,
         {
           title: `Interview: ${candidateName} - ${jobTitle}`,
           description: this.buildEventDescription(mappedInterview),
@@ -229,34 +230,34 @@ export const interviewService = {
     const candidate = interview.jobCandidate?.candidate;
     const job = interview.jobCandidate?.job;
     const panelMembers = interview.panelMembers || [];
-    
+
     let description = `Interview for ${job?.title || 'Position'}\n\n`;
     description += `Candidate: ${candidate?.name || 'Unknown'}\n`;
     description += `Email: ${candidate?.email || 'N/A'}\n`;
     description += `Duration: ${interview.duration} minutes\n`;
     description += `Mode: ${this.formatInterviewMode(interview.mode)}\n`;
-    
+
     if (interview.location) {
       description += `Location: ${interview.location}\n`;
     }
-    
+
     if (interview.meetingLink) {
       description += `Meeting Link: ${interview.meetingLink}\n`;
     }
-    
+
     description += `\nPanel Members:\n`;
     for (const pm of panelMembers) {
       description += `- ${pm.user?.name || 'Unknown'} (${pm.user?.email || 'N/A'})\n`;
     }
-    
+
     if (interview.notes) {
       description += `\nNotes: ${interview.notes}\n`;
     }
-    
+
     if (candidate?.resumeUrl) {
       description += `\nResume: ${candidate.resumeUrl}\n`;
     }
-    
+
     return description;
   },
 
@@ -433,14 +434,15 @@ export const interviewService = {
 
     // Wire calendar sync for reschedule (Requirements 4.3, 5.3) - Task 21.1
     try {
-      const panelMemberIds = mappedInterview.panelMembers?.map(pm => pm.userId) || [];
+      // Use scheduler for calendar event updates
+      const calendarUserIds = [mappedInterview.scheduledBy];
       const endTime = new Date(mappedInterview.scheduledAt.getTime() + mappedInterview.duration * 60 * 1000);
       const candidateName = mappedInterview.jobCandidate?.candidate?.name || 'Candidate';
       const jobTitle = mappedInterview.jobCandidate?.job?.title || 'Position';
-      
+
       await calendarService.updateCalendarEventsForInterview(
         mappedInterview.id,
-        panelMemberIds,
+        calendarUserIds,
         {
           title: `Interview: ${candidateName} - ${jobTitle}`,
           description: this.buildEventDescription(mappedInterview),
@@ -533,8 +535,9 @@ export const interviewService = {
 
     // Wire calendar sync for cancellation (Requirements 4.4, 5.4) - Task 21.1
     try {
-      const panelMemberIds = mappedInterview.panelMembers?.map(pm => pm.userId) || [];
-      await calendarService.deleteCalendarEventsForInterview(mappedInterview.id, panelMemberIds);
+      // Use scheduler for calendar event deletion
+      const calendarUserIds = [mappedInterview.scheduledBy];
+      await calendarService.deleteCalendarEventsForInterview(mappedInterview.id, calendarUserIds);
     } catch (error) {
       // Log error but don't fail the interview cancellation
       console.error('Failed to delete calendar events:', error);
@@ -848,7 +851,7 @@ export const interviewService = {
   async getPanelLoadDistribution(companyId: string, period: 'week' | 'month'): Promise<PanelLoad[]> {
     const now = new Date();
     const startDate = new Date(now);
-    
+
     if (period === 'week') {
       startDate.setDate(startDate.getDate() - 7);
     } else {
@@ -941,68 +944,68 @@ export const interviewService = {
       updatedAt: interview.updatedAt,
       jobCandidate: interview.jobCandidate
         ? {
-            id: interview.jobCandidate.id,
-            jobId: interview.jobCandidate.jobId,
-            candidateId: interview.jobCandidate.candidateId,
-            currentStageId: interview.jobCandidate.currentStageId,
-            appliedAt: interview.jobCandidate.appliedAt,
-            updatedAt: interview.jobCandidate.updatedAt,
-            candidate: interview.jobCandidate.candidate
-              ? {
-                  id: interview.jobCandidate.candidate.id,
-                  companyId: interview.jobCandidate.candidate.companyId,
-                  name: interview.jobCandidate.candidate.name,
-                  email: interview.jobCandidate.candidate.email,
-                  phone: interview.jobCandidate.candidate.phone ?? undefined,
-                  experienceYears: interview.jobCandidate.candidate.experienceYears,
-                  currentCompany: interview.jobCandidate.candidate.currentCompany ?? undefined,
-                  location: interview.jobCandidate.candidate.location,
-                  currentCtc: interview.jobCandidate.candidate.currentCtc ?? undefined,
-                  expectedCtc: interview.jobCandidate.candidate.expectedCtc ?? undefined,
-                  noticePeriod: interview.jobCandidate.candidate.noticePeriod ?? undefined,
-                  source: interview.jobCandidate.candidate.source,
-                  availability: interview.jobCandidate.candidate.availability ?? undefined,
-                  skills: Array.isArray(interview.jobCandidate.candidate.skills)
-                    ? interview.jobCandidate.candidate.skills
-                    : [],
-                  resumeUrl: interview.jobCandidate.candidate.resumeUrl ?? undefined,
-                  score: interview.jobCandidate.candidate.score ?? undefined,
-                  createdAt: interview.jobCandidate.candidate.createdAt,
-                  updatedAt: interview.jobCandidate.candidate.updatedAt,
-                }
-              : undefined,
-            job: interview.jobCandidate.job
-              ? {
-                  id: interview.jobCandidate.job.id,
-                  companyId: interview.jobCandidate.job.companyId,
-                  title: interview.jobCandidate.job.title,
-                  department: interview.jobCandidate.job.department,
-                  description: interview.jobCandidate.job.description ?? '',
-                  status: interview.jobCandidate.job.status,
-                  openings: interview.jobCandidate.job.openings,
-                  skills: Array.isArray(interview.jobCandidate.job.skills)
-                    ? interview.jobCandidate.job.skills
-                    : [],
-                  locations: Array.isArray(interview.jobCandidate.job.locations)
-                    ? interview.jobCandidate.job.locations
-                    : [],
-                  createdAt: interview.jobCandidate.job.createdAt,
-                  updatedAt: interview.jobCandidate.job.updatedAt,
-                }
-              : undefined,
-          }
+          id: interview.jobCandidate.id,
+          jobId: interview.jobCandidate.jobId,
+          candidateId: interview.jobCandidate.candidateId,
+          currentStageId: interview.jobCandidate.currentStageId,
+          appliedAt: interview.jobCandidate.appliedAt,
+          updatedAt: interview.jobCandidate.updatedAt,
+          candidate: interview.jobCandidate.candidate
+            ? {
+              id: interview.jobCandidate.candidate.id,
+              companyId: interview.jobCandidate.candidate.companyId,
+              name: interview.jobCandidate.candidate.name,
+              email: interview.jobCandidate.candidate.email,
+              phone: interview.jobCandidate.candidate.phone ?? undefined,
+              experienceYears: interview.jobCandidate.candidate.experienceYears,
+              currentCompany: interview.jobCandidate.candidate.currentCompany ?? undefined,
+              location: interview.jobCandidate.candidate.location,
+              currentCtc: interview.jobCandidate.candidate.currentCtc ?? undefined,
+              expectedCtc: interview.jobCandidate.candidate.expectedCtc ?? undefined,
+              noticePeriod: interview.jobCandidate.candidate.noticePeriod ?? undefined,
+              source: interview.jobCandidate.candidate.source,
+              availability: interview.jobCandidate.candidate.availability ?? undefined,
+              skills: Array.isArray(interview.jobCandidate.candidate.skills)
+                ? interview.jobCandidate.candidate.skills
+                : [],
+              resumeUrl: interview.jobCandidate.candidate.resumeUrl ?? undefined,
+              score: interview.jobCandidate.candidate.score ?? undefined,
+              createdAt: interview.jobCandidate.candidate.createdAt,
+              updatedAt: interview.jobCandidate.candidate.updatedAt,
+            }
+            : undefined,
+          job: interview.jobCandidate.job
+            ? {
+              id: interview.jobCandidate.job.id,
+              companyId: interview.jobCandidate.job.companyId,
+              title: interview.jobCandidate.job.title,
+              department: interview.jobCandidate.job.department,
+              description: interview.jobCandidate.job.description ?? '',
+              status: interview.jobCandidate.job.status,
+              openings: interview.jobCandidate.job.openings,
+              skills: Array.isArray(interview.jobCandidate.job.skills)
+                ? interview.jobCandidate.job.skills
+                : [],
+              locations: Array.isArray(interview.jobCandidate.job.locations)
+                ? interview.jobCandidate.job.locations
+                : [],
+              createdAt: interview.jobCandidate.job.createdAt,
+              updatedAt: interview.jobCandidate.job.updatedAt,
+            }
+            : undefined,
+        }
         : undefined,
       scheduler: interview.scheduler
         ? {
-            id: interview.scheduler.id,
-            companyId: interview.scheduler.companyId,
-            name: interview.scheduler.name,
-            email: interview.scheduler.email,
-            role: interview.scheduler.role,
-            isActive: interview.scheduler.isActive,
-            createdAt: interview.scheduler.createdAt,
-            updatedAt: interview.scheduler.updatedAt,
-          }
+          id: interview.scheduler.id,
+          companyId: interview.scheduler.companyId,
+          name: interview.scheduler.name,
+          email: interview.scheduler.email,
+          role: interview.scheduler.role,
+          isActive: interview.scheduler.isActive,
+          createdAt: interview.scheduler.createdAt,
+          updatedAt: interview.scheduler.updatedAt,
+        }
         : undefined,
       panelMembers: interview.panelMembers?.map((pm: { id: string; interviewId: string; userId: string; createdAt: Date; user?: { id: string; companyId: string; name: string; email: string; role: string; isActive: boolean; createdAt: Date; updatedAt: Date } }) => ({
         id: pm.id,
@@ -1011,15 +1014,15 @@ export const interviewService = {
         createdAt: pm.createdAt,
         user: pm.user
           ? {
-              id: pm.user.id,
-              companyId: pm.user.companyId,
-              name: pm.user.name,
-              email: pm.user.email,
-              role: pm.user.role,
-              isActive: pm.user.isActive,
-              createdAt: pm.user.createdAt,
-              updatedAt: pm.user.updatedAt,
-            }
+            id: pm.user.id,
+            companyId: pm.user.companyId,
+            name: pm.user.name,
+            email: pm.user.email,
+            role: pm.user.role,
+            isActive: pm.user.isActive,
+            createdAt: pm.user.createdAt,
+            updatedAt: pm.user.updatedAt,
+          }
           : undefined,
       })),
       feedback: interview.feedback?.map((fb: { id: string; interviewId: string; panelMemberId: string; ratings: unknown; overallComments: string; recommendation: string; submittedAt: Date; panelMember?: { id: string; companyId: string; name: string; email: string; role: string; isActive: boolean; createdAt: Date; updatedAt: Date } }) => ({
@@ -1032,15 +1035,15 @@ export const interviewService = {
         submittedAt: fb.submittedAt,
         panelMember: fb.panelMember
           ? {
-              id: fb.panelMember.id,
-              companyId: fb.panelMember.companyId,
-              name: fb.panelMember.name,
-              email: fb.panelMember.email,
-              role: fb.panelMember.role,
-              isActive: fb.panelMember.isActive,
-              createdAt: fb.panelMember.createdAt,
-              updatedAt: fb.panelMember.updatedAt,
-            }
+            id: fb.panelMember.id,
+            companyId: fb.panelMember.companyId,
+            name: fb.panelMember.name,
+            email: fb.panelMember.email,
+            role: fb.panelMember.role,
+            isActive: fb.panelMember.isActive,
+            createdAt: fb.panelMember.createdAt,
+            updatedAt: fb.panelMember.updatedAt,
+          }
           : undefined,
       })),
     };

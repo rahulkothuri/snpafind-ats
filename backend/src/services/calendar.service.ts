@@ -858,31 +858,39 @@ export const calendarService = {
       // Try Google Calendar first
       if (connectionStatus.google.connected) {
         try {
+          console.log(`Attempting to create Google Calendar event for user ${userId}`);
           const result = await this.createGoogleCalendarEvent(userId, {
             ...input,
             interviewId,
           });
+          console.log(`Google Calendar event created for ${userId}, Link: ${result.meetingLink}`);
           if (result.meetingLink && !meetingLink) {
             meetingLink = result.meetingLink;
           }
         } catch (error) {
           console.error(`Failed to create Google calendar event for user ${userId}:`, error);
         }
+      } else {
+        console.log(`User ${userId} is not connected to Google Calendar. Skipping...`);
       }
 
       // Try Microsoft Calendar
       if (connectionStatus.microsoft.connected) {
         try {
+          console.log(`Attempting to create Microsoft Calendar event for user ${userId}`);
           const result = await this.createMicrosoftCalendarEvent(userId, {
             ...input,
             interviewId,
           });
+          console.log(`Microsoft Calendar event created for ${userId}, Link: ${result.meetingLink}`);
           if (result.meetingLink && !meetingLink) {
             meetingLink = result.meetingLink;
           }
         } catch (error) {
           console.error(`Failed to create Microsoft calendar event for user ${userId}:`, error);
         }
+      } else {
+        console.log(`User ${userId} is not connected to Microsoft Calendar. Skipping...`);
       }
     }
 

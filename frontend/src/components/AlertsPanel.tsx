@@ -167,7 +167,7 @@ export function AlertsPanel({
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredSlaBreaches.slice(0, 3).map((alert) => {
+            {filteredSlaBreaches.slice(0, maxAlerts).map((alert) => {
               const severity = getSeverity(alert.daysOverdue);
               const style = severityStyles[severity];
               return (
@@ -190,7 +190,7 @@ export function AlertsPanel({
                 </button>
               );
             })}
-            {totalAlerts > 3 && (
+            {totalAlerts > maxAlerts && (
               <button
                 onClick={() => navigate('/dashboard')}
                 className="w-full text-center text-xs text-[#0b6cf0] hover:text-[#0952b8] py-1"
@@ -225,31 +225,28 @@ export function AlertsPanel({
       <div className="flex border-b border-[#e2e8f0]">
         <button
           onClick={() => setActiveTab('all')}
-          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
-            activeTab === 'all'
-              ? 'text-[#0b6cf0] border-b-2 border-[#0b6cf0]'
-              : 'text-[#64748b] hover:text-[#374151]'
-          }`}
+          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'all'
+            ? 'text-[#0b6cf0] border-b-2 border-[#0b6cf0]'
+            : 'text-[#64748b] hover:text-[#374151]'
+            }`}
         >
           All ({totalAlerts})
         </button>
         <button
           onClick={() => setActiveTab('sla')}
-          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
-            activeTab === 'sla'
-              ? 'text-[#0b6cf0] border-b-2 border-[#0b6cf0]'
-              : 'text-[#64748b] hover:text-[#374151]'
-          }`}
+          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'sla'
+            ? 'text-[#0b6cf0] border-b-2 border-[#0b6cf0]'
+            : 'text-[#64748b] hover:text-[#374151]'
+            }`}
         >
           SLA Breaches ({slaBreaches.length})
         </button>
         <button
           onClick={() => setActiveTab('feedback')}
-          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
-            activeTab === 'feedback'
-              ? 'text-[#0b6cf0] border-b-2 border-[#0b6cf0]'
-              : 'text-[#64748b] hover:text-[#374151]'
-          }`}
+          className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'feedback'
+            ? 'text-[#0b6cf0] border-b-2 border-[#0b6cf0]'
+            : 'text-[#64748b] hover:text-[#374151]'
+            }`}
         >
           Pending Feedback ({pendingFeedback.length})
         </button>

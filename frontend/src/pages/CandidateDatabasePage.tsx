@@ -79,18 +79,18 @@ function SearchFilterSection({
   onFilterChange: (key: keyof FilterState, value: string) => void;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] p-5 shadow-sm space-y-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm space-y-3">
       {/* Search Input - Requirement 17.2, 9.4 */}
       <div className="relative">
         <input
           type="text"
           value={filters.search}
           onChange={(e) => onFilterChange('search', e.target.value)}
-          placeholder='Search: "Java Bangalore 5 yrs", "React remote immediate", "internal mobility"'
-          className="w-full py-2.5 pl-10 pr-4 bg-[#f3f4f6] border border-[#e2e8f0] rounded-lg text-sm text-[#111827] placeholder-[#9ca3af] focus:outline-none focus:border-[#0b6cf0] focus:ring-2 focus:ring-[#0b6cf0]/20 transition-all"
+          placeholder='Search candidates...'
+          className="w-full py-2 pl-9 pr-4 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
         />
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9ca3af]"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -105,7 +105,7 @@ function SearchFilterSection({
       </div>
 
       {/* Filter Dropdowns - Requirement 17.3, 9.3 */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2">
         <FilterDropdown
           label="Department"
           value={filters.department}
@@ -298,7 +298,7 @@ function CandidateCardGrid({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {candidates.map((candidate) => (
         <EnhancedCandidateCard
           key={candidate.id}
@@ -307,7 +307,6 @@ function CandidateCardGrid({
           isSelected={selectedCandidate?.id === candidate.id}
         />
       ))}
-      
     </div>
   );
 }
@@ -343,9 +342,9 @@ function CandidateDetailContent({
 
   const actions = [
     { label: 'View CV', onClick: () => window.open(getResumeUrl(candidate.resumeUrl), '_blank'), variant: 'primary' as const },
-    { label: 'Add to role', onClick: () => {}, variant: 'secondary' as const },
-    { label: 'Share profile', onClick: () => {}, variant: 'secondary' as const },
-    { label: 'Block candidate', onClick: () => {}, variant: 'danger' as const },
+    { label: 'Add to role', onClick: () => { }, variant: 'secondary' as const },
+    { label: 'Share profile', onClick: () => { }, variant: 'secondary' as const },
+    { label: 'Block candidate', onClick: () => { }, variant: 'danger' as const },
   ];
 
   return (

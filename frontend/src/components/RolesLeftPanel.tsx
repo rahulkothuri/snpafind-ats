@@ -54,9 +54,9 @@ export function RolesLeftPanel({
       sortable: true,
       width: '0%',
       render: (row) => (
-        <div className="max-w-[160px]">
-          <div className="font-semibold text-[#111827] text-xs truncate">{row.title}</div>
-          <div className="text-[9px] text-[#64748b] truncate">{row.department} · {row.location}</div>
+        <div className="max-w-[140px]">
+          <div className="font-semibold text-gray-900 text-[11px] truncate leading-tight">{row.title}</div>
+          <div className="text-[9px] text-gray-500 truncate leading-tight">{row.department} · {row.location}</div>
         </div>
       ),
     },
@@ -93,9 +93,9 @@ export function RolesLeftPanel({
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden h-full flex flex-col min-h-0">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col min-h-0">
       {/* Panel Header with Search and Toggle - Requirements 1.1, 2.1 */}
-      <div className="px-4 py-3 border-b border-[#e2e8f0] space-y-3">
+      <div className="px-3 py-2 border-b border-gray-100 space-y-2 bg-gray-50/30">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-[#111827]">Roles</h3>
@@ -105,14 +105,14 @@ export function RolesLeftPanel({
             {roles.length} roles
           </span>
         </div>
-        
+
         {/* Search Input - Requirement 1.1 */}
         <SearchInput
           value={searchQuery}
           onChange={onSearchChange}
           placeholder="Search roles..."
         />
-        
+
         {/* Status Toggle - Requirement 2.1 */}
         <StatusToggle
           value={statusFilter}
@@ -137,8 +137,8 @@ export function RolesLeftPanel({
             <EmptyState
               icon="🔍"
               title="No matching roles"
-              description={searchQuery 
-                ? `No roles found matching "${searchQuery}"` 
+              description={searchQuery
+                ? `No roles found matching "${searchQuery}"`
                 : `No ${statusFilter} roles found`}
             />
           </div>

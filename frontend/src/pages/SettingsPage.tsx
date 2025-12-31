@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout, Button, Badge, Table, LoadingSpinner, ErrorMessage, SLAConfigSection, CalendarConnectionSettings } from '../components';
 import type { Column } from '../components';
 import { useAuth } from '../hooks/useAuth';
@@ -290,14 +291,23 @@ function CompanyProfileTab() {
 
   return (
     <div className="space-y-6">
-      {/* Section 1: Company Details - Requirements 2.2, 2.3 */}
-      <div className="form-section">
-        <h3 className="form-section-header">Company Details</h3>
-        
-        <div className="space-y-6 max-w-2xl">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Company Details</h3>
+            <p className="text-xs text-gray-500">Basic information about your organization</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           {/* Company Name */}
-          <div className="form-group">
-            <label htmlFor="companyName" className="form-label">
+          <div className="form-group col-span-2 md:col-span-1">
+            <label htmlFor="companyName" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
               Company Name
             </label>
             <input
@@ -305,14 +315,14 @@ function CompanyProfileTab() {
               type="text"
               value={company.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              className="form-input"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
               placeholder="Enter company name"
             />
           </div>
 
           {/* Website URL */}
-          <div className="form-group">
-            <label htmlFor="website" className="form-label">
+          <div className="form-group col-span-2 md:col-span-1">
+            <label htmlFor="website" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
               Website URL
             </label>
             <input
@@ -320,53 +330,60 @@ function CompanyProfileTab() {
               type="url"
               value={company.website}
               onChange={(e) => handleChange('website', e.target.value)}
-              className="form-input"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
               placeholder="https://www.yourcompany.com"
             />
           </div>
 
-          {/* Company Size and Industry - Side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Company Size Dropdown */}
-            <div className="form-group">
-              <label htmlFor="companySize" className="form-label">
-                Company Size
-              </label>
+          {/* Company Size */}
+          <div className="form-group">
+            <label htmlFor="companySize" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Company Size
+            </label>
+            <div className="relative">
               <select
                 id="companySize"
                 value={company.companySize}
                 onChange={(e) => handleChange('companySize', e.target.value)}
-                className="form-select"
+                className="w-full pl-3 pr-10 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all appearance-none"
               >
                 <option value="">Select company size</option>
                 {companySizes.map((size) => (
                   <option key={size} value={size}>{size}</option>
                 ))}
               </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </div>
             </div>
+          </div>
 
-            {/* Industry Dropdown */}
-            <div className="form-group">
-              <label htmlFor="industry" className="form-label">
-                Industry
-              </label>
+          {/* Industry */}
+          <div className="form-group">
+            <label htmlFor="industry" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Industry
+            </label>
+            <div className="relative">
               <select
                 id="industry"
                 value={company.industry}
                 onChange={(e) => handleChange('industry', e.target.value)}
-                className="form-select"
+                className="w-full pl-3 pr-10 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all appearance-none"
               >
                 <option value="">Select industry</option>
                 {industries.map((ind) => (
                   <option key={ind} value={ind}>{ind}</option>
                 ))}
               </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </div>
             </div>
           </div>
 
-          {/* Company Description */}
-          <div className="form-group">
-            <label htmlFor="description" className="form-label">
+          {/* Company Description - Full Width */}
+          <div className="form-group col-span-2">
+            <label htmlFor="description" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
               Company Description
             </label>
             <textarea
@@ -374,57 +391,67 @@ function CompanyProfileTab() {
               value={company.description}
               onChange={(e) => handleChange('description', e.target.value)}
               rows={4}
-              className="form-textarea resize-none"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none"
               placeholder="Tell candidates about your company, culture, and mission..."
             />
-            <p className="form-helper mt-2">
+            <p className="mt-1.5 text-xs text-gray-400 flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               This description will be shown to candidates on job application pages.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Section 2: Branding - Requirement 2.4 */}
-      <div className="form-section">
-        <h3 className="form-section-header">Branding</h3>
-        
-        <div className="space-y-6 max-w-2xl">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+          <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Branding</h3>
+            <p className="text-xs text-gray-500">Manage your company's visual identity</p>
+          </div>
+        </div>
+
+        <div className="space-y-6 w-full">
           {/* Logo Upload Area */}
           <div className="form-group">
-            <label className="form-label">Company Logo</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Company Logo</label>
             <div className="flex items-start gap-6">
               {/* Logo Preview */}
               <div className="flex-shrink-0">
-                <div className="w-24 h-24 rounded-xl border-2 border-dashed border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-center overflow-hidden">
+                <div className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex items-center justify-center overflow-hidden hover:border-blue-300 transition-colors group relative">
                   {company.logoUrl ? (
-                    <img 
-                      src={company.logoUrl} 
-                      alt="Company logo" 
+                    <img
+                      src={company.logoUrl}
+                      alt="Company logo"
                       className="w-full h-full object-contain p-2"
                     />
                   ) : (
-                    <div className="text-center">
-                      <svg className="w-8 h-8 mx-auto text-[#9ca3af]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="text-center p-2">
+                      <svg className="w-8 h-8 mx-auto text-gray-300 mb-1 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-xs text-[#9ca3af] mt-1 block">No logo</span>
+                      <span className="text-[10px] text-gray-400 font-medium group-hover:text-blue-500">Upload</span>
                     </div>
                   )}
                 </div>
               </div>
-              
+
               {/* Logo URL Input */}
-              <div className="flex-1">
+              <div className="flex-1 max-w-lg">
                 <input
                   id="logoUrl"
                   type="url"
                   value={company.logoUrl}
                   onChange={(e) => handleChange('logoUrl', e.target.value)}
-                  className="form-input"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-400 transition-all"
                   placeholder="https://example.com/logo.png"
                 />
-                <p className="form-helper mt-2">
-                  Enter a URL for your company logo. Recommended size: 200x200px or larger.
+                <p className="mt-2 text-xs text-gray-400">
+                  Enter a URL for your company logo. Start with https://. Recommended size: 200x200px.
                 </p>
               </div>
             </div>
@@ -432,70 +459,80 @@ function CompanyProfileTab() {
 
           {/* Brand Color Picker */}
           <div className="form-group">
-            <label htmlFor="brandColor" className="form-label">Brand Color</label>
+            <label htmlFor="brandColor" className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Brand Color</label>
             <div className="flex items-center gap-3">
-              <input
-                type="color"
-                id="brandColorPicker"
-                value={company.brandColor}
-                onChange={(e) => handleChange('brandColor', e.target.value)}
-                className="w-10 h-10 rounded-lg border border-[#e2e8f0] cursor-pointer p-0.5"
-              />
+              <div className="relative group">
+                <input
+                  type="color"
+                  id="brandColorPicker"
+                  value={company.brandColor}
+                  onChange={(e) => handleChange('brandColor', e.target.value)}
+                  className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5 bg-white shadow-sm"
+                />
+                <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-black/5 pointer-events-none"></div>
+              </div>
               <input
                 type="text"
                 id="brandColor"
                 value={company.brandColor}
                 onChange={(e) => handleChange('brandColor', e.target.value)}
-                className="form-input w-32"
+                className="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-400 transition-all uppercase"
                 placeholder="#0b6cf0"
               />
-              <span className="text-sm text-[#64748b]">Primary brand color</span>
+              <span className="text-xs text-gray-500">Primary brand color used for buttons and highlights</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Section 3: Contact & Location - Requirement 2.5 */}
-      <div className="form-section">
-        <h3 className="form-section-header">Contact & Location</h3>
-        
-        <div className="space-y-6 max-w-2xl">
-          {/* Contact Email and Phone - Side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Contact Email */}
-            <div className="form-group">
-              <label htmlFor="contactEmail" className="form-label">
-                Contact Email
-              </label>
-              <input
-                id="contactEmail"
-                type="email"
-                value={company.contactEmail}
-                onChange={(e) => handleChange('contactEmail', e.target.value)}
-                className="form-input"
-                placeholder="contact@company.com"
-              />
-            </div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+          <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Contact & Location</h3>
+            <p className="text-xs text-gray-500">Address and contact details for your office</p>
+          </div>
+        </div>
 
-            {/* Phone Number */}
-            <div className="form-group">
-              <label htmlFor="phone" className="form-label">
-                Phone Number
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={company.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                className="form-input"
-                placeholder="+1 (555) 123-4567"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+          {/* Contact Email */}
+          <div className="form-group">
+            <label htmlFor="contactEmail" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Contact Email
+            </label>
+            <input
+              id="contactEmail"
+              type="email"
+              value={company.contactEmail}
+              onChange={(e) => handleChange('contactEmail', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
+              placeholder="contact@company.com"
+            />
+          </div>
+
+          {/* Phone Number */}
+          <div className="form-group">
+            <label htmlFor="phone" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Phone Number
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              value={company.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
+              placeholder="+1 (555) 123-4567"
+            />
           </div>
 
           {/* Address */}
-          <div className="form-group">
-            <label htmlFor="address" className="form-label">
+          <div className="form-group col-span-2">
+            <label htmlFor="address" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
               Street Address
             </label>
             <input
@@ -503,178 +540,173 @@ function CompanyProfileTab() {
               type="text"
               value={company.address}
               onChange={(e) => handleChange('address', e.target.value)}
-              className="form-input"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
               placeholder="123 Main Street, Suite 100"
             />
           </div>
 
-          {/* City and State - Side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* City */}
-            <div className="form-group">
-              <label htmlFor="city" className="form-label">
-                City
-              </label>
-              <input
-                id="city"
-                type="text"
-                value={company.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                className="form-input"
-                placeholder="San Francisco"
-              />
-            </div>
-
-            {/* State */}
-            <div className="form-group">
-              <label htmlFor="state" className="form-label">
-                State / Province
-              </label>
-              <input
-                id="state"
-                type="text"
-                value={company.state}
-                onChange={(e) => handleChange('state', e.target.value)}
-                className="form-input"
-                placeholder="California"
-              />
-            </div>
+          {/* City and State */}
+          {/* City */}
+          <div className="form-group">
+            <label htmlFor="city" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              City
+            </label>
+            <input
+              id="city"
+              type="text"
+              value={company.city}
+              onChange={(e) => handleChange('city', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
+              placeholder="San Francisco"
+            />
           </div>
 
-          {/* Country and Postal Code - Side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Country */}
-            <div className="form-group">
-              <label htmlFor="country" className="form-label">
-                Country
-              </label>
-              <input
-                id="country"
-                type="text"
-                value={company.country}
-                onChange={(e) => handleChange('country', e.target.value)}
-                className="form-input"
-                placeholder="United States"
-              />
-            </div>
+          {/* State */}
+          <div className="form-group">
+            <label htmlFor="state" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              State / Province
+            </label>
+            <input
+              id="state"
+              type="text"
+              value={company.state}
+              onChange={(e) => handleChange('state', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
+              placeholder="California"
+            />
+          </div>
 
-            {/* Postal Code */}
-            <div className="form-group">
-              <label htmlFor="postalCode" className="form-label">
-                Postal Code
-              </label>
-              <input
-                id="postalCode"
-                type="text"
-                value={company.postalCode}
-                onChange={(e) => handleChange('postalCode', e.target.value)}
-                className="form-input"
-                placeholder="94102"
-              />
-            </div>
+          {/* Country and Postal Code */}
+          <div className="form-group">
+            <label htmlFor="country" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Country
+            </label>
+            <input
+              id="country"
+              type="text"
+              value={company.country}
+              onChange={(e) => handleChange('country', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
+              placeholder="United States"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="postalCode" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Postal Code
+            </label>
+            <input
+              id="postalCode"
+              type="text"
+              value={company.postalCode}
+              onChange={(e) => handleChange('postalCode', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
+              placeholder="94102"
+            />
           </div>
         </div>
       </div>
 
-      {/* Section 4: Social Media Links - Requirement 2.6 */}
-      <div className="form-section">
-        <h3 className="form-section-header">Social Media Links</h3>
-        
-        <div className="space-y-6 max-w-2xl">
-          {/* LinkedIn and Twitter - Side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* LinkedIn URL */}
-            <div className="form-group">
-              <label htmlFor="linkedinUrl" className="form-label">
-                LinkedIn
-              </label>
-              <input
-                id="linkedinUrl"
-                type="url"
-                value={company.linkedinUrl}
-                onChange={(e) => handleChange('linkedinUrl', e.target.value)}
-                className="form-input"
-                placeholder="https://linkedin.com/company/yourcompany"
-              />
-            </div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Social Media Links</h3>
+            <p className="text-xs text-gray-500">Connect your profiles for better reach</p>
+          </div>
+        </div>
 
-            {/* Twitter URL */}
-            <div className="form-group">
-              <label htmlFor="twitterUrl" className="form-label">
-                Twitter / X
-              </label>
-              <input
-                id="twitterUrl"
-                type="url"
-                value={company.twitterUrl}
-                onChange={(e) => handleChange('twitterUrl', e.target.value)}
-                className="form-input"
-                placeholder="https://twitter.com/yourcompany"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+          {/* LinkedIn URL */}
+          <div className="form-group">
+            <label htmlFor="linkedinUrl" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              LinkedIn
+            </label>
+            <input
+              id="linkedinUrl"
+              type="url"
+              value={company.linkedinUrl}
+              onChange={(e) => handleChange('linkedinUrl', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+              placeholder="https://linkedin.com/company/yourcompany"
+            />
           </div>
 
-          {/* Facebook and Careers Page - Side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Facebook URL */}
-            <div className="form-group">
-              <label htmlFor="facebookUrl" className="form-label">
-                Facebook
-              </label>
-              <input
-                id="facebookUrl"
-                type="url"
-                value={company.facebookUrl}
-                onChange={(e) => handleChange('facebookUrl', e.target.value)}
-                className="form-input"
-                placeholder="https://facebook.com/yourcompany"
-              />
-            </div>
+          {/* Twitter URL */}
+          <div className="form-group">
+            <label htmlFor="twitterUrl" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Twitter / X
+            </label>
+            <input
+              id="twitterUrl"
+              type="url"
+              value={company.twitterUrl}
+              onChange={(e) => handleChange('twitterUrl', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+              placeholder="https://twitter.com/yourcompany"
+            />
+          </div>
 
-            {/* Careers Page URL */}
-            <div className="form-group">
-              <label htmlFor="careersPageUrl" className="form-label">
-                Careers Page
-              </label>
-              <input
-                id="careersPageUrl"
-                type="url"
-                value={company.careersPageUrl}
-                onChange={(e) => handleChange('careersPageUrl', e.target.value)}
-                className="form-input"
-                placeholder="https://yourcompany.com/careers"
-              />
-            </div>
+          {/* Facebook URL */}
+          <div className="form-group">
+            <label htmlFor="facebookUrl" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Facebook
+            </label>
+            <input
+              id="facebookUrl"
+              type="url"
+              value={company.facebookUrl}
+              onChange={(e) => handleChange('facebookUrl', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+              placeholder="https://facebook.com/yourcompany"
+            />
+          </div>
+
+          {/* Careers Page URL */}
+          <div className="form-group">
+            <label htmlFor="careersPageUrl" className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+              Careers Page
+            </label>
+            <input
+              id="careersPageUrl"
+              type="url"
+              value={company.careersPageUrl}
+              onChange={(e) => handleChange('careersPageUrl', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+              placeholder="https://yourcompany.com/careers"
+            />
           </div>
         </div>
       </div>
 
       {/* Save Actions - Requirements 2.7, 2.8 */}
-      <div className="form-section">
-        <div className="flex items-center gap-4">
-          <Button variant="primary" onClick={handleSave} disabled={updateCompany.isPending}>
-            {updateCompany.isPending ? 'Saving...' : 'Save Changes'}
-          </Button>
-          <Button variant="secondary" onClick={handleReset}>
-            Reset
-          </Button>
-          {saveSuccess && (
-            <span className="text-sm text-green-600 flex items-center gap-1">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Changes saved successfully
-            </span>
-          )}
-          {saveError && (
-            <span className="text-sm text-red-600 flex items-center gap-1">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              {saveError}
-            </span>
-          )}
-        </div>
+      <div className="flex items-center justify-end gap-4 pt-6 border-t border-gray-100 mt-8">
+        {saveSuccess && (
+          <span className="text-sm text-green-600 flex items-center gap-1 animate-in fade-in">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            Changes saved successfully
+          </span>
+        )}
+        {saveError && (
+          <span className="text-sm text-red-600 flex items-center gap-1 animate-in fade-in">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            {saveError}
+          </span>
+        )}
+        <Button variant="secondary" onClick={handleReset}>
+          Reset
+        </Button>
+        <Button variant="primary" onClick={handleSave} disabled={updateCompany.isPending} className="px-8">
+          {updateCompany.isPending ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
     </div>
   );
@@ -737,7 +769,7 @@ function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      
+
       {/* Modal */}
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -914,7 +946,7 @@ function UserManagementTab() {
       header: 'User',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div 
+          <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
             style={{ backgroundColor: getAvatarColor(row.name) }}
           >
@@ -954,11 +986,10 @@ function UserManagementTab() {
           </button>
           <span className="text-[#e2e8f0]">|</span>
           <button
-            className={`text-sm font-medium transition-colors ${
-              row.isActive 
-                ? 'text-[#dc2626] hover:text-[#b91c1c]' 
-                : 'text-[#16a34a] hover:text-[#15803d]'
-            }`}
+            className={`text-sm font-medium transition-colors ${row.isActive
+              ? 'text-[#dc2626] hover:text-[#b91c1c]'
+              : 'text-[#16a34a] hover:text-[#15803d]'
+              }`}
             onClick={() => handleToggleStatus(row.id)}
           >
             {row.isActive ? 'Deactivate' : 'Activate'}
@@ -1027,7 +1058,7 @@ function RoleConfigurationTab() {
                 text={role.displayName}
                 variant={
                   role.name === 'admin' ? 'blue' :
-                  role.name === 'hiring_manager' ? 'green' : 'gray'
+                    role.name === 'hiring_manager' ? 'green' : 'gray'
                 }
               />
             </div>
@@ -1038,9 +1069,8 @@ function RoleConfigurationTab() {
                 {role.permissions.map((permission, index) => (
                   <li key={index} className="flex items-start gap-2 text-sm text-[#64748b]">
                     <svg
-                      className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                        permission.startsWith('Cannot') ? 'text-red-500' : 'text-green-500'
-                      }`}
+                      className={`w-4 h-4 mt-0.5 flex-shrink-0 ${permission.startsWith('Cannot') ? 'text-red-500' : 'text-green-500'
+                        }`}
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -1094,7 +1124,14 @@ function CalendarIntegrationTab() {
 // Main Settings Page Component - Requirement 19.1
 export function SettingsPage() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('company');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get active tab from URL or default to 'company'
+  const activeTab = (searchParams.get('tab') as TabId) || 'company';
+
+  const handleTabChange = (tabId: TabId) => {
+    setSearchParams({ tab: tabId });
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -1109,7 +1146,7 @@ export function SettingsPage() {
       case 'calendar':
         return <CalendarIntegrationTab />;
       default:
-        return null;
+        return <CompanyProfileTab />;
     }
   };
 
@@ -1123,23 +1160,22 @@ export function SettingsPage() {
       footerRightText=""
       onLogout={logout}
     >
-      <div className="space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 pb-20 px-4 sm:px-6 lg:px-8">
         {/* Tab Navigation - Requirement 8.1 */}
-        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm">
-          <div className="flex border-b border-[#e2e8f0]">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm sticky top-0 z-10 w-full mb-6">
+          <div className="flex border-b border-gray-200 overflow-x-auto custom-scrollbar">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 text-sm font-medium transition-all duration-200 relative ${
-                  activeTab === tab.id
-                    ? 'text-[#0b6cf0]'
-                    : 'text-[#64748b] hover:text-[#374151] hover:bg-[#f8fafc]'
-                }`}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex-shrink-0 px-8 py-4 text-sm font-medium transition-all duration-200 relative whitespace-nowrap ${activeTab === tab.id
+                  ? 'text-blue-600'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0b6cf0]" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
                 )}
               </button>
             ))}
@@ -1147,7 +1183,9 @@ export function SettingsPage() {
         </div>
 
         {/* Tab Content */}
-        <div>{renderTabContent()}</div>
+        <div className="min-h-[500px] animate-in fade-in duration-300 w-full">
+          {renderTabContent()}
+        </div>
       </div>
     </Layout>
   );

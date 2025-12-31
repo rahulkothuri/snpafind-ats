@@ -21,7 +21,7 @@ import { LegacyAdvancedFilters } from './AdvancedFilters';
 import type { Column } from './Table';
 import type { AdvancedFiltersState } from './AdvancedFilters';
 import { pipelineService, jobsService } from '../services';
-import type { BulkMoveResult, PipelineAnalytics, Interview } from '../services';
+import type { BulkMoveResult, PipelineAnalytics } from '../services';
 import { extractUniqueSkills, extractUniqueSources, applyAdvancedFilters } from '../utils/filters';
 
 // Types
@@ -145,12 +145,12 @@ function getStageIndicatorColor(stageName: string): string {
 }
 
 // Stage Summary Strip Component
-function StageSummaryStrip({ 
-  stages, 
+function StageSummaryStrip({
+  stages,
   activeStage,
-  onStageFilter 
-}: { 
-  stages: StageCount[]; 
+  onStageFilter
+}: {
+  stages: StageCount[];
   activeStage: string | null;
   onStageFilter: (stage: string | null) => void;
 }) {
@@ -167,8 +167,8 @@ function StageSummaryStrip({
           onClick={() => handleStageClick(stage.name)}
           className={`
             flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all
-            ${activeStage === stage.name 
-              ? 'bg-[#0b6cf0] text-white shadow-sm' 
+            ${activeStage === stage.name
+              ? 'bg-[#0b6cf0] text-white shadow-sm'
               : 'bg-[#f8fafc] text-[#4b5563] border border-dashed border-[#e2e8f0] hover:bg-[#e8f2fe] hover:border-[#0b6cf0]'
             }
           `}
@@ -183,14 +183,14 @@ function StageSummaryStrip({
 
 
 // Candidate Table View Component with checkbox selection - Requirements 1.1
-function CandidateTableView({ 
-  candidates, 
+function CandidateTableView({
+  candidates,
   onCandidateClick,
   selectedCandidates,
   onSelectionChange,
   onScheduleInterview,
-}: { 
-  candidates: PipelineCandidate[]; 
+}: {
+  candidates: PipelineCandidate[];
   onCandidateClick: (candidate: PipelineCandidate) => void;
   selectedCandidates: string[];
   onSelectionChange: (candidateIds: string[]) => void;
@@ -241,7 +241,7 @@ function CandidateTableView({
         <input
           type="checkbox"
           checked={selectedCandidates.includes(row.jobCandidateId || row.id)}
-          onChange={() => {}}
+          onChange={() => { }}
           onClick={(e) => handleSelectCandidate(row, e)}
           className="w-4 h-4 rounded border-gray-300 text-[#0b6cf0] focus:ring-[#0b6cf0] cursor-pointer"
         />
@@ -314,10 +314,10 @@ function CandidateTableView({
         };
         return (
           <div className="grid grid-cols-2 gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button variant="mini" miniColor="note" onClick={() => {}}>Note</Button>
-            <Button variant="mini" miniColor="move" onClick={() => {}}>Move</Button>
+            <Button variant="mini" miniColor="note" onClick={() => { }}>Note</Button>
+            <Button variant="mini" miniColor="move" onClick={() => { }}>Move</Button>
             <Button variant="mini" miniColor="schedule" onClick={handleScheduleClick}>Sched</Button>
-            <Button variant="mini" miniColor="cv" onClick={() => {}}>CV</Button>
+            <Button variant="mini" miniColor="cv" onClick={() => { }}>CV</Button>
           </div>
         );
       },
@@ -338,8 +338,8 @@ function CandidateTableView({
 
 
 // Kanban Card Component with checkbox selection and drag support - Requirements 1.1
-function KanbanCard({ 
-  candidate, 
+function KanbanCard({
+  candidate,
   onClick,
   isSelected,
   onSelect,
@@ -347,8 +347,8 @@ function KanbanCard({
   onDragStart,
   onDragEnd,
   onScheduleInterview,
-}: { 
-  candidate: PipelineCandidate; 
+}: {
+  candidate: PipelineCandidate;
   onClick: () => void;
   isSelected: boolean;
   onSelect: (e: React.MouseEvent) => void;
@@ -364,17 +364,17 @@ function KanbanCard({
       onDragEnd={onDragEnd}
       onClick={onClick}
       className={`
-        bg-white rounded-xl border p-3 shadow-sm transition-all cursor-grab active:cursor-grabbing
-        ${isSelected ? 'border-[#0b6cf0] ring-2 ring-[#0b6cf0]/20' : 'border-[#e2e8f0]'}
-        ${isDragging ? 'opacity-50 scale-95 shadow-lg ring-2 ring-[#0b6cf0]' : 'hover:shadow-lg hover:-translate-y-0.5'}
+        bg-white rounded-lg border p-2 shadow-sm transition-all cursor-grab active:cursor-grabbing
+        ${isSelected ? 'border-[#0b6cf0] ring-1 ring-[#0b6cf0]/20' : 'border-gray-200'}
+        ${isDragging ? 'opacity-50 scale-95 shadow-md ring-1 ring-[#0b6cf0]' : 'hover:shadow-md hover:-translate-y-0.5'}
       `}
     >
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={() => {}}
+            onChange={() => { }}
             onClick={onSelect}
             className="w-4 h-4 rounded border-gray-300 text-[#0b6cf0] focus:ring-[#0b6cf0] cursor-pointer"
           />
@@ -388,11 +388,11 @@ function KanbanCard({
         </div>
         <Badge text={String(candidate.score)} variant={getScoreVariant(candidate.score)} />
       </div>
-      
+
       <div className="text-[10px] text-[#64748b] mb-2">
         {candidate.experience} yrs · {candidate.location}
       </div>
-      
+
       <div className="flex flex-wrap gap-1 mb-3">
         {candidate.skills.slice(0, 3).map((skill) => (
           <span
@@ -406,7 +406,7 @@ function KanbanCard({
           <span className="text-[9px] text-[#94a3b8]">+{candidate.skills.length - 3}</span>
         )}
       </div>
-      
+
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         <Button variant="mini" miniColor="note">Note</Button>
         <Button variant="mini" miniColor="move">Move</Button>
@@ -430,8 +430,8 @@ const stageColors: Record<string, { bg: string; border: string; indicator: strin
 };
 
 // Kanban Board View Component with checkbox selection and drag-drop - Requirements 1.1
-function KanbanBoardView({ 
-  candidates, 
+function KanbanBoardView({
+  candidates,
   stages,
   pipelineStages,
   onCandidateClick,
@@ -440,8 +440,8 @@ function KanbanBoardView({
   onCandidateDrop,
   isMoving,
   onScheduleInterview,
-}: { 
-  candidates: PipelineCandidate[]; 
+}: {
+  candidates: PipelineCandidate[];
   stages: string[];
   pipelineStages: { id: string; name: string; position: number }[];
   onCandidateClick: (candidate: PipelineCandidate) => void;
@@ -454,7 +454,7 @@ function KanbanBoardView({
   const [draggingCandidateId, setDraggingCandidateId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
-  const getCandidatesByStage = (stage: string) => 
+  const getCandidatesByStage = (stage: string) =>
     candidates.filter((c) => c.stage === stage);
 
   const getStageStyle = (stage: string) => stageColors[stage] || stageColors['Queue'];
@@ -508,13 +508,13 @@ function KanbanBoardView({
   const handleDrop = (e: React.DragEvent, targetStageName: string) => {
     e.preventDefault();
     setDragOverStage(null);
-    
+
     if (isMoving) return;
 
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
       const { candidateId, fromStage } = data;
-      
+
       // Don't do anything if dropping on the same stage
       if (fromStage === targetStageName) {
         return;
@@ -533,7 +533,7 @@ function KanbanBoardView({
         const stageCandidates = getCandidatesByStage(stage);
         const stageStyle = getStageStyle(stage);
         const isDragOver = dragOverStage === stage;
-        
+
         return (
           <div
             key={stage}
@@ -541,26 +541,26 @@ function KanbanBoardView({
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, stage)}
             className={`
-              flex-shrink-0 w-[280px] rounded-xl p-3 border transition-all duration-200
+              flex-shrink-0 w-[260px] rounded-lg p-2 border transition-all duration-200
               ${stageStyle.bg} ${stageStyle.border}
-              ${isDragOver ? 'ring-2 ring-[#0b6cf0] ring-offset-2 border-[#0b6cf0] scale-[1.02]' : ''}
+              ${isDragOver ? 'ring-2 ring-[#0b6cf0] ring-offset-1 border-[#0b6cf0]' : ''}
             `}
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${stageStyle.indicator}`}></div>
-                <h4 className="text-sm font-semibold text-[#374151]">{stage}</h4>
+            <div className="flex items-center justify-between mb-1.5 px-1">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${stageStyle.indicator}`}></div>
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-tight">{stage}</h4>
               </div>
               <span className={`
-                px-2 py-0.5 rounded-full text-xs font-medium border shadow-sm
-                ${isDragOver ? 'bg-[#0b6cf0] text-white border-[#0b6cf0]' : 'bg-white text-[#64748b] border-[#e2e8f0]'}
+                px-1.5 py-0.5 rounded text-[10px] font-bold border leading-none
+                ${isDragOver ? 'bg-[#0b6cf0] text-white border-[#0b6cf0]' : 'bg-white text-gray-400 border-gray-100'}
               `}>
                 {stageCandidates.length}
               </span>
             </div>
-            
+
             <div className={`
-              space-y-3 min-h-[200px] max-h-[calc(100vh-500px)] overflow-y-auto rounded-lg p-1 transition-colors
+              space-y-1.5 min-h-[100px] max-h-[calc(100vh-280px)] overflow-y-auto rounded p-0.5 transition-colors custom-scrollbar
               ${isDragOver ? 'bg-[#0b6cf0]/5' : ''}
             `}>
               {stageCandidates.map((candidate) => (
@@ -614,14 +614,14 @@ export function JobDetailsRightPanel({
 }: JobDetailsRightPanelProps) {
   // URL search params for stage filter - Requirements 4.2
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Selection state for bulk operations - Requirements 1.1, 1.2
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [isBulkMoving, setIsBulkMoving] = useState(false);
-  
+
   // Drag-drop state for single candidate moves
   const [isDragMoving, setIsDragMoving] = useState(false);
-  
+
   // Pipeline analytics state - Requirements 4.1, 4.5
   const [pipelineAnalytics, setPipelineAnalytics] = useState<PipelineAnalytics | null>(null);
 
@@ -775,7 +775,7 @@ export function JobDetailsRightPanel({
   }, [role]);
 
   // Handle interview scheduled success
-  const handleInterviewScheduled = useCallback((_interview: Interview) => {
+  const handleInterviewScheduled = useCallback((_interview: any) => {
     setIsScheduleModalOpen(false);
     setSelectedCandidateForInterview(null);
     // Optionally refresh data or show success message
@@ -805,8 +805,8 @@ export function JobDetailsRightPanel({
   }, [role, isDragMoving, onCandidatesMoved]);
 
   // Get pipeline stages for bulk move dropdown
-  const bulkMoveStages = pipelineStages.length > 0 
-    ? pipelineStages 
+  const bulkMoveStages = pipelineStages.length > 0
+    ? pipelineStages
     : defaultStages.map((name, index) => ({ id: name, name, position: index }));
 
   // Show placeholder when no role is selected - Requirement 5.5
@@ -839,8 +839,8 @@ export function JobDetailsRightPanel({
           </div>
           <div className="flex gap-2">
             {onViewJobDescription && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={onViewJobDescription}
                 disabled={jobDescriptionLoading}
@@ -849,8 +849,8 @@ export function JobDetailsRightPanel({
               </Button>
             )}
             {onEditJobDescription && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={onEditJobDescription}
               >
@@ -914,21 +914,19 @@ export function JobDetailsRightPanel({
           <div className="flex gap-2">
             <button
               onClick={() => onViewModeChange('table')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                viewMode === 'table'
-                  ? 'bg-[#0b6cf0] text-white'
-                  : 'bg-[#f8fafc] text-[#4b5563] hover:bg-[#e8f2fe]'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${viewMode === 'table'
+                ? 'bg-[#0b6cf0] text-white'
+                : 'bg-[#f8fafc] text-[#4b5563] hover:bg-[#e8f2fe]'
+                }`}
             >
               Table
             </button>
             <button
               onClick={() => onViewModeChange('board')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                viewMode === 'board'
-                  ? 'bg-[#0b6cf0] text-white'
-                  : 'bg-[#f8fafc] text-[#4b5563] hover:bg-[#e8f2fe]'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${viewMode === 'board'
+                ? 'bg-[#0b6cf0] text-white'
+                : 'bg-[#f8fafc] text-[#4b5563] hover:bg-[#e8f2fe]'
+                }`}
             >
               Board
             </button>
@@ -936,10 +934,10 @@ export function JobDetailsRightPanel({
         </div>
 
         {/* Stage Summary Strip */}
-        <StageSummaryStrip 
-          stages={stageCounts} 
+        <StageSummaryStrip
+          stages={stageCounts}
           activeStage={stageFilter}
-          onStageFilter={handleStageFilterChange} 
+          onStageFilter={handleStageFilterChange}
         />
       </div>
 

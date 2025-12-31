@@ -3,31 +3,49 @@
 /* Theme CSS Variables - Requirements 6.1, 6.2, 6.3, 6.4 */
 :root {
   /* Primary colors - Requirement 6.1 */
-  --color-primary: #0b6cf0;
-  --color-primary-hover: #0958c7;
-  --color-primary-light: #eff6ff;
-  
+  --color-primary: #0f172a;
+  /* Slate 900 - More professional "SaaS" dark blue/black */
+  --color-primary-hover: #1e293b;
+  /* Slate 800 */
+  --color-primary-light: #f1f5f9;
+  /* Slate 100 */
+  --color-accent: #0b6cf0;
+  /* Bright Blue for actions/Links */
+
   /* Background colors - Requirement 6.2 */
   --color-bg-white: #ffffff;
   --color-bg-gray: #f8fafc;
-  --color-bg-light-gray: #f9fafb;
-  --color-bg-input: #f3f4f6;
-  
-  /* Sidebar colors - Light theme - Requirement 1.1, 1.2 */
-  --color-sidebar: #ffffff;
-  --color-sidebar-border: #e2e8f0;
-  --color-sidebar-text: #374151;
-  --color-sidebar-active-bg: #eff6ff;
-  --color-sidebar-active-text: #0b6cf0;
-  --color-sidebar-hover-bg: #f8fafc;
-  --color-sidebar-user-bg: #f8fafc;
-  
+  /* Slate 50 */
+  --color-bg-light-gray: #f1f5f9;
+  /* Slate 100 */
+  --color-bg-input: #f8fafc;
+
+  /* Sidebar colors - Dark Theme "SaaS" Look */
+  --color-sidebar: #0f172a;
+  /* Slate 900 */
+  --color-sidebar-border: #1e293b;
+  /* Slate 800 */
+  --color-sidebar-text: #94a3b8;
+  /* Slate 400 */
+  --color-sidebar-text-hover: #f8fafc;
+  /* Slate 50 */
+  --color-sidebar-active-bg: #1e293b;
+  /* Slate 800 */
+  --color-sidebar-active-text: #ffffff;
+  /* White */
+  --color-sidebar-hover-bg: #1e293b;
+  /* Slate 800 */
+
   /* Text colors - Requirement 6.3 */
-  --color-text-primary: #111827;
+  --color-text-primary: #0f172a;
+  /* Slate 900 */
   --color-text-secondary: #64748b;
-  --color-text-muted: #9ca3af;
-  --color-text-placeholder: #9ca3af;
-  
+  /* Slate 500 */
+  --color-text-muted: #94a3b8;
+  /* Slate 400 */
+  --color-text-placeholder: #cbd5e1;
+  /* Slate 300 */
+
   /* Badge colors - Requirement 4.3 */
   --color-badge-green-bg: #dcfce7;
   --color-badge-green-text: #166534;
@@ -37,122 +55,104 @@
   --color-badge-red-text: #991b1b;
   --color-badge-blue-bg: #dbeafe;
   --color-badge-blue-text: #1e40af;
-  --color-badge-gray-bg: #f3f4f6;
-  --color-badge-gray-text: #374151;
-  
-  /* Trend colors - Requirement 3.3 */
-  --color-trend-positive: #16a34a;
-  --color-trend-negative: #dc2626;
-  
+  --color-badge-gray-bg: #f1f5f9;
+  --color-badge-gray-text: #475569;
+
   /* Border colors - Requirement 6.4 */
   --color-border: #e2e8f0;
-  --color-border-light: #f3f4f6;
-  
+  /* Slate 200 */
+  --color-border-light: #f1f5f9;
+  /* Slate 100 */
+
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-panel: -4px 0 15px -3px rgb(0 0 0 / 0.1);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
-  
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  /* Softer, richer shadow */
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* Crisp card shadow */
+
   /* Spacing */
-  --sidebar-width: 210px;
-  --sidebar-collapsed-width: 60px;
-  --header-height: 64px;
-  --footer-height: 48px;
-  --detail-panel-width: 500px;
-  
+  --sidebar-width: 240px;
+  /* Slightly wider for cleaner text */
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+  /* Compact Header */
+
   /* Border radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
   --radius-lg: 12px;
+  /* Smooth corners */
   --radius-full: 9999px;
-  
+
   /* Transitions */
-  --transition-fast: 150ms ease-in-out;
-  --transition-normal: 200ms ease-in-out;
-  --transition-slow: 300ms ease-in-out;
-  
-  /* Responsive breakpoints */
-  --breakpoint-sm: 720px;
-  --breakpoint-md: 900px;
-  --breakpoint-lg: 1200px;
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Tailwind theme extension via CSS */
 @theme {
-  --color-primary: #0b6cf0;
-  --color-primary-hover: #0958c7;
-  --color-primary-light: #eff6ff;
-  --color-sidebar: #ffffff;
-  --color-sidebar-border: #e2e8f0;
-  --color-sidebar-text: #374151;
-  --color-sidebar-active-bg: #eff6ff;
-  --color-sidebar-active-text: #0b6cf0;
+  --color-primary: #0f172a;
+  --color-primary-hover: #1e293b;
+  --color-primary-light: #f1f5f9;
+  --color-accent: #0b6cf0;
+
+  --color-sidebar: #0f172a;
 }
 
 /* Base styles - Requirements 6.2, 6.3 */
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f8fafc; /* Light gray page background - Requirement 6.2 */
-  color: #111827; /* Dark gray primary text - Requirement 6.3 */
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-bg-gray);
+  /* Light gray page background - Requirement 6.2 */
+  color: var(--color-text-primary);
+  /* Dark gray primary text - Requirement 6.3 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: var(--color-bg-gray);
 }
 
-/* Utility classes for theme */
-.bg-primary {
-  background-color: var(--color-primary);
-}
-
-.bg-primary-hover:hover {
-  background-color: var(--color-primary-hover);
-}
-
-.text-primary {
-  color: var(--color-primary);
-}
-
-.border-primary {
-  border-color: var(--color-primary);
-}
-
-/* Card styles */
+/* Card styles - Compact & Clean */
 .card {
   background-color: var(--color-bg-white);
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition-fast);
 }
 
-.card-hover:hover {
+.card:hover {
   box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+  /* Slate 300 on hover */
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling - Sleek & Thin */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-gray);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-text-muted);
-  border-radius: 3px;
+  background: #cbd5e1;
+  /* Slate 300 */
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+  background: #94a3b8;
+  /* Slate 400 */
 }
 
 /* Responsive Layout Utilities - Requirements 22.1, 22.2, 22.3, 22.4 */
@@ -162,11 +162,11 @@ body {
   .sidebar-desktop {
     display: none !important;
   }
-  
+
   .hamburger-menu {
     display: flex !important;
   }
-  
+
   .main-content-with-sidebar {
     margin-left: 0 !important;
   }
@@ -184,7 +184,7 @@ body {
   .grid-responsive-xl {
     grid-template-columns: 1fr !important;
   }
-  
+
   .grid-cols-4-responsive {
     grid-template-columns: repeat(2, 1fr) !important;
   }
@@ -192,30 +192,31 @@ body {
 
 /* Stack KPI cards and adjust tables at 720px - Requirement 22.3 */
 @media (max-width: 719px) {
+
   .grid-cols-4-responsive,
   .grid-cols-2-responsive {
     grid-template-columns: 1fr !important;
   }
-  
+
   .table-responsive {
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .table-responsive table {
     min-width: 600px;
   }
-  
+
   .hide-on-mobile {
     display: none !important;
   }
-  
+
   .stack-on-mobile {
     flex-direction: column !important;
     align-items: stretch !important;
   }
-  
+
   .full-width-mobile {
     width: 100% !important;
   }
@@ -256,7 +257,8 @@ body {
   width: 100%;
   padding: 10px 14px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); /* 8px */
+  border-radius: var(--radius-md);
+  /* 8px */
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: var(--color-text-primary);
@@ -294,7 +296,8 @@ body {
   padding: 10px 14px;
   padding-right: 40px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); /* 8px */
+  border-radius: var(--radius-md);
+  /* 8px */
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: var(--color-text-primary);
@@ -329,7 +332,8 @@ body {
   width: 100%;
   padding: 10px 14px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); /* 8px */
+  border-radius: var(--radius-md);
+  /* 8px */
   font-size: 0.875rem;
   line-height: 1.5rem;
   color: var(--color-text-primary);
@@ -464,21 +468,22 @@ body {
 
 /* Mobile layout (< 768px) - Requirement 5.1 */
 @media (max-width: 767px) {
+
   /* Full-width detail panel for mobile - Requirement 2.4 */
   :root {
     --detail-panel-width: 100vw;
   }
-  
+
   /* Stack content vertically */
   .application-page-layout {
     flex-direction: column !important;
   }
-  
+
   /* Full-width form fields */
   .application-form-grid {
     grid-template-columns: 1fr !important;
   }
-  
+
   /* Touch-friendly button sizes (min 44px) - Requirement 5.5 */
   .application-page-layout button,
   .application-page-layout input,
@@ -486,7 +491,7 @@ body {
   .application-page-layout textarea {
     min-height: 44px;
   }
-  
+
   /* Ensure radio buttons and checkboxes are touch-friendly */
   .application-page-layout input[type="radio"],
   .application-page-layout input[type="checkbox"] {
@@ -497,11 +502,12 @@ body {
 
 /* Tablet layout (768px - 1024px) - Requirement 5.2 */
 @media (min-width: 768px) and (max-width: 1024px) {
+
   /* Adjust column proportions */
   .application-form-view {
     gap: 1.5rem;
   }
-  
+
   /* Optimize spacing for medium screens */
   .application-form-container {
     padding: 1.25rem;
@@ -510,13 +516,14 @@ body {
 
 /* Desktop layout (> 1024px) - Requirement 5.3 */
 @media (min-width: 1025px) {
+
   /* Two-column layout with sticky job details */
   .job-details-sticky {
     position: sticky;
     top: 2rem;
     align-self: flex-start;
   }
-  
+
   /* Efficient use of screen space */
   .application-form-view {
     gap: 1.5rem;

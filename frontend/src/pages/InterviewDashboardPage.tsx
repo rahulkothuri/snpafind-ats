@@ -14,14 +14,37 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Layout, 
-  LoadingSpinner, 
-  ErrorMessage, 
+import {
+  MdCalendarToday,
+  MdAccessTime,
+  MdPerson,
+  MdLocationOn,
+  MdVideocam,
+  MdCheckCircle,
+  MdCancel,
+  MdSchedule,
+  MdChevronLeft,
+  MdChevronRight,
+  MdFilterList,
+  MdViewModule,
+  MdViewList,
+  MdBusiness,
+  MdOutlineTimer,
+  MdClose,
+  MdLaptopMac,
+  MdInfo,
+  MdWork,
+  MdSearch
+} from 'react-icons/md';
+import {
+  Layout,
+  LoadingSpinner,
+  ErrorMessage,
   EmptyState,
   InterviewDetailModal,
   RescheduleModal,
   CancelConfirmationModal,
+  Button
 } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useInterviews } from '../hooks/useInterviews';
@@ -32,38 +55,38 @@ type ViewMode = 'calendar' | 'list';
 
 // Pipeline stage definitions with all stages
 const PIPELINE_STAGES = [
-  { id: 'to_schedule', label: 'To Schedule', color: 'bg-gray-100', borderColor: 'border-gray-300', textColor: 'text-gray-700', dotColor: 'bg-gray-400' },
-  { id: 'scheduled', label: 'Scheduled', color: 'bg-blue-50', borderColor: 'border-blue-200', textColor: 'text-blue-700', dotColor: 'bg-blue-400' },
-  { id: 'today', label: 'Today / Ongoing', color: 'bg-amber-50', borderColor: 'border-amber-200', textColor: 'text-amber-700', dotColor: 'bg-amber-400' },
-  { id: 'feedback_pending', label: 'Feedback Pending', color: 'bg-orange-50', borderColor: 'border-orange-200', textColor: 'text-orange-700', dotColor: 'bg-orange-400' },
-  { id: 'completed', label: 'Completed', color: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-700', dotColor: 'bg-green-400' },
-  { id: 'no_show', label: 'No-show / Cancelled', color: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-700', dotColor: 'bg-red-400' },
+  { id: 'to_schedule', label: 'To Schedule', color: 'bg-gray-50', borderColor: 'border-gray-200', textColor: 'text-gray-700', dotColor: 'bg-gray-400' },
+  { id: 'scheduled', label: 'Scheduled', color: 'bg-blue-50/50', borderColor: 'border-blue-100', textColor: 'text-blue-700', dotColor: 'bg-blue-400' },
+  { id: 'today', label: 'Today / Ongoing', color: 'bg-amber-50/50', borderColor: 'border-amber-100', textColor: 'text-amber-700', dotColor: 'bg-amber-400' },
+  { id: 'feedback_pending', label: 'Feedback Pending', color: 'bg-orange-50/50', borderColor: 'border-orange-100', textColor: 'text-orange-700', dotColor: 'bg-orange-400' },
+  { id: 'completed', label: 'Completed', color: 'bg-green-50/50', borderColor: 'border-green-100', textColor: 'text-green-700', dotColor: 'bg-green-400' },
+  { id: 'no_show', label: 'No-show / Cancelled', color: 'bg-red-50/50', borderColor: 'border-red-100', textColor: 'text-red-700', dotColor: 'bg-red-400' },
 ] as const;
 
 type PipelineStageId = typeof PIPELINE_STAGES[number]['id'];
 
 // Helper functions
 const formatTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
-    minute: '2-digit', 
-    hour12: true 
+  return new Date(dateString).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
   });
 };
 
 const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-US', { 
-    weekday: 'short', 
-    month: 'short', 
-    day: 'numeric' 
+  return new Date(dateString).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
   });
 };
 
 const formatFullDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-US', { 
-    day: 'numeric', 
-    month: 'long', 
-    year: 'numeric' 
+  return new Date(dateString).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
   });
 };
 
@@ -78,17 +101,19 @@ const getModeLabel = (mode: InterviewMode): string => {
     google_meet: 'Google Meet',
     microsoft_teams: 'MS Teams',
     in_person: 'In-Person',
+    custom_url: 'Custom URL',
   };
   return labels[mode] || mode;
 };
 
-const getModeIcon = (mode: InterviewMode): string => {
-  const icons: Record<InterviewMode, string> = {
-    google_meet: '📹',
-    microsoft_teams: '💼',
-    in_person: '🏢',
-  };
-  return icons[mode] || '📅';
+const getModeIcon = (mode: InterviewMode) => {
+  switch (mode) {
+    case 'google_meet': return <MdVideocam className="w-3.5 h-3.5" />;
+    case 'microsoft_teams': return <MdLaptopMac className="w-3.5 h-3.5" />;
+    case 'in_person': return <MdBusiness className="w-3.5 h-3.5" />;
+    case 'custom_url': return <MdVideocam className="w-3.5 h-3.5" />;
+    default: return <MdVideocam className="w-3.5 h-3.5" />;
+  }
 };
 
 // Determine pipeline stage for an interview
@@ -97,7 +122,7 @@ const getInterviewStage = (interview: Interview): PipelineStageId => {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const interviewDateStr = scheduledDate.toISOString().split('T')[0];
-  
+
   if (interview.status === 'cancelled') return 'no_show';
   if (interview.status === 'no_show') return 'no_show';
   if (interview.status === 'completed') {
@@ -127,17 +152,20 @@ interface KPICardProps {
 
 function KPICard({ label, value, subtext, alert }: KPICardProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
+    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all duration-200">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
         {alert && (
-          <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded-full">
+          <span className="px-2 py-0.5 text-[10px] font-bold bg-red-50 text-red-600 rounded-full border border-red-100 uppercase tracking-wide">
             Needs attention
           </span>
         )}
       </div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      <div className="text-xs text-gray-500 mt-1">{subtext}</div>
+      <div className="text-3xl font-bold text-gray-900 tracking-tight">{value}</div>
+      <div className="text-xs font-medium text-gray-500 mt-2 flex items-center gap-1.5">
+        <MdOutlineTimer className="w-3.5 h-3.5" />
+        {subtext}
+      </div>
     </div>
   );
 }
@@ -149,35 +177,27 @@ interface StatusBadgeProps {
 }
 
 function StatusBadge({ status, isToday: isTodayInterview }: StatusBadgeProps) {
-  const getStatusStyles = () => {
+  const getStatusConfig = () => {
     if (isTodayInterview && status === 'scheduled') {
-      return 'bg-amber-100 text-amber-800 border-amber-200';
+      return { className: 'bg-amber-50 text-amber-700 border-amber-200', label: 'Today', icon: MdSchedule };
     }
     switch (status) {
-      case 'scheduled': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'in_progress': return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      case 'no_show': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'scheduled': return { className: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Scheduled', icon: MdCalendarToday };
+      case 'in_progress': return { className: 'bg-amber-50 text-amber-700 border-amber-200', label: 'In Progress', icon: MdOutlineTimer };
+      case 'completed': return { className: 'bg-green-50 text-green-700 border-green-200', label: 'Completed', icon: MdCheckCircle };
+      case 'cancelled': return { className: 'bg-red-50 text-red-700 border-red-200', label: 'Cancelled', icon: MdCancel };
+      case 'no_show': return { className: 'bg-red-50 text-red-700 border-red-200', label: 'No-show', icon: MdCancel };
+      default: return { className: 'bg-gray-50 text-gray-700 border-gray-200', label: status, icon: MdInfo };
     }
   };
 
-  const getStatusLabel = () => {
-    if (isTodayInterview && status === 'scheduled') return 'Today';
-    switch (status) {
-      case 'scheduled': return 'Scheduled';
-      case 'in_progress': return 'In Progress';
-      case 'completed': return 'Completed';
-      case 'cancelled': return 'Cancelled';
-      case 'no_show': return 'No-show';
-      default: return status;
-    }
-  };
+  const config = getStatusConfig();
+  const Icon = config.icon;
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusStyles()}`}>
-      {getStatusLabel()}
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+      <Icon className="w-3 h-3" />
+      {config.label}
     </span>
   );
 }
@@ -197,36 +217,57 @@ function PipelineCard({ interview, onClick }: PipelineCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all group"
+      className="bg-white rounded-xl border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all duration-200 group relative"
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
-          <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600">
+          <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
             {candidateName}
           </h4>
-          <p className="text-xs text-gray-500 truncate">{jobTitle}</p>
+          <p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
+            <MdWork className="w-3 h-3 text-gray-400" />
+            {jobTitle}
+          </p>
         </div>
-        <span className="text-xs text-gray-400 whitespace-nowrap">
+        <span className="text-xs font-medium text-gray-500 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
           {formatTime(interview.scheduledAt)}
         </span>
       </div>
-      
-      <div className="text-xs text-gray-500 mb-2">
-        {formatDate(interview.scheduledAt)} · {interview.duration} min
+
+      <div className="flex items-center gap-2 text-xs text-gray-500 mb-3 pb-3 border-b border-gray-50 border-dashed">
+        <MdCalendarToday className="w-3.5 h-3.5 text-gray-400" />
+        {formatDate(interview.scheduledAt)}
+        <span className="text-gray-300">|</span>
+        <MdAccessTime className="w-3.5 h-3.5 text-gray-400" />
+        {interview.duration} min
       </div>
-      
+
       <div className="flex flex-wrap gap-1.5">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-gray-50 text-gray-600 rounded-md border border-gray-200/60">
           {getModeIcon(interview.mode)} {getModeLabel(interview.mode)}
         </span>
         {panelMembers.length > 0 && (
-          <span className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full truncate max-w-[120px]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-100 truncate max-w-[120px]">
+            <MdPerson className="w-3 h-3" />
             {panelMembers[0]}{panelMembers.length > 1 ? ` +${panelMembers.length - 1}` : ''}
           </span>
         )}
-        <span className="px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded-full">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-purple-50 text-purple-700 rounded-md border border-purple-100">
+          <MdSchedule className="w-3 h-3" />
           {recruiterName}
         </span>
+        {interview.meetingLink && interview.status === 'scheduled' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(interview.meetingLink, '_blank');
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md shadow-sm hover:shadow-md hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+          >
+            <MdVideocam className="w-3 h-3" />
+            Join Now
+          </button>
+        )}
       </div>
     </div>
   );
@@ -241,20 +282,22 @@ interface PipelineColumnProps {
 
 function PipelineColumn({ stage, interviews, onInterviewClick }: PipelineColumnProps) {
   return (
-    <div className={`flex-1 min-w-[200px] max-w-[280px] rounded-xl ${stage.color} border ${stage.borderColor} p-3`}>
-      <div className="flex items-center justify-between mb-3">
+    <div className={`flex-1 min-w-[280px] max-w-[320px] rounded-xl ${stage.color} border ${stage.borderColor} p-3 flex flex-col`}>
+      <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${stage.dotColor}`} />
-          <h3 className={`text-sm font-semibold ${stage.textColor}`}>{stage.label}</h3>
+          <span className={`w-2 h-2 rounded-full ${stage.dotColor} ring-2 ring-white`} />
+          <h3 className={`text-sm font-bold ${stage.textColor}`}>{stage.label}</h3>
         </div>
-        <span className="px-2 py-0.5 text-xs font-medium bg-white/80 text-gray-700 rounded-full shadow-sm">
+        <span className="px-2 py-0.5 text-[10px] font-bold bg-white text-gray-600 rounded-md shadow-sm border border-gray-100/50">
           {interviews.length}
         </span>
       </div>
-      
-      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+
+      <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-[100px]">
         {interviews.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-4">No interviews</p>
+          <div className="h-full flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-gray-200/50 rounded-lg">
+            <p className="text-xs font-medium text-gray-400">No interviews</p>
+          </div>
         ) : (
           interviews.map(interview => (
             <PipelineCard
@@ -283,24 +326,42 @@ function CalendarDayCell({ day, count, isToday: isTodayCell, isSelected, onClick
     <button
       onClick={onClick}
       className={`
-        relative p-2 min-h-[70px] rounded-lg text-left transition-all
-        ${isTodayCell ? 'bg-blue-50 ring-2 ring-blue-200' : 'bg-gray-50 hover:bg-gray-100'}
-        ${isSelected ? 'ring-2 ring-blue-500 shadow-md' : ''}
+        relative p-2 min-h-[80px] rounded-xl text-left transition-all duration-200 border
+        ${isTodayCell
+          ? 'bg-blue-50/30 border-blue-200 ring-1 ring-blue-100'
+          : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
+        }
+        ${isSelected
+          ? 'ring-2 ring-blue-600 border-transparent shadow-md z-10'
+          : ''
+        }
       `}
     >
-      <span className={`text-sm font-semibold ${isTodayCell ? 'text-blue-600' : 'text-gray-900'}`}>
-        {day}
-      </span>
-      <div className="mt-1">
+      <div className="flex justify-between items-start">
+        <span className={`
+          text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full
+          ${isTodayCell ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-700'}
+        `}>
+          {day}
+        </span>
+        {count > 0 && (
+          <span className={`
+            text-[10px] font-bold px-1.5 py-0.5 rounded-full
+            ${isSelected ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}
+          `}>
+            {count}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-2 space-y-1">
         {count > 0 ? (
-          <>
-            <p className="text-xs text-gray-500">{count} interview{count > 1 ? 's' : ''}</p>
-            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-700 rounded">
-              {count} scheduled
-            </span>
-          </>
+          <div className="flex items-center gap-1 text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md w-fit">
+            <MdVideocam className="w-3 h-3" />
+            <span>{count} scheduled</span>
+          </div>
         ) : (
-          <p className="text-xs text-gray-400">No interviews</p>
+          <div className="h-4" /> // Spacer
         )}
       </div>
     </button>
@@ -321,14 +382,44 @@ function DayInterviewItem({ interview, onClick }: DayInterviewItemProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all"
+      className="w-full text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:shadow-md transition-all duration-200 group"
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-semibold text-gray-900">{candidateName}</span>
-        <span className="text-xs font-medium text-blue-600">{formatTime(interview.scheduledAt)}</span>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+          {candidateName}
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+          <MdAccessTime className="w-3.5 h-3.5" />
+          {formatTime(interview.scheduledAt)}
+        </span>
       </div>
-      <p className="text-xs text-gray-500">{jobTitle}</p>
-      <p className="text-xs text-gray-400 mt-1">{getModeLabel(interview.mode)} · {panelMembers}</p>
+      <p className="text-xs font-medium text-gray-600 flex items-center gap-1.5 mb-1.5">
+        <MdWork className="w-3.5 h-3.5 text-gray-400" />
+        {jobTitle}
+      </p>
+      <div className="flex items-center gap-3 text-xs text-gray-500">
+        <span className="flex items-center gap-1">
+          {getModeIcon(interview.mode)}
+          {getModeLabel(interview.mode)}
+        </span>
+        <span className="text-gray-300">|</span>
+        <span className="flex items-center gap-1 truncate max-w-[150px]">
+          <MdPerson className="w-3.5 h-3.5" />
+          {panelMembers}
+        </span>
+        {interview.meetingLink && interview.status === 'scheduled' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(interview.meetingLink, '_blank');
+            }}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md shadow-sm hover:shadow-md hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+          >
+            <MdVideocam className="w-3.5 h-3.5" />
+            Join Now
+          </button>
+        )}
+      </div>
     </button>
   );
 }
@@ -351,55 +442,77 @@ function InterviewTableRow({ interview, onClick, onJoin, onReschedule }: Intervi
   const isTodayInterview = isToday(interview.scheduledAt);
 
   return (
-    <tr 
+    <tr
       onClick={onClick}
-      className="hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-100 last:border-0"
+      className="hover:bg-gray-50/80 cursor-pointer transition-colors border-b border-gray-100 last:border-0 group"
     >
-      <td className="py-3 px-4">
-        <div className="text-sm font-medium text-gray-900">
-          {formatDate(interview.scheduledAt)}
-          {isTodayInterview && <span className="ml-1 text-amber-600">· Today</span>}
+      <td className="py-4 px-4 align-top">
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+            {formatDate(interview.scheduledAt)}
+            {isTodayInterview && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Today" />
+            )}
+          </span>
+          <span className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+            <MdAccessTime className="w-3 h-3" />
+            {formatTime(interview.scheduledAt)}
+          </span>
         </div>
-        <div className="text-xs text-gray-500">{formatTime(interview.scheduledAt)}</div>
       </td>
-      <td className="py-3 px-4">
-        <div className="text-sm font-semibold text-gray-900">{candidateName}</div>
-        <div className="text-xs text-gray-500">{candidateExp} yrs · {candidateLocation}</div>
+      <td className="py-4 px-4 align-top">
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+            {candidateName}
+          </span>
+          <span className="text-xs text-gray-500 mt-0.5">
+            {candidateExp} yrs · {candidateLocation}
+          </span>
+        </div>
       </td>
-      <td className="py-3 px-4">
-        <span className="text-sm text-gray-700">{jobTitle}</span>
+      <td className="py-4 px-4 align-top">
+        <span className="text-sm text-gray-700 font-medium">{jobTitle}</span>
       </td>
-      <td className="py-3 px-4">
-        <span className="inline-flex items-center gap-1 text-sm text-gray-600">
-          {getModeIcon(interview.mode)} {getModeLabel(interview.mode)}
+      <td className="py-4 px-4 align-top">
+        <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+          {getModeIcon(interview.mode)}
+          <span className="text-xs font-medium">{getModeLabel(interview.mode)}</span>
         </span>
       </td>
-      <td className="py-3 px-4">
-        <span className="text-sm text-gray-600 truncate max-w-[150px] block">{panelMembers}</span>
+      <td className="py-4 px-4 align-top">
+        <span className="text-sm text-gray-600 truncate max-w-[150px] block" title={panelMembers}>{panelMembers}</span>
       </td>
-      <td className="py-3 px-4">
+      <td className="py-4 px-4 align-top">
         <span className="text-sm text-gray-600">{recruiterName}</span>
       </td>
-      <td className="py-3 px-4">
+      <td className="py-4 px-4 align-top">
         <StatusBadge status={interview.status} isToday={isTodayInterview} />
       </td>
-      <td className="py-3 px-4">
-        <div className="flex items-center gap-2">
+      <td className="py-4 px-4 align-top">
+        <div
+          className="flex items-center gap-2 "
+          onClick={(e) => e.stopPropagation()}
+        >
           {interview.meetingLink && interview.status === 'scheduled' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onJoin(); }}
-              className="px-2.5 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => onJoin()}
+              className="h-8 text-xs px-3 font-bold bg-gradient-to-r from-blue-600 to-indigo-600 border-0 hover:from-blue-700 hover:to-indigo-700 shadow-sm hover:shadow-md transition-all duration-200 rounded-md"
             >
-              Join
-            </button>
+              <MdVideocam className="w-3.5 h-3.5 mr-1.5" />
+              Join Now
+            </Button>
           )}
           {interview.status === 'scheduled' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onReschedule(); }}
-              className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onReschedule()}
+              className="h-7 text-xs px-2.5"
             >
               Reschedule
-            </button>
+            </Button>
           )}
         </div>
       </td>
@@ -407,6 +520,7 @@ function InterviewTableRow({ interview, onClick, onJoin, onReschedule }: Intervi
   );
 }
 
+// Detail Slide Panel Component
 // Detail Slide Panel Component
 interface DetailPanelProps {
   interview: Interview | null;
@@ -427,149 +541,197 @@ function DetailPanel({ interview, isOpen, onClose, onJoin, onReschedule, onCance
   const candidateLocation = interview.jobCandidate?.candidate?.location || 'N/A';
   const candidateSkills = interview.jobCandidate?.candidate?.skills || [];
   const jobTitle = interview.jobCandidate?.job?.title || 'Unknown Role';
-  const panelMembers = interview.panelMembers?.map(pm => pm.user?.name).filter(Boolean).join(', ') || 'No panel';
   const recruiterName = interview.scheduler?.name || 'Unknown';
 
   return (
     <>
       {/* Backdrop */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 z-40 transition-opacity"
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
           onClick={onClose}
         />
       )}
-      
+
       {/* Panel */}
       <aside className={`
-        fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-50
-        transform transition-transform duration-300 ease-out
+        fixed top-0 right-0 h-full w-[400px] bg-white shadow-2xl z-50
+        transform transition-transform duration-300 ease-out flex flex-col
         ${isOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
         {/* Header */}
-        <div className="flex items-start justify-between p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-start justify-between p-6 border-b border-gray-100 bg-white">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">{candidateName}</h2>
-            <p className="text-sm text-gray-500">{jobTitle} · {getModeLabel(interview.mode)}</p>
+            <h2 className="text-xl font-bold text-gray-900">{candidateName}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100/50">
+                {jobTitle}
+              </span>
+              <span className="text-gray-300">|</span>
+              <span className="text-sm text-gray-500 flex items-center gap-1">
+                {getModeIcon(interview.mode)} {getModeLabel(interview.mode)}
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <MdClose className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 overflow-y-auto h-[calc(100%-180px)]">
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           {/* Interview Details */}
-          <section className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Interview Details</h3>
-            <div className="space-y-2">
+          <section className="mb-8">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <MdCalendarToday className="w-4 h-4" />
+              Interview Details
+            </h3>
+            <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Date & Time</span>
-                <span className="text-gray-900 font-medium">{formatFullDate(interview.scheduledAt)} · {formatTime(interview.scheduledAt)}</span>
+                <span className="text-gray-900 font-semibold">{formatFullDate(interview.scheduledAt)} · {formatTime(interview.scheduledAt)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Duration</span>
-                <span className="text-gray-900">{interview.duration} minutes</span>
+                <span className="text-gray-900 font-medium">{interview.duration} minutes</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Mode</span>
-                <span className="text-gray-900">{getModeIcon(interview.mode)} {getModeLabel(interview.mode)}</span>
+                <span className="text-gray-900 font-medium flex items-center gap-1">
+                  {getModeIcon(interview.mode)} {getModeLabel(interview.mode)}
+                </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Status</span>
+              <div className="flex justify-between center text-sm pt-1 border-t border-gray-200/50 mt-1">
+                <span className="text-gray-500 self-center">Status</span>
                 <StatusBadge status={interview.status} />
               </div>
             </div>
           </section>
 
           {/* Panel & Recruiter */}
-          <section className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Panel & Recruiter</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Panel Members</span>
-                <span className="text-gray-900">{panelMembers}</span>
+          <section className="mb-8">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <MdPerson className="w-4 h-4" />
+              Panel & Recruiter
+            </h3>
+            <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 space-y-3">
+              <div>
+                <span className="text-xs text-gray-500 block mb-1">Panel Members</span>
+                <div className="flex items-center gap-2">
+                  {interview.panelMembers?.map((pm, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 bg-white border border-gray-200 px-2 py-1 rounded-md shadow-sm">
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-[10px] font-bold text-blue-600">
+                        {pm.user?.name?.charAt(0) || '?'}
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">{pm.user?.name}</span>
+                    </div>
+                  ))}
+                  {(!interview.panelMembers || interview.panelMembers.length === 0) && (
+                    <span className="text-sm text-gray-400 italic">No panel members assigned</span>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Scheduled By</span>
-                <span className="text-gray-900">{recruiterName}</span>
+              <div className="pt-2 border-t border-gray-200/50">
+                <span className="text-xs text-gray-500 block mb-1">Scheduled By</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs font-bold text-purple-600">
+                    {recruiterName.charAt(0)}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{recruiterName}</span>
+                </div>
               </div>
             </div>
           </section>
 
           {/* Candidate Info */}
           <section className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Candidate Snapshot</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Experience</span>
-                <span className="text-gray-900">{candidateExp} years</span>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <MdWork className="w-4 h-4" />
+              Candidate Snapshot
+            </h3>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <span className="text-xs text-gray-500 block">Experience</span>
+                  <span className="text-sm font-semibold text-gray-900">{candidateExp} years</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500 block">Current Company</span>
+                  <span className="text-sm font-semibold text-gray-900 truncate" title={candidateCompany}>{candidateCompany}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-xs text-gray-500 block">Location</span>
+                  <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
+                    <MdLocationOn className="w-3.5 h-3.5 text-gray-400" />
+                    {candidateLocation}
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Current Company</span>
-                <span className="text-gray-900">{candidateCompany}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Location</span>
-                <span className="text-gray-900">{candidateLocation}</span>
-              </div>
+
+              {candidateSkills.length > 0 && (
+                <div className="pt-3 border-t border-gray-100">
+                  <span className="text-xs text-gray-500 block mb-2">Skills</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {candidateSkills.slice(0, 6).map((skill, i) => (
+                      <span key={i} className="px-2 py-0.5 text-[10px] uppercase font-bold bg-gray-100 text-gray-600 rounded-md border border-gray-200">
+                        {skill}
+                      </span>
+                    ))}
+                    {candidateSkills.length > 6 && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-gray-50 text-gray-400 rounded-md border border-gray-100">
+                        +{candidateSkills.length - 6}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            {candidateSkills.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {candidateSkills.slice(0, 6).map((skill, i) => (
-                  <span key={i} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
-                    {skill}
-                  </span>
-                ))}
-                {candidateSkills.length > 6 && (
-                  <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-full">
-                    +{candidateSkills.length - 6} more
-                  </span>
-                )}
-              </div>
-            )}
           </section>
         </div>
 
         {/* Actions Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-          <div className="flex flex-wrap gap-2">
+        <div className="p-4 border-t border-gray-100 bg-gray-50/50 backdrop-blur-sm">
+          <div className="flex flex-col gap-2">
             {interview.meetingLink && interview.status === 'scheduled' && (
-              <button
+              <Button
+                variant="primary"
                 onClick={onJoin}
-                className="flex-1 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full justify-center shadow-md shadow-blue-500/20"
               >
                 Join Meeting
-              </button>
+              </Button>
             )}
-            {interview.status === 'scheduled' && (
-              <button
-                onClick={onReschedule}
-                className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Reschedule
-              </button>
-            )}
-            {interview.status === 'scheduled' && (
-              <button
-                onClick={onCancel}
-                className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            )}
+            <div className="flex gap-2">
+              {interview.status === 'scheduled' && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={onReschedule}
+                    className="flex-1 justify-center"
+                  >
+                    Reschedule
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={onCancel}
+                    className="flex-1 justify-center text-red-600 hover:bg-red-50 hover:border-red-200"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
             {(interview.status === 'completed' || interview.status === 'in_progress') && (
-              <button
+              <Button
+                variant="primary"
                 onClick={onFeedback}
-                className="flex-1 px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="w-full justify-center bg-green-600 hover:bg-green-700 shadow-md shadow-green-500/20"
               >
                 Submit Feedback
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -582,10 +744,10 @@ function DetailPanel({ interview, isOpen, onClose, onJoin, onReschedule, onCance
 export function InterviewDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
-  
+
   // Calendar state
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -594,29 +756,29 @@ export function InterviewDashboardPage() {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
-  
+
   // Filters
   const [selectedRecruiterId, setSelectedRecruiterId] = useState<string>('');
   const [selectedMode, setSelectedMode] = useState<string>('');
-  
+
   // Panel state
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
-  
+
   // Modal states
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [rescheduleInterview, setRescheduleInterview] = useState<Interview | null>(null);
   const [cancelInterview, setCancelInterview] = useState<Interview | null>(null);
-  
+
   // Data fetching
   const { data: interviews = [], isLoading, error, refetch } = useInterviews();
   const { data: users = [] } = useUsers();
-  
-  const recruiters = useMemo(() => 
+
+  const recruiters = useMemo(() =>
     users.filter(u => u.isActive).map(u => ({ id: u.id, name: u.name })),
     [users]
   );
-  
+
   // Filter interviews
   const filteredInterviews = useMemo(() => {
     return interviews.filter(interview => {
@@ -634,28 +796,28 @@ export function InterviewDashboardPage() {
     weekStart.setDate(now.getDate() - now.getDay());
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
-    
-    const todayInterviews = filteredInterviews.filter(i => 
+
+    const todayInterviews = filteredInterviews.filter(i =>
       new Date(i.scheduledAt).toISOString().split('T')[0] === todayStr
     );
-    
+
     const weekInterviews = filteredInterviews.filter(i => {
       const date = new Date(i.scheduledAt);
       return date >= weekStart && date <= weekEnd;
     });
-    
-    const feedbackPending = filteredInterviews.filter(i => 
+
+    const feedbackPending = filteredInterviews.filter(i =>
       i.status === 'completed' && (!i.feedback || i.feedback.length === 0)
     );
-    
+
     const last30Days = new Date(now);
     last30Days.setDate(now.getDate() - 30);
     const recentInterviews = filteredInterviews.filter(i => new Date(i.scheduledAt) >= last30Days);
     const noShows = recentInterviews.filter(i => i.status === 'no_show');
-    const noShowRate = recentInterviews.length > 0 
-      ? Math.round((noShows.length / recentInterviews.length) * 100) 
+    const noShowRate = recentInterviews.length > 0
+      ? Math.round((noShows.length / recentInterviews.length) * 100)
       : 0;
-    
+
     return {
       todayCount: todayInterviews.length,
       todaySubtext: `${todayInterviews.filter(i => i.mode === 'google_meet').length} virtual · ${todayInterviews.filter(i => i.mode === 'in_person').length} in-person`,
@@ -677,7 +839,7 @@ export function InterviewDashboardPage() {
     const firstDay = new Date(year, month, 1);
     const startWeekday = (firstDay.getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
+
     const countsByDay: Record<number, number> = {};
     filteredInterviews.forEach(interview => {
       const date = new Date(interview.scheduledAt);
@@ -686,7 +848,7 @@ export function InterviewDashboardPage() {
         countsByDay[day] = (countsByDay[day] || 0) + 1;
       }
     });
-    
+
     return { startWeekday, daysInMonth, countsByDay };
   }, [selectedMonth, filteredInterviews]);
 
@@ -707,19 +869,21 @@ export function InterviewDashboardPage() {
       completed: [],
       no_show: [],
     };
-    
+
     filteredInterviews.forEach(interview => {
       const stage = getInterviewStage(interview);
-      grouped[stage].push(interview);
+      if (grouped[stage]) {
+        grouped[stage].push(interview);
+      }
     });
-    
+
     // Sort each group by scheduled time
     Object.keys(grouped).forEach(key => {
-      grouped[key as PipelineStageId].sort((a, b) => 
+      grouped[key as PipelineStageId].sort((a, b) =>
         new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
       );
     });
-    
+
     return grouped;
   }, [filteredInterviews]);
 
@@ -812,19 +976,24 @@ export function InterviewDashboardPage() {
       )}
 
       {!isLoading && !error && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Filters & View Toggle */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium text-gray-500">Filters:</span>
-              
+              <span className="flex items-center gap-2 text-sm font-semibold text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                <MdFilterList className="w-4 h-4 text-gray-500" />
+                Filters
+              </span>
+
+              <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+
               <select
                 value={`${selectedMonth.year}-${selectedMonth.month}`}
                 onChange={(e) => {
                   const [year, month] = e.target.value.split('-').map(Number);
                   setSelectedMonth({ year, month });
                 }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-white transition-colors cursor-pointer outline-none"
               >
                 {[-2, -1, 0, 1, 2, 3].map(offset => {
                   const date = new Date();
@@ -840,7 +1009,7 @@ export function InterviewDashboardPage() {
               <select
                 value={selectedRecruiterId}
                 onChange={(e) => setSelectedRecruiterId(e.target.value)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-white transition-colors cursor-pointer outline-none"
               >
                 <option value="">All Recruiters</option>
                 {recruiters.map(r => (
@@ -851,7 +1020,7 @@ export function InterviewDashboardPage() {
               <select
                 value={selectedMode}
                 onChange={(e) => setSelectedMode(e.target.value)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-white transition-colors cursor-pointer outline-none"
               >
                 <option value="">All Types</option>
                 <option value="google_meet">Google Meet</option>
@@ -862,35 +1031,36 @@ export function InterviewDashboardPage() {
               {hasFilters && (
                 <button
                   onClick={handleClearFilters}
-                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                  className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 font-medium"
                 >
-                  Clear filters
+                  <MdClose className="w-4 h-4" />
+                  Clear
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">View:</span>
-              <div className="flex rounded-full border border-gray-300 overflow-hidden">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-500 hidden sm:block">Display View:</span>
+              <div className="flex p-1 bg-gray-100/80 rounded-lg border border-gray-200">
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                    viewMode === 'calendar'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-200 ${viewMode === 'calendar'
+                    ? 'bg-white text-blue-600 shadow-sm ring-1 ring-gray-200'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                    }`}
                 >
-                  📅 Calendar
+                  <MdCalendarToday className="w-4 h-4" />
+                  Calendar
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                    viewMode === 'list'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-200 ${viewMode === 'list'
+                    ? 'bg-white text-blue-600 shadow-sm ring-1 ring-gray-200'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                    }`}
                 >
-                  📋 List + Pipeline
+                  <MdViewList className="w-4 h-4" />
+                  List + Pipeline
                 </button>
               </div>
             </div>
@@ -923,38 +1093,30 @@ export function InterviewDashboardPage() {
 
           {/* Calendar View */}
           {viewMode === 'calendar' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Calendar Grid */}
-              <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
+              <div className="xl:col-span-2 bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <MdCalendarToday className="w-5 h-5 text-blue-600" />
                       {monthNames[selectedMonth.month]} {selectedMonth.year}
                     </h2>
-                    <p className="text-sm text-gray-500">Click a date to view interviews</p>
+                    <p className="text-sm text-gray-500 mt-1">Select a date to view scheduled interviews</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
                     <button
                       onClick={handlePrevMonth}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
                     >
-                      ←
+                      <MdChevronLeft className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        setSelectedMonth({ year: now.getFullYear(), month: now.getMonth() });
-                        setSelectedDate(now.toISOString().split('T')[0]);
-                      }}
-                      className="px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    >
-                      Today
-                    </button>
+
                     <button
                       onClick={handleNextMonth}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
                     >
-                      →
+                      <MdChevronRight className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -962,7 +1124,7 @@ export function InterviewDashboardPage() {
                 {/* Weekday Headers */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
                   {weekDays.map(day => (
-                    <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                    <div key={day} className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest py-2">
                       {day}
                     </div>
                   ))}
@@ -971,7 +1133,7 @@ export function InterviewDashboardPage() {
                 {/* Calendar Days */}
                 <div className="grid grid-cols-7 gap-1">
                   {Array.from({ length: calendarData.startWeekday }).map((_, i) => (
-                    <div key={`empty-${i}`} className="min-h-[70px]" />
+                    <div key={`empty-${i}`} className="min-h-[70px] bg-gray-50/30 rounded-lg" />
                   ))}
                   {Array.from({ length: calendarData.daysInMonth }).map((_, i) => {
                     const day = i + 1;
@@ -992,20 +1154,24 @@ export function InterviewDashboardPage() {
               </div>
 
               {/* Selected Date Interviews */}
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
+              <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col h-full max-h-[800px]">
+                <div className="mb-6 pb-4 border-b border-gray-100">
+                  <h2 className="text-lg font-bold text-gray-900">
                     {formatFullDate(selectedDate)}
                   </h2>
-                  <p className="text-sm text-gray-500">
-                    {selectedDateInterviews.length} interview{selectedDateInterviews.length !== 1 ? 's' : ''} scheduled
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-600 border border-blue-100">
+                      {selectedDateInterviews.length} Scheduled
+                    </span>
+                  </div>
                 </div>
 
-                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                <div className="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-1">
                   {selectedDateInterviews.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-400">No interviews on this date</p>
+                    <div className="flex flex-col items-center justify-center h-40 text-center border-2 border-dashed border-gray-100 rounded-xl">
+                      <MdAccessTime className="w-8 h-8 text-gray-300 mb-2" />
+                      <p className="text-sm font-medium text-gray-500">No interviews</p>
+                      <p className="text-xs text-gray-400">Time to schedule some!</p>
                     </div>
                   ) : (
                     selectedDateInterviews.map(interview => (
@@ -1023,29 +1189,37 @@ export function InterviewDashboardPage() {
 
           {/* List + Pipeline View */}
           {viewMode === 'list' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Interview Table - Top */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">All Interviews</h2>
-                  <p className="text-sm text-gray-500">Click any row for details and actions</p>
+                <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <MdViewList className="w-5 h-5 text-gray-500" />
+                      All Scheduled Interviews
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-0.5">Comprehensive list of all upcoming and past interviews</p>
+                  </div>
+                  <span className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-semibold text-gray-600 shadow-sm">
+                    Showing {Math.min(filteredInterviews.length, 20)} of {filteredInterviews.length}
+                  </span>
                 </div>
-                
+
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Date & Time</th>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Candidate</th>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Role</th>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Type</th>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Panel</th>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Recruiter</th>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Status</th>
-                        <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide py-3 px-4">Actions</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Date & Time</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Candidate</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Role</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Type</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Panel</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Recruiter</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Status</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {filteredInterviews
                         .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
                         .slice(0, 20)
@@ -1060,31 +1234,32 @@ export function InterviewDashboardPage() {
                         ))}
                     </tbody>
                   </table>
-                  
+
                   {filteredInterviews.length === 0 && (
-                    <div className="text-center py-12">
-                      <p className="text-gray-400">No interviews found</p>
-                    </div>
-                  )}
-                  
-                  {filteredInterviews.length > 20 && (
-                    <div className="text-center py-3 border-t border-gray-100">
-                      <p className="text-sm text-gray-500">
-                        Showing 20 of {filteredInterviews.length} interviews
-                      </p>
+                    <div className="text-center py-16 bg-gray-50/30">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <MdSearch className="w-8 h-8 text-gray-300" />
+                      </div>
+                      <p className="text-gray-500 font-medium">No interviews match your filters</p>
+                      <button onClick={handleClearFilters} className="text-blue-600 text-sm font-semibold hover:underline mt-2">Clear all filters</button>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Pipeline Board - Bottom */}
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Interview Pipeline</h2>
-                  <p className="text-sm text-gray-500">Drag-and-drop style board view of all interview stages</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <MdViewModule className="w-5 h-5 text-gray-500" />
+                      Interview Pipeline
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">Visual overview of candidate progress across stages</p>
+                  </div>
                 </div>
-                
-                <div className="flex gap-3 overflow-x-auto pb-2">
+
+                <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x">
                   {PIPELINE_STAGES.map(stage => (
                     <PipelineColumn
                       key={stage.id}
