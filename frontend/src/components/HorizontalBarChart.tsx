@@ -35,8 +35,8 @@ interface HorizontalBarChartProps {
 
 const defaultColorScheme = {
   normal: '#3b82f6',    // blue-500
-  warning: '#ef4444',   // red-500
-  threshold: '#f59e0b', // amber-500
+  warning: '#f43f5e',   // rose-500 (softer red)
+  threshold: '#fbbf24', // amber-400
 };
 
 export function HorizontalBarChart({
@@ -65,7 +65,7 @@ export function HorizontalBarChart({
 
   // Find the maximum value to calculate proportional widths
   const maxValue = Math.max(...data.map(item => item.value), threshold || 0);
-  
+
   return (
     <div className={`bg-white rounded-xl border border-[#e2e8f0] p-6 ${className}`}>
       {title && (
@@ -76,13 +76,13 @@ export function HorizontalBarChart({
           )}
         </div>
       )}
-      
+
       <div className="space-y-4">
         {data.map((item) => {
           const widthPercentage = maxValue > 0 ? (item.value / maxValue) * maxBarWidth : 0;
           const isWarning = item.isOverThreshold || (threshold && item.value > threshold);
           const barColor = isWarning ? colorScheme.warning : colorScheme.normal;
-          
+
           return (
             <div key={item.id} className="space-y-2">
               {/* Label and Value */}
@@ -116,31 +116,28 @@ export function HorizontalBarChart({
                   </span>
                 )}
               </div>
-              
+
               {/* Bar */}
-              <div className="relative">
-                <div className="w-full bg-[#f1f5f9] rounded-lg h-3 overflow-hidden">
+              <div className="relative flex items-center">
+                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                   <div
-                    className="h-full rounded-lg transition-all duration-300"
+                    className="h-full rounded-full transition-all duration-500 ease-out"
                     style={{
                       width: `${widthPercentage}%`,
                       backgroundColor: barColor,
-                      minWidth: item.value > 0 ? '8px' : '0px',
+                      minWidth: item.value > 0 ? '4px' : '0px',
                     }}
                   />
                 </div>
-                
+
                 {/* Threshold Line */}
                 {threshold && threshold <= maxValue && (
                   <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-amber-500"
+                    className="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10"
                     style={{
                       left: `${(threshold / maxValue) * maxBarWidth}%`,
                     }}
                   >
-                    <div className="absolute -top-1 -left-2 w-4 h-4">
-                      <div className="w-2 h-2 bg-amber-500 rotate-45 transform origin-center" />
-                    </div>
                   </div>
                 )}
               </div>
@@ -148,7 +145,7 @@ export function HorizontalBarChart({
           );
         })}
       </div>
-      
+
       {/* Legend */}
       {(threshold || data.some(item => item.isOverThreshold)) && (
         <div className="mt-6 pt-4 border-t border-[#e2e8f0]">

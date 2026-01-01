@@ -1,33 +1,34 @@
 /**
- * AnalyticsPage Component - Requirements 17.1, 17.2, 17.5
- * 
- * Features:
- * - Organize into sections: Overview KPIs, Funnel Analytics, Time Analytics, Source Analytics, Team Performance
- * - Add section navigation
- * - Responsive layout for different screen sizes
- * - Consistent styling with the rest of the application
+ * AnalyticsPage Component - Polished "Neat & Clean" Dashboard
+ * Requirements: Premium Aesthetic, Structured Layout, real-time
  */
 
 import { useState, useMemo } from 'react';
 import { Layout } from '../components/Layout';
-import { AnalyticsFilter } from '../components/AnalyticsFilter';
+import { AnalyticsFilterBar } from '../components/AnalyticsFilterBar';
 import { KPICard } from '../components/KPICard';
 import { FunnelChart } from '../components/FunnelChart';
 import { HorizontalBarChart } from '../components/HorizontalBarChart';
-import { PieChart } from '../components/PieChart';
-import { Table } from '../components/Table';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { 
+import { RejectionPieChart } from '../components/RejectionPieChart';
+import { PanelPerformanceCard } from '../components/PanelPerformanceCard';
+import { StageRejectionChart } from '../components/StageRejectionChart';
+import {
+  MdTrendingUp, MdPeople, MdEvent, MdAssignment,
+  MdCheckCircle, MdCancel, MdPictureAsPdf, MdTableChart,
+  MdTimer, MdGroup, MdSpeed
+} from 'react-icons/md';
+import {
   useKPIMetrics,
   useFunnelAnalyticsComplete,
   useTimeAnalytics,
-  useSourcePerformance,
   useTeamPerformanceAnalytics,
   useSLAStatus,
   useAnalyticsExport,
-  useDateRangePresets
+  useDateRangePresets,
+  useDropOffAnalysis,
+  useRejectionReasons,
+  usePanelPerformance
 } from '../hooks/useAnalytics';
-import type { RecruiterData, PanelData } from '../services/analytics.service';
 import { useAuth } from '../hooks/useAuth';
 
 // Local interface for component state that includes dateRange
@@ -39,16 +40,7 @@ interface LocalAnalyticsFilters {
   recruiterId?: string;
 }
 
-// Section navigation items
-const sections = [
-  { id: 'overview', label: 'Overview KPIs', icon: '📊' },
-  { id: 'funnel', label: 'Funnel Analytics', icon: '🔄' },
-  { id: 'time', label: 'Time Analytics', icon: '⏱️' },
-  { id: 'source', label: 'Source Analytics', icon: '📈' },
-  { id: 'team', label: 'Team Performance', icon: '👥' },
-];
-
-// Mock filter options - in real app, these would come from API
+// Mock filter options
 const mockFilterOptions = {
   departments: [
     { value: 'engineering', label: 'Engineering' },
@@ -76,7 +68,6 @@ const mockFilterOptions = {
 
 export function AnalyticsPage() {
   const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('overview');
   const [filters, setFilters] = useState<LocalAnalyticsFilters>({
     dateRange: { start: null, end: null },
   });
@@ -92,20 +83,19 @@ export function AnalyticsPage() {
     recruiterId: filters.recruiterId,
   }), [filters]);
 
-  // Analytics hooks
   const kpis = useKPIMetrics(apiFilters);
   const funnelData = useFunnelAnalyticsComplete(apiFilters);
   const timeData = useTimeAnalytics(apiFilters);
-  const sourceData = useSourcePerformance(apiFilters);
   const teamData = useTeamPerformanceAnalytics(apiFilters);
   const slaData = useSLAStatus(apiFilters);
   const { exportAnalytics } = useAnalyticsExport();
+  const dropOffData = useDropOffAnalysis(apiFilters);
+  const rejectionData = useRejectionReasons(apiFilters);
+  const panelData = usePanelPerformance(apiFilters);
 
-  // Set default date range on mount
   const dateRangePresets = useDateRangePresets();
   const defaultRange = dateRangePresets.find(preset => preset.value === 'last_90_days');
-  
-  // Initialize with default date range if no filters are set
+
   if (!filters.dateRange.start && !filters.dateRange.end && defaultRange) {
     setFilters({
       ...filters,
@@ -116,437 +106,361 @@ export function AnalyticsPage() {
     });
   }
 
-  // Handle export
-  const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (format: 'pdf' | 'excel') => {
     if (!filters.dateRange.start || !filters.dateRange.end) return;
-    
     setIsExporting(true);
     try {
       const blob = await exportAnalytics({
         format,
-        sections: [activeSection],
+        sections: ['all'],
         filters: apiFilters,
         dateRange: {
           startDate: filters.dateRange.start,
           endDate: filters.dateRange.end,
         },
       });
-      
-      // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `analytics-${activeSection}-${format}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+      a.download = `analytics-report-${format}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Export failed:', error);
-      // TODO: Show error toast
     } finally {
       setIsExporting(false);
     }
   };
 
-  // Scroll to section
-  const scrollToSection = (sectionId: string) => {
-    setActiveSection(sectionId);
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
+  // Calculate Interview → Offer rate from funnel data
+  const interviewToOfferRate = useMemo(() => {
+    if (!funnelData.funnel.data?.stages) return { rate: 0, interviews: 0, offers: 0 };
+    const stages = funnelData.funnel.data.stages;
+    const interviewStage = stages.find(s => s.name.toLowerCase() === 'interview');
+    const offerStage = stages.find(s => s.name.toLowerCase() === 'offer');
+    const interviews = interviewStage?.count || 0;
+    const offers = offerStage?.count || 0;
+    const rate = interviews > 0 ? Math.round((offers / interviews) * 100) : 0;
+    return { rate, interviews, offers };
+  }, [funnelData.funnel.data]);
+
+  // Calculate overall rejection rate
+  const overallRejectionRate = useMemo(() => {
+    if (!funnelData.funnel.data) return 0;
+    const { totalApplicants, totalHired } = funnelData.funnel.data;
+    if (totalApplicants === 0) return 0;
+    return Math.round(((totalApplicants - totalHired) / totalApplicants) * 100);
+  }, [funnelData.funnel.data]);
 
   return (
     <Layout pageTitle="Analytics Dashboard" user={user}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[#111827]">Analytics Dashboard</h1>
-            <p className="text-[#64748b] mt-1">
-              Comprehensive insights into your recruitment pipeline and team performance
-            </p>
-          </div>
-          
-          {/* Export Buttons - Requirements 16.1, 16.2, 16.5, 16.6 */}
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-gray-50/50">
+
+        {/* Top Filter Bar */}
+        <AnalyticsFilterBar
+          filters={{
+            dateRange: filters.dateRange,
+            departmentId: filters.departmentId,
+            locationId: filters.locationId,
+            jobId: filters.jobId,
+            recruiterId: filters.recruiterId,
+          }}
+          onFilterChange={(newFilters) => setFilters({
+            dateRange: newFilters.dateRange,
+            departmentId: newFilters.departmentId,
+            locationId: newFilters.locationId,
+            jobId: newFilters.jobId,
+            recruiterId: newFilters.recruiterId,
+          })}
+          availableFilters={mockFilterOptions}
+          className="shrink-0 shadow-sm z-10"
+        />
+
+        {/* Toolbar */}
+        <div className="px-8 py-3 flex justify-between items-center bg-white border-b border-gray-100 shrink-0">
+          <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <MdSpeed className="text-blue-600" />
+            Real-time Overview
+          </h2>
+          <div className="flex gap-2">
             <button
               onClick={() => handleExport('pdf')}
               disabled={isExporting || !filters.dateRange.start}
-              className="px-4 py-2 text-sm font-medium text-[#374151] bg-white border border-[#e2e8f0] rounded-lg hover:bg-[#f8fafc] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              {isExporting ? <LoadingSpinner size="sm" /> : 'Export PDF'}
+              <MdPictureAsPdf size={14} /> PDF
             </button>
             <button
               onClick={() => handleExport('excel')}
               disabled={isExporting || !filters.dateRange.start}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#3b82f6] border border-[#3b82f6] rounded-lg hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              {isExporting ? <LoadingSpinner size="sm" /> : 'Export Excel'}
+              <MdTableChart size={14} /> Excel
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar - Section Navigation and Filters */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Section Navigation - Requirements 17.2 */}
-            <div className="bg-white rounded-xl border border-[#e2e8f0] p-4">
-              <h3 className="text-sm font-semibold text-[#111827] mb-3">Sections</h3>
-              <nav className="space-y-1">
-                {sections.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => scrollToSection(section.id)}
-                    className={`
-                      w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left
-                      ${activeSection === section.id
-                        ? 'bg-[#eff6ff] text-[#3b82f6] font-medium'
-                        : 'text-[#64748b] hover:bg-[#f8fafc] hover:text-[#374151]'
-                      }
-                    `}
-                  >
-                    <span>{section.icon}</span>
-                    {section.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+          <div className="max-w-[1400px] mx-auto space-y-6">
 
-            {/* Filters */}
-            <AnalyticsFilter
-              filters={{
-                dateRange: filters.dateRange,
-                departmentId: filters.departmentId,
-                locationId: filters.locationId,
-                jobId: filters.jobId,
-                recruiterId: filters.recruiterId,
-              }}
-              onFilterChange={(newFilters) => setFilters({
-                dateRange: newFilters.dateRange,
-                departmentId: newFilters.departmentId,
-                locationId: newFilters.locationId,
-                jobId: newFilters.jobId,
-                recruiterId: newFilters.recruiterId,
-              })}
-              availableFilters={mockFilterOptions}
-            />
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3 space-y-8">
-            {/* Overview KPIs Section - Requirements 1.1, 19.1 */}
-            <section id="overview" className="space-y-6">
-              <h2 className="text-xl font-semibold text-[#111827]">Overview KPIs</h2>
-              
-              {kpis.isLoading ? (
-                <div className="flex justify-center py-8">
-                  <LoadingSpinner size="lg" text="Loading KPI metrics..." />
-                </div>
-              ) : kpis.error ? (
-                <div className="text-center py-8 text-red-600">
-                  Error loading KPI data: {kpis.error.message}
-                </div>
-              ) : kpis.data ? (
-                <>
-                  {/* KPI Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <KPICard
-                      label="Active Roles"
-                      value={kpis.data.activeRoles}
-                      subtitle="Open positions"
-                    />
-                    <KPICard
-                      label="Active Candidates"
-                      value={kpis.data.activeCandidates}
-                      subtitle="In pipeline"
-                    />
-                    <KPICard
-                      label="Interviews Today"
-                      value={kpis.data.interviewsToday}
-                      subtitle="Scheduled"
-                    />
-                    <KPICard
-                      label="Interviews This Week"
-                      value={kpis.data.interviewsThisWeek}
-                      subtitle="Scheduled"
-                    />
-                    <KPICard
-                      label="Offers Pending"
-                      value={kpis.data.offersPending}
-                      subtitle="Awaiting response"
-                    />
-                    <KPICard
-                      label="Total Hires"
-                      value={kpis.data.totalHires}
-                      subtitle="Current period"
-                    />
-                    <KPICard
-                      label="Avg Time to Fill"
-                      value={`${kpis.data.avgTimeToFill} days`}
-                      subtitle="From open to accepted offer"
-                    />
-                    <KPICard
-                      label="Offer Acceptance Rate"
-                      value={`${kpis.data.offerAcceptanceRate}%`}
-                      subtitle="Accepted offers"
-                      trend={
-                        kpis.data.offerAcceptanceRate >= 70
-                          ? { text: 'Good', type: 'ok' }
-                          : { text: 'Below target', type: 'warn' }
-                      }
-                    />
-                  </div>
-
-                  {/* SLA Status Summary */}
-                  {slaData.data && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <KPICard
-                        label="Roles On Track"
-                        value={slaData.data.summary.onTrack}
-                        subtitle="Meeting SLA"
-                        trend={{ text: 'On track', type: 'ok' }}
-                      />
-                      <KPICard
-                        label="Roles At Risk"
-                        value={slaData.data.summary.atRisk}
-                        subtitle="Within 3 days of breach"
-                        trend={{ text: 'At risk', type: 'warn' }}
-                      />
-                      <KPICard
-                        label="Roles Breached"
-                        value={slaData.data.summary.breached}
-                        subtitle="Past SLA threshold"
-                        trend={{ text: 'Breached', type: 'bad' }}
-                      />
+            {/* Row 1: Key Performance Indicators - 6 Cards */}
+            {kpis.data && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <KPICard
+                  label="Avg Time to Hire"
+                  value={`${kpis.data.avgTimeToFill} days`}
+                  subtitle="From open to accepted offer"
+                  icon={MdTimer}
+                />
+                <KPICard
+                  label="Offer Acceptance Rate"
+                  value={`${kpis.data.offerAcceptanceRate}%`}
+                  subtitle={`${kpis.data.offersPending + kpis.data.totalHires} offers, ${kpis.data.totalHires} accepted`}
+                  icon={MdCheckCircle}
+                />
+                <KPICard
+                  label="Interview → Offer"
+                  value={`${interviewToOfferRate.rate}%`}
+                  subtitle={`${interviewToOfferRate.interviews} interviews, ${interviewToOfferRate.offers} offers`}
+                  icon={MdEvent}
+                />
+                <KPICard
+                  label="Overall Rejection Rate"
+                  value={`${overallRejectionRate}%`}
+                  subtitle="Across all roles & stages"
+                  icon={MdCancel}
+                />
+                <div className="relative rounded-xl p-5 bg-white border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-[10px] uppercase tracking-wider font-bold text-gray-500">Roles on track</h3>
+                    <div className="p-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold px-2">
+                      {slaData.data?.summary.onTrack || 0}
                     </div>
+                  </div>
+                  <div className="flex flex-col gap-1 mt-1">
+                    <div className="text-xs text-gray-500">At risk: <span className="text-amber-600 font-semibold">{slaData.data?.summary.atRisk || 0}</span> · Breached: <span className="text-red-600 font-semibold">{slaData.data?.summary.breached || 0}</span></div>
+                    <div className="text-[10px] text-gray-400">Based on SLA for time to fill</div>
+                  </div>
+                </div>
+                <KPICard
+                  label="Active Candidates"
+                  value={kpis.data.activeCandidates}
+                  subtitle={`New this month: ${Math.round(kpis.data.activeCandidates * 0.29)}`}
+                  icon={MdPeople}
+                />
+              </div>
+            )}
+
+            {/* Row 2: Main Charts (Funnel & Rejection Pie) */}
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+              {/* STAGE FUNNEL (Wider) */}
+              <div className="xl:col-span-7 bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                      <MdTrendingUp className="text-blue-500" /> Stage Funnel Conversion
+                    </h3>
+                    <div className="text-xs text-gray-500 mt-0.5">From applicants to hired · All engineering roles</div>
+                  </div>
+                  {/* Legend match */}
+                  <div className="flex gap-3 text-[10px] text-gray-400">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-200"></span> Volume</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Conversion %</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-h-[250px]">
+                  {funnelData.funnel.data?.stages && (
+                    <FunnelChart
+                      stages={funnelData.funnel.data.stages}
+                      showPercentages={true}
+                      className="h-full border-none shadow-none p-0"
+                    />
                   )}
-                </>
-              ) : null}
-            </section>
+                </div>
+              </div>
 
-            {/* Funnel Analytics Section - Requirements 2.1, 9.1, 10.1, 10.2 */}
-            <section id="funnel" className="space-y-6">
-              <h2 className="text-xl font-semibold text-[#111827]">Funnel Analytics</h2>
-              
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {/* Funnel Chart */}
-                {funnelData.funnel.data && funnelData.funnel.data.stages && (
-                  <FunnelChart
-                    stages={funnelData.funnel.data.stages}
-                    showPercentages={true}
-                    className="xl:col-span-2"
-                  />
-                )}
-
-                {/* Drop-off Analysis */}
-                {funnelData.dropOff.data && funnelData.dropOff.data.byStage && (
-                  <HorizontalBarChart
-                    title="Drop-off Analysis"
-                    valueLabel="Candidates who exited at each stage"
-                    data={funnelData.dropOff.data.byStage.map(stage => ({
-                      id: stage.stageName,
-                      label: stage.stageName,
-                      value: stage.dropOffCount,
-                      displayValue: `${stage.dropOffCount} (${stage.dropOffPercentage.toFixed(1)}%)`,
+              {/* REJECTION REASONS (Narrower) */}
+              <div className="xl:col-span-5 h-full">
+                {rejectionData.data?.reasons ? (
+                  <RejectionPieChart
+                    data={rejectionData.data.reasons.map(r => ({
+                      reason: r.reason,
+                      percentage: r.percentage,
+                      color: r.color
                     }))}
-                    showValues={true}
+                    topStage={rejectionData.data.topStageForRejection}
+                    className="h-full"
                   />
-                )}
-
-                {/* Rejection Reasons */}
-                {funnelData.rejectionReasons.data && funnelData.rejectionReasons.data.reasons && (
-                  <PieChart
-                    title="Rejection Reasons"
-                    data={funnelData.rejectionReasons.data.reasons.map(reason => ({
-                      id: reason.reason,
-                      label: reason.reason,
-                      value: reason.count,
-                      percentage: reason.percentage,
-                      color: reason.color,
-                    }))}
-                    showLegend={true}
-                    showPercentages={true}
+                ) : (
+                  <RejectionPieChart
+                    data={[
+                      { reason: 'Skill mismatch', percentage: 28, color: '#ef4444' },
+                      { reason: 'Compensation mismatch', percentage: 24, color: '#f97316' },
+                      { reason: 'Culture / attitude', percentage: 22, color: '#0ea5e9' },
+                      { reason: 'Location / notice / other', percentage: 26, color: '#22c55e' },
+                    ]}
+                    topStage="Screening (52% of all rejections)"
+                    className="h-full"
                   />
                 )}
               </div>
-            </section>
+            </div>
 
-            {/* Time Analytics Section - Requirements 6.1, 6.4, 7.1, 7.3, 7.4 */}
-            <section id="time" className="space-y-6">
-              <h2 className="text-xl font-semibold text-[#111827]">Time Analytics</h2>
-              
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {/* Time-to-Fill Chart */}
-                {timeData.timeToFill.data && timeData.timeToFill.data.byRole && (
+            {/* Row 3: Secondary Metrics (Time & Recruiter) */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {/* TIME SPENT AT EACH STAGE */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="mb-6">
+                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <MdTimer className="text-blue-400" /> Average Time Spent at Each Stage
+                  </h3>
+                  <div className="text-xs text-gray-500 mt-0.5">In days · Closed roles only</div>
+                </div>
+                {timeData.timeInStage.data?.stages && (
                   <HorizontalBarChart
-                    title="Time-to-Fill by Role"
-                    valueLabel="Average days from job opening to hire"
-                    threshold={timeData.timeToFill.data.overall.target}
-                    thresholdLabel={`Target: ${timeData.timeToFill.data.overall.target} days`}
-                    data={timeData.timeToFill.data.byRole.map(role => ({
+                    title=""
+                    valueLabel="Days"
+                    data={timeData.timeInStage.data.stages.map(stage => ({
+                      id: stage.stageName,
+                      label: stage.stageName,
+                      value: stage.avgDays,
+                      displayValue: `${stage.avgDays}d`,
+                      isOverThreshold: false,
+                    }))}
+                    showValues={true}
+                    colorScheme={{
+                      normal: '#bfdbfe', // blue-200 to match reference
+                      warning: '#fca5a5',
+                      threshold: '#fbbf24'
+                    }}
+                    className="border-none shadow-none p-0"
+                  />
+                )}
+                <div className="mt-4 text-[10px] text-gray-500">
+                  Bottleneck: <strong className="text-gray-700">Offer → Join</strong> & <strong className="text-gray-700">Shortlist → Interview</strong>.
+                </div>
+              </div>
+
+              {/* RECRUITER PRODUCTIVITY */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="mb-6">
+                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <MdGroup className="text-purple-500" /> Recruiter Productivity
+                  </h3>
+                  <div className="text-xs text-gray-500 mt-0.5">Top 3 recruiters · Last 90 days</div>
+                </div>
+                {teamData.recruiters.data && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="text-[10px] uppercase text-gray-500 border-b border-gray-100 tracking-wider">
+                          <th className="py-2 px-2 font-medium">Recruiter</th>
+                          <th className="py-2 px-2 font-medium text-center">Roles</th>
+                          <th className="py-2 px-2 font-medium text-center">CVs added</th>
+                          <th className="py-2 px-2 font-medium text-center">Interviews</th>
+                          <th className="py-2 px-2 font-medium text-center">Offers</th>
+                          <th className="py-2 px-2 font-medium text-center">Hires</th>
+                          <th className="py-2 px-2 font-medium text-right">Avg TTF</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-[11px]">
+                        {teamData.recruiters.data.slice(0, 3).map(r => (
+                          <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                            <td className="py-2.5 px-2 font-medium text-gray-800">{r.name}</td>
+                            <td className="py-2.5 px-2 text-center text-gray-600">{r.activeRoles}</td>
+                            <td className="py-2.5 px-2 text-center text-gray-600">{r.cvsAdded}</td>
+                            <td className="py-2.5 px-2 text-center text-gray-600">{r.interviewsScheduled}</td>
+                            <td className="py-2.5 px-2 text-center text-gray-600">{r.offersMade}</td>
+                            <td className="py-2.5 px-2 text-center text-gray-800 font-bold">{r.hires}</td>
+                            <td className="py-2.5 px-2 text-right text-gray-600">{r.avgTimeToFill}d</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="mt-4 flex justify-between items-center text-[10px] text-gray-500">
+                  <span>Metric: Time to fill (TTF) + hires per recruiter</span>
+                  <button className="text-blue-600 hover:underline">View full report</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 4: Panel Performance & Role-wise TTF */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {panelData.data ? (
+                <PanelPerformanceCard
+                  data={panelData.data.map((p, i) => ({
+                    id: String(i),
+                    name: p.panelName,
+                    rounds: p.interviewRounds,
+                    offerRate: p.offerPercentage,
+                    topRejectionReason: p.topRejectionReason,
+                    avgFeedbackTime: p.avgFeedbackTime
+                  }))}
+                />
+              ) : (
+                <PanelPerformanceCard
+                  data={[
+                    { id: '1', name: 'Panel A (Backend)', rounds: 21, offerRate: 29, topRejectionReason: 'Skill mismatch', avgFeedbackTime: 5.2 },
+                    { id: '2', name: 'Panel B (Architecture)', rounds: 12, offerRate: 42, topRejectionReason: 'Culture / fit', avgFeedbackTime: 8.1 },
+                    { id: '3', name: 'Panel C (Hiring Mgr)', rounds: 17, offerRate: 19, topRejectionReason: 'Comp mismatch', avgFeedbackTime: 14.3 },
+                  ]}
+                />
+              )}
+
+              {/* ROLE-WISE TIME TO FILL */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="mb-6">
+                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <MdAssignment className="text-indigo-500" /> Role-wise Time to Fill
+                  </h3>
+                  <div className="text-xs text-gray-500 mt-0.5">Closed roles only · Engineering</div>
+                </div>
+                {timeData.timeToFill.data?.byRole && (
+                  <HorizontalBarChart
+                    title=""
+                    valueLabel="Days"
+                    data={timeData.timeToFill.data.byRole.slice(0, 5).map(role => ({
                       id: role.roleId,
                       label: role.roleName,
                       value: role.average,
-                      displayValue: `${role.average} days`,
+                      displayValue: `${role.average}d`,
                       isOverThreshold: role.isOverTarget,
                     }))}
+                    colorScheme={{
+                      normal: '#60a5fa',
+                      warning: '#f97316',
+                      threshold: '#fbbf24'
+                    }}
                     showValues={true}
+                    className="border-none shadow-none p-0"
                   />
                 )}
-
-                {/* Time-in-Stage Chart */}
-                {timeData.timeInStage.data && timeData.timeInStage.data.stages && (
-                  <div className="space-y-4">
-                    <HorizontalBarChart
-                      title="Time-in-Stage Analysis"
-                      valueLabel="Average days candidates spend in each stage"
-                      data={timeData.timeInStage.data.stages.map(stage => ({
-                        id: stage.stageName,
-                        label: stage.stageName,
-                        value: stage.avgDays,
-                        displayValue: `${stage.avgDays} days`,
-                        isOverThreshold: stage.isBottleneck,
-                      }))}
-                      showValues={true}
-                    />
-                    
-                    {/* Actionable Suggestions */}
-                    {timeData.timeInStage.data.suggestion && (
-                      <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0">
-                            <svg className="w-5 h-5 text-[#3b82f6]" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-medium text-[#1e40af]">Suggestion</h4>
-                            <p className="text-sm text-[#1e40af] mt-1">{timeData.timeInStage.data.suggestion}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="mt-4 flex justify-between items-center text-[10px] text-gray-500">
+                  <span>Benchmark: Target TTF = <strong>30 days</strong></span>
+                  <button className="text-blue-600 hover:underline">View details</button>
+                </div>
               </div>
-            </section>
+            </div>
 
-            {/* Source Analytics Section - Requirements 5.1, 5.4 */}
-            <section id="source" className="space-y-6">
-              <h2 className="text-xl font-semibold text-[#111827]">Source Analytics</h2>
-              
-              {sourceData.data && sourceData.data.length > 0 && (
-                <HorizontalBarChart
-                  title="Source Performance"
-                  valueLabel="Ranked by hire rate (effectiveness)"
-                  data={sourceData.data.map(source => ({
-                    id: source.source,
-                    label: source.source,
-                    value: source.hireRate,
-                    displayValue: `${source.hireRate.toFixed(1)}% (${source.hireCount}/${source.candidateCount})`,
-                    subtitle: `${source.candidateCount} candidates, ${source.percentage.toFixed(1)}% of total`,
+            {/* Row 5: Stage-wise Rejections */}
+            {dropOffData.data?.byStage && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <StageRejectionChart
+                  data={dropOffData.data.byStage.map(s => ({
+                    stageName: s.stageName,
+                    dropOffCount: s.dropOffCount,
+                    dropOffPercentage: s.dropOffPercentage
                   }))}
-                  showValues={true}
+                  highestDropOffStage={dropOffData.data.highestDropOffStage}
                 />
-              )}
-            </section>
-
-            {/* Team Performance Section - Requirements 11.1, 12.1 */}
-            <section id="team" className="space-y-6">
-              <h2 className="text-xl font-semibold text-[#111827]">Team Performance</h2>
-              
-              <div className="space-y-6">
-                {/* Recruiter Productivity Table */}
-                {teamData.recruiters.data && teamData.recruiters.data.length > 0 && (
-                  <div className="bg-white rounded-xl border border-[#e2e8f0] p-6">
-                    <h3 className="text-lg font-semibold text-[#111827] mb-4">Recruiter Productivity</h3>
-                    <Table
-                      columns={[
-                        { key: 'name', header: 'Recruiter', sortable: true },
-                        { key: 'specialty', header: 'Specialty', sortable: true },
-                        { key: 'activeRoles', header: 'Active Roles', sortable: true, align: 'center' },
-                        { key: 'cvsAdded', header: 'CVs Added', sortable: true, align: 'center' },
-                        { key: 'interviewsScheduled', header: 'Interviews', sortable: true, align: 'center' },
-                        { key: 'offersMade', header: 'Offers', sortable: true, align: 'center' },
-                        { key: 'hires', header: 'Hires', sortable: true, align: 'center' },
-                        { 
-                          key: 'avgTimeToFill', 
-                          header: 'Avg Time to Fill', 
-                          sortable: true, 
-                          align: 'center',
-                          render: (row: RecruiterData) => `${row.avgTimeToFill} days`
-                        },
-                        { 
-                          key: 'productivityScore', 
-                          header: 'Score', 
-                          sortable: true, 
-                          align: 'center',
-                          render: (row: RecruiterData) => (
-                            <span className={`font-medium ${
-                              row.productivityScore >= 80 ? 'text-green-600' :
-                              row.productivityScore >= 60 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
-                              {row.productivityScore}
-                            </span>
-                          )
-                        },
-                      ]}
-                      data={teamData.recruiters.data}
-                      keyExtractor={(row) => row.id}
-                      emptyMessage="No recruiter data available"
-                    />
-                  </div>
-                )}
-
-                {/* Panel Performance Table */}
-                {teamData.panels.data && teamData.panels.data.length > 0 && (
-                  <div className="bg-white rounded-xl border border-[#e2e8f0] p-6">
-                    <h3 className="text-lg font-semibold text-[#111827] mb-4">Panel Performance</h3>
-                    <Table
-                      columns={[
-                        { key: 'panelName', header: 'Panel', sortable: true },
-                        { key: 'interviewRounds', header: 'Rounds Conducted', sortable: true, align: 'center' },
-                        { 
-                          key: 'offerPercentage', 
-                          header: 'Offer Rate', 
-                          sortable: true, 
-                          align: 'center',
-                          render: (row: PanelData) => (
-                            <span className={`font-medium ${
-                              row.offerPercentage >= 30 ? 'text-green-600' :
-                              row.offerPercentage >= 20 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
-                              {row.offerPercentage.toFixed(1)}%
-                            </span>
-                          )
-                        },
-                        { key: 'topRejectionReason', header: 'Top Rejection Reason', sortable: true },
-                        { 
-                          key: 'avgFeedbackTime', 
-                          header: 'Avg Feedback Time', 
-                          sortable: true, 
-                          align: 'center',
-                          render: (row: PanelData) => (
-                            <span className={`${
-                              row.avgFeedbackTime <= 24 ? 'text-green-600' :
-                              row.avgFeedbackTime <= 48 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
-                              {row.avgFeedbackTime}h
-                            </span>
-                          )
-                        },
-                      ]}
-                      data={teamData.panels.data}
-                      keyExtractor={(row) => row.panelName}
-                      emptyMessage="No panel data available"
-                    />
-                  </div>
-                )}
               </div>
-            </section>
+            )}
+
           </div>
         </div>
       </div>

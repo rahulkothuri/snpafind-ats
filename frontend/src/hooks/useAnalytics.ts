@@ -22,7 +22,7 @@ export const analyticsKeys = {
 // Default query options for analytics
 const defaultQueryOptions = {
   staleTime: 5 * 60 * 1000, // 5 minutes
-  refetchInterval: 10 * 60 * 1000, // Refetch every 10 minutes
+  refetchInterval: 60 * 1000, // Refetch every 1 minute for real-time updates
   retry: 2,
   refetchOnWindowFocus: false,
 };
@@ -266,7 +266,7 @@ export function useDateRangePresets() {
  */
 export function useDateRangeValidation() {
   return {
-    validateDateRange: (startDate: Date, endDate: Date) => 
+    validateDateRange: (startDate: Date, endDate: Date) =>
       AnalyticsService.validateDateRange(startDate, endDate),
   };
 }

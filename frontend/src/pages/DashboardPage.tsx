@@ -122,7 +122,7 @@ function UpcomingInterviews({ interviews, showViewAll, onViewAll }: any) {
   return (
     <div className="card p-3 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900">Today's Interviews</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Interviews</h3>
         <button onClick={onViewAll} className="px-2 py-1 text-[10px] font-semibold text-blue-600 border border-blue-200 rounded hover:bg-blue-50 transition-colors">View All</button>
       </div>
       <div className="space-y-2 overflow-y-auto custom-scrollbar pr-2 h-[330px]">
@@ -378,14 +378,14 @@ export function DashboardPage() {
           <KPICard
             label="Active Jobs"
             value={metrics.openRoles}
-            trend={{ text: '+2 this week', type: 'ok' }}
+            trend={{ text: '2 this week', type: 'ok' }}
             icon={MdWork}
             variant="default"
           />
           <KPICard
             label="Total Candidates"
             value={metrics.activeCandidates}
-            trend={{ text: '+12 today', type: 'ok' }}
+            trend={{ text: '12 today', type: 'ok' }}
             icon={MdPeople}
             variant="default"
           />
@@ -424,8 +424,8 @@ export function DashboardPage() {
 
 
             {/* Active Pipeline Table */}
-            <div className="card bg-white overflow-hidden flex flex-col shadow-none border border-gray-100/50">
-              <div className="p-3 border-b border-gray-100 flex justify-between items-center">
+            <div className="card bg-white overflow-hidden flex flex-col shadow-none border border-gray-100/50 max-h-[500px]">
+              <div className="p-3 border-b border-gray-100 flex justify-between items-center shrink-0">
                 <h2 className="text-sm font-bold text-gray-900">Active Role Pipelines</h2>
                 <button
                   onClick={() => navigate('/roles')}
@@ -434,7 +434,7 @@ export function DashboardPage() {
                   View All
                 </button>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-y-auto custom-scrollbar">
                 <Table
                   data={rolePipeline}
                   columns={pipelineColumns}

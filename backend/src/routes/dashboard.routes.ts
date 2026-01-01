@@ -19,7 +19,7 @@ const dashboardFiltersSchema = z.object({
 });
 
 const interviewPeriodSchema = z.object({
-  period: z.enum(['today', 'week']).default('today'),
+  period: z.enum(['today', 'week', 'all']).default('today'),
 });
 
 /**
@@ -58,15 +58,15 @@ router.get(
         req.user!.companyId,
         req.user!.userId,
         req.user!.role,
-        7
+        50
       );
 
-      // Get upcoming interviews (today, limit 5)
+      // Get upcoming interviews (all upcoming, limit 50)
       const upcomingInterviews = await getUpcomingInterviews(
         req.user!.companyId,
         req.user!.userId,
-        'today',
-        5
+        'all',
+        50
       );
 
       // Get activity feed (limit 10)
@@ -131,10 +131,10 @@ router.get(
           candidateName: interview.candidateName,
           role: interview.roleName,
           panelMembers: interview.panelMembers,
-          meetingType: interview.meetingType === 'in_person' ? 'In-person' : 
-                      interview.meetingType === 'google_meet' ? 'Google Meet' :
-                      interview.meetingType === 'microsoft_teams' ? 'Microsoft Teams' :
-                      interview.meetingType === 'custom_url' ? 'Custom Link' : 'In-person',
+          meetingType: interview.meetingType === 'in_person' ? 'In-person' :
+            interview.meetingType === 'google_meet' ? 'Google Meet' :
+              interview.meetingType === 'microsoft_teams' ? 'Microsoft Teams' :
+                interview.meetingType === 'custom_url' ? 'Custom Link' : 'In-person',
           meetingLink: interview.meetingLink,
         })),
         funnel: funnelData.stages.map(stage => ({
@@ -219,7 +219,7 @@ router.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { limit = '7', sortBy = 'priority', sortOrder = 'desc' } = req.query;
-      
+
       const rolePipeline = await getRolePipelineData(
         req.user!.companyId,
         req.user!.userId,
@@ -335,30 +335,30 @@ async function getRolePipelineData(
         }
       }
     },
-    orderBy: sortBy === 'age' ? { createdAt: 'asc' } : 
-              sortBy === 'priority' ? { priority: sortOrder } :
-              { [sortBy]: sortOrder },
+    orderBy: sortBy === 'age' ? { createdAt: 'asc' } :
+      sortBy === 'priority' ? { priority: sortOrder } :
+        { [sortBy]: sortOrder },
   });
 
   // Calculate pipeline data for each job
   const pipelineData = jobs.map(job => {
     const now = new Date();
     const ageInDays = Math.floor((now.getTime() - job.createdAt.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     // Calculate offer count (candidates in offer stages)
-    const offerCount = job.jobCandidates.filter(jc => 
+    const offerCount = job.jobCandidates.filter(jc =>
       jc.currentStageId && jc.currentStageId.includes('offer')
     ).length;
 
     // Calculate interview count from job candidates
-    const interviewCount = job.jobCandidates.reduce((count, jc) => 
+    const interviewCount = job.jobCandidates.reduce((count, jc) =>
       count + jc.interviews.length, 0
     );
 
     // Simple SLA calculation (30 days threshold)
     const slaThreshold = 30;
     let slaStatus: 'On track' | 'At risk' | 'Breached' = 'On track';
-    
+
     if (ageInDays > slaThreshold) {
       slaStatus = 'Breached';
     } else if (ageInDays > slaThreshold - 3) {
@@ -399,7 +399,7 @@ async function getRolePipelineData(
 async function getUpcomingInterviews(
   companyId: string,
   userId: string,
-  period: 'today' | 'week',
+  period: 'today' | 'week' | 'all',
   limit: number = 5
 ) {
   const now = new Date();
@@ -412,9 +412,11 @@ async function getUpcomingInterviews(
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(endOfWeek.getDate() + 7);
 
-  const dateRange = period === 'today' 
+  const dateRange = period === 'today'
     ? { gte: startOfToday, lt: endOfToday }
-    : { gte: startOfWeek, lt: endOfWeek };
+    : period === 'week'
+      ? { gte: startOfWeek, lt: endOfWeek }
+      : { gte: startOfToday }; // 'all' - upcoming from today onwards
 
   const interviews = await prisma.interview.findMany({
     where: {
@@ -480,7 +482,7 @@ async function getActivityFeed(
 ) {
   // For now, we'll create a simple activity feed from recent stage changes
   // In a real implementation, you'd have a dedicated activity/audit log table
-  
+
   const recentStageChanges = await prisma.stageHistory.findMany({
     where: {
       jobCandidate: {
