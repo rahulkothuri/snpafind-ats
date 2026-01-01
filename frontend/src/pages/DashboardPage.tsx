@@ -22,8 +22,7 @@ interface Column<T> {
 import type {
   FunnelStage,
   SourcePerformance,
-  RolePipeline,
-  Interview
+  RolePipeline
 } from '../services/dashboard.service';
 
 /**
@@ -312,7 +311,7 @@ const pipelineColumns: Column<RolePipeline>[] = [
 ];
 
 export function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Real Data Hooks

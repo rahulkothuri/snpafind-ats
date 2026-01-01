@@ -43,8 +43,8 @@ export interface MandatoryCriteriaSectionProps {
   readOnly?: boolean;
 }
 
-export function MandatoryCriteriaSection({ 
-  value = DEFAULT_MANDATORY_CRITERIA, 
+export function MandatoryCriteriaSection({
+  value = DEFAULT_MANDATORY_CRITERIA,
   onChange,
   readOnly = false,
 }: MandatoryCriteriaSectionProps) {
@@ -56,24 +56,13 @@ export function MandatoryCriteriaSection({
     title: value?.title || DEFAULT_MANDATORY_CRITERIA.title,
     intro: value?.intro || DEFAULT_MANDATORY_CRITERIA.intro,
     criteria: Array.isArray(value?.criteria) ? value.criteria : DEFAULT_MANDATORY_CRITERIA.criteria,
+    // Note removed from UI but preserved in data structure if needed for compatibility
     note: value?.note || DEFAULT_MANDATORY_CRITERIA.note,
-  };
-
-  const handleTitleChange = (title: string) => {
-    if (onChange) {
-      onChange({ ...safeValue, title });
-    }
   };
 
   const handleIntroChange = (intro: string) => {
     if (onChange) {
       onChange({ ...safeValue, intro });
-    }
-  };
-
-  const handleNoteChange = (note: string) => {
-    if (onChange) {
-      onChange({ ...safeValue, note });
     }
   };
 
@@ -107,106 +96,47 @@ export function MandatoryCriteriaSection({
   };
 
   return (
-    <div className="form-section bg-[#fffbeb] border border-[#fcd34d]">
-      {/* Header with warning icon */}
-      <div className="flex items-start gap-2 mb-4">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#f59e0b] flex items-center justify-center mt-1">
-          <svg 
-            className="w-5 h-5 text-white" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-            />
-          </svg>
-        </div>
+    <div className="space-y-4">
+      {/* Introduction */}
+      <div>
         {isEditable ? (
           <input
             type="text"
-            value={safeValue.title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            className="flex-1 text-base font-semibold text-[#92400e] bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
-            placeholder="Section title..."
+            value={safeValue.intro}
+            onChange={(e) => handleIntroChange(e.target.value)}
+            className="w-full text-sm text-gray-600 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-blue-500 focus:outline-none transition-colors px-0 py-1"
+            placeholder="Introduction text..."
           />
         ) : (
-          <h3 className="text-base font-semibold text-[#92400e]">
-            {safeValue.title}
-          </h3>
+          <p className="text-sm text-gray-600">
+            {safeValue.intro}
+          </p>
         )}
       </div>
 
-      {/* Mode indicator */}
-      <div className="flex items-center gap-1.5 mb-4 text-xs text-[#b45309]">
-        {isEditable ? (
-          <>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" 
-              />
-            </svg>
-            <span>Edit the mandatory criteria for this job posting</span>
-          </>
-        ) : (
-          <>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
-              />
-            </svg>
-            <span>This section is read-only and will be included in all job postings</span>
-          </>
-        )}
-      </div>
-
-      {/* Intro text */}
-      {isEditable ? (
-        <input
-          type="text"
-          value={safeValue.intro}
-          onChange={(e) => handleIntroChange(e.target.value)}
-          className="w-full text-sm text-[#78350f] font-medium bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
-          placeholder="Introduction text..."
-        />
-      ) : (
-        <p className="text-sm text-[#78350f] font-medium mb-3">
-          {safeValue.intro}
-        </p>
-      )}
-
-      {/* Numbered criteria list */}
-      <ol className="space-y-2 mb-4">
+      {/* Criteria List */}
+      <div className="space-y-3">
         {safeValue.criteria.map((criterion, index) => (
-          <li 
-            key={index} 
-            className="flex gap-3 text-sm text-[#78350f]"
+          <div
+            key={index}
+            className="group flex items-start gap-3 bg-gray-50 rounded-lg p-3 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all duration-200"
           >
-            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#fcd34d] text-[#78350f] text-xs font-semibold flex items-center justify-center">
-              {index + 1}
-            </span>
+            <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500 mt-2" />
+
             {isEditable ? (
               <div className="flex-1 flex gap-2">
                 <input
                   type="text"
                   value={criterion}
                   onChange={(e) => handleCriterionChange(index, e.target.value)}
-                  className="flex-1 bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
+                  className="flex-1 bg-transparent text-sm text-gray-700 focus:outline-none placeholder-gray-400"
+                  placeholder="Enter requirement..."
                 />
                 <button
                   type="button"
                   onClick={() => handleRemoveCriterion(index)}
-                  className="flex-shrink-0 w-7 h-7 rounded-full bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors"
-                  title="Remove criterion"
+                  className="flex-shrink-0 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                  title="Remove requirement"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -214,50 +144,41 @@ export function MandatoryCriteriaSection({
                 </button>
               </div>
             ) : (
-              <span className="pt-0.5">{criterion}</span>
+              <span className="text-sm text-gray-700 leading-relaxed">{criterion}</span>
             )}
-          </li>
+          </div>
         ))}
-      </ol>
 
-      {/* Add new criterion input */}
-      {isEditable && (
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            value={newCriterion}
-            onChange={(e) => setNewCriterion(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
-            placeholder="Add a new criterion..."
-          />
-          <button
-            type="button"
-            onClick={handleAddCriterion}
-            disabled={!newCriterion.trim()}
-            className="px-4 py-2 bg-[#f59e0b] text-white rounded-lg text-sm font-medium hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Add
-          </button>
-        </div>
-      )}
-
-      {/* Note section */}
-      <div className="mt-4 pt-3 border-t border-[#fcd34d]">
-        {isEditable ? (
-          <input
-            type="text"
-            value={safeValue.note}
-            onChange={(e) => handleNoteChange(e.target.value)}
-            className="w-full text-sm font-semibold text-[#92400e] uppercase tracking-wide bg-white/50 border border-[#fcd34d] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#f59e0b]"
-            placeholder="Note..."
-          />
-        ) : (
-          <p className="text-sm font-semibold text-[#92400e] uppercase tracking-wide">
-            {safeValue.note}
-          </p>
+        {/* Add New Criterion Input */}
+        {isEditable && (
+          <div className="flex items-center gap-3 bg-white border border-dashed border-gray-300 rounded-lg p-3 hover:border-blue-400 transition-colors group focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/20">
+            <svg className="w-4 h-4 text-gray-400 group-focus-within:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <input
+              type="text"
+              value={newCriterion}
+              onChange={(e) => setNewCriterion(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 text-sm bg-transparent focus:outline-none placeholder-gray-400 text-gray-700"
+              placeholder="Add a new screening requirement..."
+            />
+            {newCriterion && (
+              <button
+                type="button"
+                onClick={handleAddCriterion}
+                className="text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+              >
+                Add
+              </button>
+            )}
+          </div>
         )}
       </div>
+
+      {safeValue.criteria.length === 0 && !isEditable && (
+        <p className="text-sm text-gray-400 italic">No specific screening criteria listed.</p>
+      )}
     </div>
   );
 }

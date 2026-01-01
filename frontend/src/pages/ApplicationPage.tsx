@@ -80,10 +80,9 @@ const initialFormData: ApplicationFormData = {
 export function ApplicationPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // View state management - Requirements 3.1, 3.2, 3.3, 3.4
-  const [showApplicationForm, setShowApplicationForm] = useState(false);
-  
+
+
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<ApplicationFormData>(initialFormData);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -94,10 +93,7 @@ export function ApplicationPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Handler to show application form when Apply button is clicked - Requirement 3.3
-  const handleApplyClick = () => {
-    setShowApplicationForm(true);
-  };
+
 
   // Fetch job details on mount
   useEffect(() => {
@@ -107,7 +103,7 @@ export function ApplicationPage() {
         setIsLoadingJob(false);
         return;
       }
-      
+
       try {
         const response = await api.get(`/public/jobs/${jobId}`);
         setJob(response.data);
@@ -122,7 +118,7 @@ export function ApplicationPage() {
         setIsLoadingJob(false);
       }
     };
-    
+
     fetchJob();
   }, [jobId]);
 
@@ -140,7 +136,7 @@ export function ApplicationPage() {
   // Validation for each step
   const validateStep = (step: number): boolean => {
     const newErrors: FormErrors = {};
-    
+
     if (step === 1) {
       // Personal Information validation
       if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
@@ -151,11 +147,11 @@ export function ApplicationPage() {
       }
       if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
       if (!formData.currentLocation.trim()) newErrors.currentLocation = 'Current location is required';
-      
+
       // Resume validation
       if (!formData.resumeFile) newErrors.resumeFile = 'Resume is required';
     }
-    
+
     if (step === 2) {
       // Screening Questions validation
       const screeningQuestions = job?.screeningQuestions || [];
@@ -168,11 +164,11 @@ export function ApplicationPage() {
         }
       }
     }
-    
+
     if (step === 3) {
       if (!formData.agreedToTerms) newErrors.agreedToTerms = 'You must agree to the terms';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -202,7 +198,7 @@ export function ApplicationPage() {
     const allowedExtensions = ['.pdf', '.doc', '.docx'];
     const maxSize = 5 * 1024 * 1024; // 5MB
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-    
+
     if (!allowedExtensions.includes(ext)) {
       return 'Invalid file format. Please upload PDF, DOC, or DOCX';
     }
@@ -252,10 +248,10 @@ export function ApplicationPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateStep(3) || !jobId) return;
-    
+
     setIsSubmitting(true);
     setErrors({});
-    
+
     try {
       const submitData = new FormData();
       submitData.append('jobId', jobId);
@@ -265,22 +261,22 @@ export function ApplicationPage() {
       submitData.append('currentLocation', formData.currentLocation);
       submitData.append('workAuthorization', formData.workAuthorization || 'no');
       submitData.append('agreedToTerms', String(formData.agreedToTerms));
-      
+
       if (formData.linkedinProfile) submitData.append('linkedinProfile', formData.linkedinProfile);
       if (formData.portfolioUrl) submitData.append('portfolioUrl', formData.portfolioUrl);
       if (formData.coverLetter) submitData.append('coverLetter', formData.coverLetter);
       if (formData.desiredSalary) submitData.append('desiredSalary', formData.desiredSalary);
       if (formData.resumeFile) submitData.append('resume', formData.resumeFile);
-      
+
       // Add screening answers as JSON string
       if (Object.keys(formData.screeningAnswers).length > 0) {
         submitData.append('screeningAnswers', JSON.stringify(formData.screeningAnswers));
       }
-      
+
       await api.post('/public/applications', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       setSubmitSuccess(true);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string; code?: string } } };
@@ -289,6 +285,33 @@ export function ApplicationPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Header Component
+  const Header = () => {
+    if (!job) return null;
+    return (
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {job.companyLogo ? (
+              <img src={job.companyLogo} alt={job.companyName} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border border-slate-100" />
+            ) : (
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                {job.companyName.charAt(0)}
+              </div>
+            )}
+            <div>
+              <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight line-clamp-1">{job.title}</h1>
+              <p className="text-xs text-slate-500 line-clamp-1">{job.companyName} • {job.location}</p>
+            </div>
+          </div>
+          <Link to="/" className="text-xs sm:text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors">
+            Browse Jobs
+          </Link>
+        </div>
+      </div>
+    );
   };
 
   // Loading state
@@ -317,43 +340,30 @@ export function ApplicationPage() {
     );
   }
 
-  // Success state
+  // Success View
   if (submitSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4">
-        <div className="text-center max-w-md w-full">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-            <svg className="w-7 h-7 sm:w-8 sm:h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-50 flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Application Submitted!</h2>
+            <p className="text-slate-600 mb-8 leading-relaxed">
+              Thanks for applying to <strong>{job.companyName}</strong>. We've received your application for the <strong>{job.title}</strong> role.
+            </p>
+            <Link to="/" className="block w-full py-3 px-4 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-colors">
+              Back to Jobs
+            </Link>
           </div>
-          <h1 className="text-lg sm:text-xl font-semibold text-[#111827] mb-2">Application Submitted!</h1>
-          <p className="text-sm sm:text-base text-[#64748b] mb-6">
-            Thank you for applying to {job.title} at {job.companyName}. We'll review your application and get back to you soon.
-          </p>
-          <Link to="/" className="text-[#0b6cf0] hover:underline inline-block min-h-[44px] leading-[44px] touch-manipulation">Return to homepage</Link>
         </div>
       </div>
     );
   }
-
-  // Step indicator component - Responsive with accessibility
-  const StepIndicator = () => (
-    <div className="mb-6 sm:mb-8" role="progressbar" aria-valuenow={formSteps[currentStep - 1].progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Application progress: Step ${currentStep} of 3`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs sm:text-sm font-medium text-[#374151]">
-          Step {currentStep} of 3: {formSteps[currentStep - 1].title}
-        </span>
-        <span className="text-xs sm:text-sm text-[#64748b]" aria-hidden="true">{formSteps[currentStep - 1].progress}%</span>
-      </div>
-      <div className="w-full bg-[#e2e8f0] rounded-full h-2">
-        <div 
-          className="bg-[#0b6cf0] h-2 rounded-full transition-all duration-300"
-          style={{ width: `${formSteps[currentStep - 1].progress}%` }}
-        />
-      </div>
-    </div>
-  );
 
   // Helper function to update screening answer
   const updateScreeningAnswer = (questionId: string, value: string | string[] | number | boolean) => {
@@ -377,7 +387,7 @@ export function ApplicationPage() {
   // Step 1: Screening Questions
   const renderScreeningQuestions = () => {
     const screeningQuestions = job?.screeningQuestions || [];
-    
+
     if (screeningQuestions.length === 0) {
       // Skip to next step if no screening questions
       return (
@@ -410,7 +420,7 @@ export function ApplicationPage() {
             <label className="form-label">
               {index + 1}. {question.question} {question.required && <span className="text-red-500">*</span>}
             </label>
-            
+
             {question.type === 'text' && (
               <input
                 type="text"
@@ -420,7 +430,7 @@ export function ApplicationPage() {
                 placeholder="Enter your answer..."
               />
             )}
-            
+
             {question.type === 'textarea' && (
               <textarea
                 value={(formData.screeningAnswers[question.id] as string) || ''}
@@ -429,7 +439,7 @@ export function ApplicationPage() {
                 placeholder="Enter your answer..."
               />
             )}
-            
+
             {question.type === 'number' && (
               <input
                 type="number"
@@ -439,7 +449,7 @@ export function ApplicationPage() {
                 placeholder="Enter a number..."
               />
             )}
-            
+
             {question.type === 'yes_no' && (
               <div className="flex gap-4 mt-2">
                 <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
@@ -464,7 +474,7 @@ export function ApplicationPage() {
                 </label>
               </div>
             )}
-            
+
             {question.type === 'single_choice' && question.options && (
               <div className="space-y-2 mt-2">
                 {question.options.map((option, optIndex) => (
@@ -481,7 +491,7 @@ export function ApplicationPage() {
                 ))}
               </div>
             )}
-            
+
             {question.type === 'multiple_choice' && question.options && (
               <div className="space-y-2 mt-2">
                 {question.options.map((option, optIndex) => {
@@ -506,7 +516,7 @@ export function ApplicationPage() {
                 })}
               </div>
             )}
-            
+
             {errors[`screening_${question.id}`] && (
               <p className="form-error mt-1">{errors[`screening_${question.id}`]}</p>
             )}
@@ -523,7 +533,7 @@ export function ApplicationPage() {
       {/* Personal Information Section */}
       <div className="space-y-4">
         <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4">Personal Information</h2>
-        
+
         {/* Responsive grid: 1 column on mobile, 2 columns on tablet+ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="form-group">
@@ -540,7 +550,7 @@ export function ApplicationPage() {
             />
             {errors.fullName && <p className="form-error" id="fullName-error" role="alert">{errors.fullName}</p>}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="email" className="form-label">Email Address *</label>
             <input
@@ -555,7 +565,7 @@ export function ApplicationPage() {
             />
             {errors.email && <p className="form-error" id="email-error" role="alert">{errors.email}</p>}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="phone" className="form-label">Phone Number *</label>
             <input
@@ -570,7 +580,7 @@ export function ApplicationPage() {
             />
             {errors.phone && <p className="form-error" id="phone-error" role="alert">{errors.phone}</p>}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="currentLocation" className="form-label">Current Location *</label>
             <input
@@ -601,7 +611,7 @@ export function ApplicationPage() {
                 placeholder="https://linkedin.com/in/johndoe"
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="portfolioUrl" className="form-label">Portfolio / Website</label>
               <input
@@ -620,7 +630,7 @@ export function ApplicationPage() {
       {/* Resume Upload Section */}
       <div className="space-y-4 pt-4 sm:pt-6 border-t border-[#e2e8f0]">
         <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4" id="resume-section-heading">Resume / CV</h2>
-        
+
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -643,7 +653,7 @@ export function ApplicationPage() {
             className="hidden"
             aria-label="Upload resume file"
           />
-          
+
           {formData.resumeFile ? (
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <svg className="w-8 h-8 text-[#0b6cf0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -680,7 +690,7 @@ export function ApplicationPage() {
       {/* Additional Information Section */}
       <div className="space-y-4 pt-4 sm:pt-6 border-t border-[#e2e8f0]">
         <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4">Additional Information</h2>
-        
+
         <div className="form-group">
           <label htmlFor="coverLetter" className="form-label">Cover Letter (Optional)</label>
           <textarea
@@ -691,7 +701,7 @@ export function ApplicationPage() {
             placeholder="Tell us why you're interested in this position..."
           />
         </div>
-        
+
         <div className="form-group">
           <label htmlFor="desiredSalary" className="form-label">Desired Salary (Optional)</label>
           <input
@@ -703,7 +713,7 @@ export function ApplicationPage() {
             placeholder="e.g., $80,000 - $100,000"
           />
         </div>
-        
+
         <div className="form-group">
           <label className="form-label" id="work-auth-label">Are you authorized to work in this location? *</label>
           <div className="flex gap-4 sm:gap-6 mt-2" role="radiogroup" aria-labelledby="work-auth-label">
@@ -740,248 +750,239 @@ export function ApplicationPage() {
   // Responsive: Adjusted grid and spacing for different screen sizes
   const renderStep2 = () => {
     const screeningQuestions = job?.screeningQuestions || [];
-    
+
     return (
-    <div className="space-y-4 sm:space-y-6 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
-      <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4">Review Your Application</h2>
-      
-      <div className="bg-[#f8fafc] rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
-        {/* Screening Questions Review */}
-        {screeningQuestions.length > 0 && (
-          <div>
-            <h3 className="text-sm font-medium text-[#64748b] mb-2">Screening Questions</h3>
-            <div className="space-y-2 text-sm">
-              {screeningQuestions.map((question, index) => {
-                const answer = formData.screeningAnswers[question.id];
-                let displayAnswer = 'Not answered';
-                if (answer !== undefined && answer !== '') {
-                  if (Array.isArray(answer)) {
-                    displayAnswer = answer.join(', ');
-                  } else {
-                    displayAnswer = String(answer);
+      <div className="space-y-4 sm:space-y-6 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
+        <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4">Review Your Application</h2>
+
+        <div className="bg-[#f8fafc] rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
+          {/* Screening Questions Review */}
+          {screeningQuestions.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-[#64748b] mb-2">Screening Questions</h3>
+              <div className="space-y-2 text-sm">
+                {screeningQuestions.map((question, index) => {
+                  const answer = formData.screeningAnswers[question.id];
+                  let displayAnswer = 'Not answered';
+                  if (answer !== undefined && answer !== '') {
+                    if (Array.isArray(answer)) {
+                      displayAnswer = answer.join(', ');
+                    } else {
+                      displayAnswer = String(answer);
+                    }
                   }
-                }
-                return (
-                  <div key={question.id} className="pb-2 border-b border-[#e2e8f0] last:border-0">
-                    <p className="text-[#64748b]">{index + 1}. {question.question}</p>
-                    <p className="text-[#111827] mt-1">{displayAnswer}</p>
-                  </div>
-                );
-              })}
+                  return (
+                    <div key={question.id} className="pb-2 border-b border-[#e2e8f0] last:border-0">
+                      <p className="text-[#64748b]">{index + 1}. {question.question}</p>
+                      <p className="text-[#111827] mt-1">{displayAnswer}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {screeningQuestions.length > 0 && (
+            <div className="border-t border-[#e2e8f0] pt-3 sm:pt-4" />
+          )}
+
+          <div>
+            <h3 className="text-sm font-medium text-[#64748b] mb-2">Personal Information</h3>
+            {/* Responsive grid: 1 column on mobile, 2 columns on tablet+ */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2 text-sm">
+              <p><span className="text-[#64748b]">Name:</span> <span className="text-[#111827]">{formData.fullName}</span></p>
+              <p><span className="text-[#64748b]">Email:</span> <span className="text-[#111827] break-all">{formData.email}</span></p>
+              <p><span className="text-[#64748b]">Phone:</span> <span className="text-[#111827]">{formData.phone}</span></p>
+              <p><span className="text-[#64748b]">Location:</span> <span className="text-[#111827]">{formData.currentLocation}</span></p>
+              {formData.linkedinProfile && <p className="col-span-1 sm:col-span-2"><span className="text-[#64748b]">LinkedIn:</span> <span className="text-[#111827] break-all">{formData.linkedinProfile}</span></p>}
+              {formData.portfolioUrl && <p className="col-span-1 sm:col-span-2"><span className="text-[#64748b]">Portfolio:</span> <span className="text-[#111827] break-all">{formData.portfolioUrl}</span></p>}
             </div>
           </div>
-        )}
-        
-        {screeningQuestions.length > 0 && (
-          <div className="border-t border-[#e2e8f0] pt-3 sm:pt-4" />
-        )}
-        
-        <div>
-          <h3 className="text-sm font-medium text-[#64748b] mb-2">Personal Information</h3>
-          {/* Responsive grid: 1 column on mobile, 2 columns on tablet+ */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2 text-sm">
-            <p><span className="text-[#64748b]">Name:</span> <span className="text-[#111827]">{formData.fullName}</span></p>
-            <p><span className="text-[#64748b]">Email:</span> <span className="text-[#111827] break-all">{formData.email}</span></p>
-            <p><span className="text-[#64748b]">Phone:</span> <span className="text-[#111827]">{formData.phone}</span></p>
-            <p><span className="text-[#64748b]">Location:</span> <span className="text-[#111827]">{formData.currentLocation}</span></p>
-            {formData.linkedinProfile && <p className="col-span-1 sm:col-span-2"><span className="text-[#64748b]">LinkedIn:</span> <span className="text-[#111827] break-all">{formData.linkedinProfile}</span></p>}
-            {formData.portfolioUrl && <p className="col-span-1 sm:col-span-2"><span className="text-[#64748b]">Portfolio:</span> <span className="text-[#111827] break-all">{formData.portfolioUrl}</span></p>}
+
+          <div className="border-t border-[#e2e8f0] pt-3 sm:pt-4">
+            <h3 className="text-sm font-medium text-[#64748b] mb-2">Resume</h3>
+            <p className="text-sm text-[#111827] break-all">{formData.resumeFile?.name || 'No file uploaded'}</p>
           </div>
-        </div>
-        
-        <div className="border-t border-[#e2e8f0] pt-3 sm:pt-4">
-          <h3 className="text-sm font-medium text-[#64748b] mb-2">Resume</h3>
-          <p className="text-sm text-[#111827] break-all">{formData.resumeFile?.name || 'No file uploaded'}</p>
-        </div>
-        
-        <div className="border-t border-[#e2e8f0] pt-3 sm:pt-4">
-          <h3 className="text-sm font-medium text-[#64748b] mb-2">Additional Information</h3>
-          <div className="text-sm space-y-1">
-            {formData.coverLetter && <p><span className="text-[#64748b]">Cover Letter:</span> <span className="text-[#111827]">{formData.coverLetter.substring(0, 100)}...</span></p>}
-            {formData.desiredSalary && <p><span className="text-[#64748b]">Desired Salary:</span> <span className="text-[#111827]">{formData.desiredSalary}</span></p>}
-            <p><span className="text-[#64748b]">Work Authorization:</span> <span className="text-[#111827]">{formData.workAuthorization === 'yes' ? 'Yes' : formData.workAuthorization === 'no' ? 'No' : 'Not specified'}</span></p>
+
+          <div className="border-t border-[#e2e8f0] pt-3 sm:pt-4">
+            <h3 className="text-sm font-medium text-[#64748b] mb-2">Additional Information</h3>
+            <div className="text-sm space-y-1">
+              {formData.coverLetter && <p><span className="text-[#64748b]">Cover Letter:</span> <span className="text-[#111827]">{formData.coverLetter.substring(0, 100)}...</span></p>}
+              {formData.desiredSalary && <p><span className="text-[#64748b]">Desired Salary:</span> <span className="text-[#111827]">{formData.desiredSalary}</span></p>}
+              <p><span className="text-[#64748b]">Work Authorization:</span> <span className="text-[#111827]">{formData.workAuthorization === 'yes' ? 'Yes' : formData.workAuthorization === 'no' ? 'No' : 'Not specified'}</span></p>
+            </div>
           </div>
         </div>
       </div>
-      
-      <div className="form-group">
-        <label className="flex items-start gap-3 cursor-pointer min-h-[44px] touch-manipulation">
-          <input
-            type="checkbox"
-            checked={formData.agreedToTerms}
-            onChange={(e) => updateFormData('agreedToTerms', e.target.checked)}
-            className="w-5 h-5 sm:w-4 sm:h-4 mt-0.5 text-[#0b6cf0] rounded flex-shrink-0"
-            aria-invalid={errors.agreedToTerms ? 'true' : 'false'}
-            aria-describedby={errors.agreedToTerms ? 'terms-error' : undefined}
-            aria-label="I agree to the Privacy Policy and Terms of Service"
-          />
-          <span className="text-sm text-[#374151]">
-            I agree to the <a href="#" className="text-[#0b6cf0] hover:underline">Privacy Policy</a> and{' '}
-            <a href="#" className="text-[#0b6cf0] hover:underline">Terms of Service</a>. I understand that my information will be processed in accordance with these policies.
-          </span>
-        </label>
-        {errors.agreedToTerms && <p className="form-error mt-2" id="terms-error" role="alert">{errors.agreedToTerms}</p>}
-      </div>
-      
-      {errors.submit && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200" role="alert">
-          <p className="text-sm text-red-700">{errors.submit}</p>
-        </div>
-      )}
-    </div>
-  );
+    );
   };
 
-  // Main render - Responsive layout (Requirements 5.1, 5.2, 5.3, 5.4, 5.5)
-  // Mobile (< 768px): Stack content vertically, full-width form fields, touch-friendly buttons
-  // Tablet (768px - 1024px): Adjusted column proportions, optimized spacing
-  // Desktop (> 1024px): Two-column layout with sticky job details
-  
-  // Job Details View - Initial state showing job info with Apply button (Requirements 3.1, 3.2, 3.4)
-  const renderJobDetailsView = () => (
-    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-0">
-      <JobDetailsPanel
-        job={{
-          id: job.id,
-          title: job.title,
-          department: job.department,
-          description: job.description,
-          openings: job.openings,
-          experienceMin: job.experienceMin,
-          experienceMax: job.experienceMax,
-          salaryMin: job.salaryMin,
-          salaryMax: job.salaryMax,
-          variables: job.variables,
-          educationQualification: job.educationQualification,
-          ageUpTo: job.ageUpTo,
-          skills: job.skills,
-          preferredIndustry: job.preferredIndustry,
-          workMode: job.workMode,
-          locations: job.locations,
-          priority: job.priority,
-          jobDomain: job.jobDomain,
-          // Additional job description sections (Requirement 1.3)
-          responsibilities: job.responsibilities,
-          requirements: job.requirements,
-          benefits: job.benefits,
-        }}
-        company={{
-          name: job.companyName,
-          logoUrl: job.companyLogo,
-        }}
-      />
-      
-      {/* Apply Button at bottom - Requirement 3.2, 5.5 (touch-friendly min 44px) */}
-      <div className="mt-6 flex justify-center px-4 sm:px-0">
-        <button
-          type="button"
-          onClick={handleApplyClick}
-          className="w-full sm:w-auto px-8 py-3 text-white bg-[#0b6cf0] rounded-full hover:bg-[#0958c7] transition-colors text-lg font-medium shadow-lg hover:shadow-xl min-h-[44px] touch-manipulation"
-        >
-          Apply for this Position
-        </button>
-      </div>
-    </div>
-  );
 
-  // Application Form View - Shown after clicking Apply (Requirement 3.3)
-  // Responsive layout: stacked on mobile, two-column on tablet/desktop
-  const renderApplicationFormView = () => (
-    <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 lg:px-0">
-      {/* Left Column - Job Details Panel */}
-      {/* Mobile: Full width, not sticky */}
-      {/* Tablet (768px-1024px): 45% width */}
-      {/* Desktop (>1024px): 40% width, sticky */}
-      <div className="w-full lg:w-[40%] md:w-[45%] lg:sticky lg:top-8 lg:self-start">
-        <JobDetailsPanel
-          job={{
-            id: job.id,
-            title: job.title,
-            department: job.department,
-            description: job.description,
-            openings: job.openings,
-            experienceMin: job.experienceMin,
-            experienceMax: job.experienceMax,
-            salaryMin: job.salaryMin,
-            salaryMax: job.salaryMax,
-            variables: job.variables,
-            educationQualification: job.educationQualification,
-            ageUpTo: job.ageUpTo,
-            skills: job.skills,
-            preferredIndustry: job.preferredIndustry,
-            workMode: job.workMode,
-            locations: job.locations,
-            priority: job.priority,
-            jobDomain: job.jobDomain,
-            // Additional job description sections (Requirement 1.3)
-            responsibilities: job.responsibilities,
-            requirements: job.requirements,
-            benefits: job.benefits,
-          }}
-          company={{
-            name: job.companyName,
-            logoUrl: job.companyLogo,
-          }}
-        />
-      </div>
 
-      {/* Right Column - Application Form */}
-      {/* Mobile: Full width */}
-      {/* Tablet (768px-1024px): 55% width */}
-      {/* Desktop (>1024px): 60% width */}
-      <div className="w-full lg:w-[60%] md:w-[55%]">
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-[#e2e8f0] max-h-[90vh] overflow-y-auto">
-          <StepIndicator />
-          
-          <form onSubmit={handleSubmit}>
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderScreeningQuestions()}
-            {currentStep === 3 && renderStep2()}
-            
-            {/* Navigation Buttons - Touch-friendly (min 44px) - Requirement 5.5 */}
-            <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 sm:gap-0 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-[#e2e8f0]">
-              {currentStep > 1 ? (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="w-full sm:w-auto px-6 py-2.5 text-[#374151] bg-white border border-[#e2e8f0] rounded-full hover:bg-[#f8fafc] transition-colors min-h-[44px] touch-manipulation"
-                >
-                  Back
-                </button>
-              ) : (
-                <div className="hidden sm:block" />
-              )}
-              
-              {currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="w-full sm:w-auto px-6 py-2.5 text-white bg-[#0b6cf0] rounded-full hover:bg-[#0958c7] transition-colors min-h-[44px] touch-manipulation"
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto px-6 py-2.5 text-white bg-[#0b6cf0] rounded-full hover:bg-[#0958c7] transition-colors disabled:opacity-50 min-h-[44px] touch-manipulation"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit Application'}
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
 
+  // Split Layout
   return (
-    <div className="min-h-screen bg-[#f8fafc] py-4 sm:py-6 lg:py-8 px-0 sm:px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Conditional rendering based on showApplicationForm state - Requirements 3.3, 3.4 */}
-        {showApplicationForm ? renderApplicationFormView() : renderJobDetailsView()}
-      </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <Header />
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+
+          {/* LEFT COLUMN: Job Details (Scrollable) */}
+          <div className="lg:col-span-7 space-y-6 mb-8 lg:mb-0">
+            {/* Mobile Apply Button (Visible only on small screens) */}
+            <div className="lg:hidden mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm sticky top-20 z-20">
+              <button
+                onClick={() => document.getElementById('application-form')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
+              >
+                Apply for this Job
+              </button>
+            </div>
+
+            {/* Job Details Panel - Using job data */}
+            {job && (
+              <JobDetailsPanel
+                job={job}
+                company={{ name: job.companyName, logoUrl: job.companyLogo }}
+              />
+            )}
+
+          </div>
+
+          {/* RIGHT COLUMN: Application Form (Sticky) */}
+          <div className="lg:col-span-5 relative">
+            <div id="application-form" className="lg:sticky lg:top-24 transition-all duration-300">
+              <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
+                {/* Form Header */}
+                <div className="px-6 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                  <h3 className="text-lg font-bold">Apply Now</h3>
+                  <div className="mt-4 flex items-center justify-between text-xs font-medium text-blue-100">
+                    <span>Step {currentStep} of {formSteps.length}</span>
+                    <span>{Math.round((currentStep / formSteps.length) * 100)}% Complete</span>
+                  </div>
+                  {/* Progress Bar inside Header */}
+                  <div className="mt-2 h-1.5 bg-blue-900/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${(currentStep / formSteps.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSubmit} className="p-6">
+                  {currentStep === 1 && (
+                    <>
+                      <h4 className="text-sm uppercase tracking-wider text-slate-500 font-bold mb-5 flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs">1</span>
+                        Personal Info
+                      </h4>
+                      {renderStep1()}
+                    </>
+                  )}
+
+                  {currentStep === 2 && (
+                    <>
+                      <h4 className="text-sm uppercase tracking-wider text-slate-500 font-bold mb-5 flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs">2</span>
+                        Screening Questions
+                      </h4>
+                      {renderScreeningQuestions()}
+                    </>
+                  )}
+
+                  {currentStep === 3 && (
+                    <>
+                      <h4 className="text-sm uppercase tracking-wider text-slate-500 font-bold mb-5 flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs">3</span>
+                        Review & Submit
+                      </h4>
+                      {renderStep2()}
+
+                      {/* Terms */}
+                      <div className="mt-6 pt-4 border-t border-slate-100">
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <div className="relative flex items-center mt-0.5">
+                            <input
+                              type="checkbox"
+                              checked={formData.agreedToTerms}
+                              onChange={(e) => updateFormData('agreedToTerms', e.target.checked)}
+                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                            />
+                          </div>
+                          <span className="text-xs text-slate-500 group-hover:text-slate-600 transition-colors">
+                            I agree to the <a href="#" className="text-blue-600 hover:underline">Terms of Service</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>.
+                          </span>
+                        </label>
+                        {errors.agreedToTerms && <p className="text-xs text-red-500 mt-1 ml-7">{errors.agreedToTerms}</p>}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Actions */}
+                  <div className="mt-8 flex items-center gap-3 pt-4 border-t border-slate-100">
+                    {currentStep > 1 && (
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        className="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+                      >
+                        Back
+                      </button>
+                    )}
+
+                    {currentStep < 3 ? (
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="flex-1 px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        Next Step
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="flex-1 px-5 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl shadow-md shadow-green-200 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isSubmitting ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            Submit Application
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {errors.submit && (
+                    <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      {errors.submit}
+                    </div>
+                  )}
+
+                </form>
+              </div>
+
+              {/* Security Badge */}
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Secure Application
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </main>
     </div>
   );
 }

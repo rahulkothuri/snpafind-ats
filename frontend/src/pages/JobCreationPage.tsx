@@ -75,7 +75,7 @@ const formatCurrency = (value: number | ''): string => {
   if (value === '' || value === null || value === undefined) return '';
   const num = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(num)) return '';
-  
+
   // Format in Indian numbering system (lakhs)
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -95,7 +95,7 @@ export function JobCreationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  
+
   // State for JobShareModal - Requirement 7.1
   const [showShareModal, setShowShareModal] = useState(false);
   const [createdJobId, setCreatedJobId] = useState<string>('');
@@ -106,7 +106,7 @@ export function JobCreationPage() {
 
   // Fetch company users for recruiter assignment - Requirement 1.1
   const { data: users = [], isLoading: isLoadingUsers } = useUsers();
-  
+
   // Filter to get only recruiters and hiring managers who can be assigned to jobs
   const recruiters = users.filter(
     (u) => (u.role === 'recruiter' || u.role === 'hiring_manager') && u.isActive
@@ -123,23 +123,23 @@ export function JobCreationPage() {
           // Convert pipeline stages from API format to form format
           const pipelineStages: EnhancedPipelineStageConfig[] = job.stages && job.stages.length > 0
             ? job.stages
-                .filter(stage => !stage.parentId) // Only top-level stages
-                .sort((a, b) => a.position - b.position)
-                .map(stage => ({
-                  id: stage.id,
-                  name: stage.name,
-                  position: stage.position,
-                  isMandatory: stage.isMandatory || false,
-                  subStages: (stage.subStages || [])
-                    .sort((a, b) => a.position - b.position)
-                    .map(sub => ({
-                      id: sub.id,
-                      name: sub.name,
-                      position: sub.position,
-                    })),
-                  type: 'screening', // Default type, will be inferred from stage name
-                  isCustom: !stage.isDefault,
-                }))
+              .filter(stage => !stage.parentId) // Only top-level stages
+              .sort((a, b) => a.position - b.position)
+              .map(stage => ({
+                id: stage.id,
+                name: stage.name,
+                position: stage.position,
+                isMandatory: stage.isMandatory || false,
+                subStages: (stage.subStages || [])
+                  .sort((a, b) => a.position - b.position)
+                  .map(sub => ({
+                    id: sub.id,
+                    name: sub.name,
+                    position: sub.position,
+                  })),
+                type: 'screening', // Default type, will be inferred from stage name
+                isCustom: !stage.isDefault,
+              }))
             : DEFAULT_PIPELINE_STAGES;
 
           setFormData({
@@ -194,19 +194,19 @@ export function JobCreationPage() {
     // Experience range required validation - Requirement 1.7
     const expMin = formData.experienceMin;
     const expMax = formData.experienceMax;
-    
+
     if (expMin === '' || expMin === null || expMin === undefined) {
       newErrors.experienceMin = 'Minimum experience is required';
     } else if (expMin < 0) {
       newErrors.experienceMin = 'Minimum experience cannot be negative';
     }
-    
+
     if (expMax === '' || expMax === null || expMax === undefined) {
       newErrors.experienceMax = 'Maximum experience is required';
     } else if (expMax < 0) {
       newErrors.experienceMax = 'Maximum experience cannot be negative';
     }
-    
+
     // Experience range validation - Requirement 1.2
     if (expMin !== '' && expMax !== '' && typeof expMin === 'number' && typeof expMax === 'number' && expMin > expMax) {
       newErrors.experienceMax = 'Maximum experience must be greater than or equal to minimum';
@@ -215,7 +215,7 @@ export function JobCreationPage() {
     // Salary range validation - Requirement 1.3
     const salMin = formData.salaryMin;
     const salMax = formData.salaryMax;
-    
+
     if (salMin !== '' && salMin < 0) {
       newErrors.salaryMin = 'Minimum salary cannot be negative';
     }
@@ -243,7 +243,7 @@ export function JobCreationPage() {
   // Handle form submission - Requirements 20.3, 20.4
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validate()) return;
 
     setIsSubmitting(true);
@@ -281,10 +281,10 @@ export function JobCreationPage() {
       if (formData.assignedRecruiterId) payload.assignedRecruiterId = formData.assignedRecruiterId;
 
       // Always include these complex objects if they exist and have content
-      if (formData.mandatoryCriteria && 
-          formData.mandatoryCriteria.title && 
-          formData.mandatoryCriteria.criteria && 
-          formData.mandatoryCriteria.criteria.length > 0) {
+      if (formData.mandatoryCriteria &&
+        formData.mandatoryCriteria.title &&
+        formData.mandatoryCriteria.criteria &&
+        formData.mandatoryCriteria.criteria.length > 0) {
         payload.mandatoryCriteria = formData.mandatoryCriteria;
       }
 
@@ -390,130 +390,262 @@ export function JobCreationPage() {
       footerRightText=""
       onLogout={logout}
     >
-      <div className="max-w-3xl mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="max-w-[1600px] mx-auto p-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Error Banner */}
           {submitError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
               <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               <div>
                 <p className="text-sm font-medium text-red-800">Error</p>
-                <p className="text-sm text-red-700">{submitError}</p>
+                <p className="text-xs text-red-700">{submitError}</p>
               </div>
             </div>
           )}
 
-          {/* Basic Information Card */}
-          <div className="form-section">
-            <h3 className="form-section-header">Basic Information</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Job Title - Required */}
-              <div className="md:col-span-2 form-group">
-                <label htmlFor="title" className="form-label form-label-required">
-                  Job Title
+          {/* Top Section: Basic Info Grid */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Basic Information</h3>
+
+            <div className="grid grid-cols-4 gap-x-4 gap-y-3">
+              {/* Row 1: Title (2), Recruiter (1), Priority (1) */}
+              <div className="col-span-2">
+                <label htmlFor="title" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Job Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleChange('title', e.target.value)}
-                  className={`form-input ${errors.title ? 'error' : ''}`}
+                  className={`w-full px-3 py-1.5 text-sm border rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${errors.title ? 'border-red-300' : 'border-gray-200'}`}
                   placeholder="e.g., Senior Backend Engineer"
                 />
-                {errors.title && <p className="form-error">{errors.title}</p>}
+                {errors.title && <p className="text-[10px] text-red-500 mt-0.5">{errors.title}</p>}
               </div>
 
-              {/* Experience Range - Requirement 1.2, 1.7 */}
-              <div className="form-group">
-                <label className="form-label form-label-required">
-                  Experience Range (Years)
+              <div className="col-span-1">
+                <label htmlFor="assignedRecruiterId" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Assign Recruiter
                 </label>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <input
-                      id="experienceMin"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={formData.experienceMin}
-                      onChange={(e) => handleChange('experienceMin', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      className={`form-input ${errors.experienceMin ? 'error' : ''}`}
-                      placeholder="Min"
-                    />
-                  </div>
-                  <span className="text-[#64748b] text-sm">to</span>
-                  <div className="flex-1">
-                    <input
-                      id="experienceMax"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={formData.experienceMax}
-                      onChange={(e) => handleChange('experienceMax', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      className={`form-input ${errors.experienceMax ? 'error' : ''}`}
-                      placeholder="Max"
-                    />
-                  </div>
-                </div>
-                {errors.experienceMin && <p className="form-error">{errors.experienceMin}</p>}
-                {errors.experienceMax && <p className="form-error">{errors.experienceMax}</p>}
+                <select
+                  id="assignedRecruiterId"
+                  value={formData.assignedRecruiterId}
+                  onChange={(e) => handleChange('assignedRecruiterId', e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                  disabled={isLoadingUsers}
+                >
+                  <option value="">Select recruiter</option>
+                  {recruiters.map((recruiter) => (
+                    <option key={recruiter.id} value={recruiter.id}>
+                      {recruiter.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Salary Range - Requirement 1.3 */}
-              <div className="form-group">
-                <label className="form-label">
-                  Salary Range (₹ per annum)
+              <div className="col-span-1">
+                <label htmlFor="priority" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Priority
+                </label>
+                <select
+                  id="priority"
+                  value={formData.priority}
+                  onChange={(e) => handleChange('priority', e.target.value as JobPriority | '')}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select priority</option>
+                  {JOB_PRIORITIES.map((priority) => (
+                    <option key={priority.value} value={priority.value}>{priority.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 2: Experience (1), Salary (1), Openings (1), Work Mode (1) */}
+              <div className="col-span-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Experience (Yrs) <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b] text-sm">₹</span>
-                    <input
-                      id="salaryMin"
-                      type="number"
-                      min="0"
-                      step="10000"
-                      value={formData.salaryMin}
-                      onChange={(e) => handleChange('salaryMin', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      className={`form-input pl-7 ${errors.salaryMin ? 'error' : ''}`}
-                      placeholder="Min"
-                    />
-                  </div>
-                  <span className="text-[#64748b] text-sm">to</span>
-                  <div className="flex-1 relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b] text-sm">₹</span>
-                    <input
-                      id="salaryMax"
-                      type="number"
-                      min="0"
-                      step="10000"
-                      value={formData.salaryMax}
-                      onChange={(e) => handleChange('salaryMax', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      className={`form-input pl-7 ${errors.salaryMax ? 'error' : ''}`}
-                      placeholder="Max"
-                    />
-                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={formData.experienceMin}
+                    onChange={(e) => handleChange('experienceMin', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    className={`w-full px-2 py-1.5 text-sm border rounded-md focus:ring-1 focus:ring-blue-500 outline-none ${errors.experienceMin ? 'border-red-300' : 'border-gray-200'}`}
+                    placeholder="Min"
+                  />
+                  <span className="text-gray-400 text-xs">-</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={formData.experienceMax}
+                    onChange={(e) => handleChange('experienceMax', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    className={`w-full px-2 py-1.5 text-sm border rounded-md focus:ring-1 focus:ring-blue-500 outline-none ${errors.experienceMax ? 'border-red-300' : 'border-gray-200'}`}
+                    placeholder="Max"
+                  />
                 </div>
-                {/* Display formatted currency preview */}
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Salary (₹ LPA)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="10000"
+                    value={formData.salaryMin}
+                    onChange={(e) => handleChange('salaryMin', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder="Min"
+                  />
+                  <span className="text-gray-400 text-xs">-</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="10000"
+                    value={formData.salaryMax}
+                    onChange={(e) => handleChange('salaryMax', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder="Max"
+                  />
+                </div>
                 {(formData.salaryMin !== '' || formData.salaryMax !== '') && (
-                  <p className="mt-1 text-xs text-[#64748b]">
-                    {formData.salaryMin !== '' && formData.salaryMax !== '' 
-                      ? `${formatCurrency(formData.salaryMin)} - ${formatCurrency(formData.salaryMax)}`
-                      : formData.salaryMin !== '' 
-                        ? `From ${formatCurrency(formData.salaryMin)}`
-                        : `Up to ${formatCurrency(formData.salaryMax)}`
-                    }
+                  <p className="text-[10px] text-gray-400 mt-1 truncate">
+                    {formData.salaryMin !== '' ? formatCurrency(formData.salaryMin) : ''}
+                    {formData.salaryMin !== '' && formData.salaryMax !== '' ? ' - ' : ''}
+                    {formData.salaryMax !== '' ? formatCurrency(formData.salaryMax) : ''}
                   </p>
                 )}
-                {errors.salaryMin && <p className="form-error">{errors.salaryMin}</p>}
-                {errors.salaryMax && <p className="form-error">{errors.salaryMax}</p>}
               </div>
 
-              {/* Variables/Incentives - Requirement 1.1 */}
-              <div className="md:col-span-2 form-group">
-                <label htmlFor="variables" className="form-label">
+              <div className="col-span-1">
+                <label htmlFor="openings" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Openings <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="openings"
+                  type="number"
+                  min="1"
+                  value={formData.openings}
+                  onChange={(e) => handleChange('openings', parseInt(e.target.value) || 1)}
+                  className={`w-full px-3 py-1.5 text-sm border rounded-md focus:ring-1 focus:ring-blue-500 outline-none ${errors.openings ? 'border-red-300' : 'border-gray-200'}`}
+                />
+              </div>
+
+              <div className="col-span-1">
+                <label htmlFor="workMode" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Work Mode <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="workMode"
+                  value={formData.workMode}
+                  onChange={(e) => handleChange('workMode', e.target.value as WorkMode | '')}
+                  className={`w-full px-3 py-1.5 text-sm border rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white ${errors.workMode ? 'border-red-300' : 'border-gray-200'}`}
+                >
+                  <option value="">Select mode</option>
+                  {WORK_MODES.map((mode) => (
+                    <option key={mode.value} value={mode.value}>{mode.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 3: Locations (1), Industry (1), Domain (1), Education (1) */}
+              <div className="col-span-1">
+                <label htmlFor="locations" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Locations <span className="text-red-500">*</span>
+                </label>
+                <div className="h-[34px]">
+                  <MultiSelect
+                    id="locations"
+                    options={CITIES}
+                    value={formData.locations}
+                    onChange={(locations) => handleChange('locations', locations)}
+                    placeholder="Select..."
+                    searchPlaceholder="Search..."
+                    maxDisplayTags={2}
+                    error={!!errors.locations}
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-1">
+                <label htmlFor="preferredIndustry" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Industry
+                </label>
+                <select
+                  id="preferredIndustry"
+                  value={formData.preferredIndustry}
+                  onChange={(e) => handleChange('preferredIndustry', e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select industry</option>
+                  {INDUSTRIES.map((industry) => (
+                    <option key={industry.value} value={industry.value}>{industry.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-1">
+                <label htmlFor="jobDomain" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Job Domain
+                </label>
+                <select
+                  id="jobDomain"
+                  value={formData.jobDomain}
+                  onChange={(e) => handleChange('jobDomain', e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select domain</option>
+                  {JOB_DOMAINS.map((domain) => (
+                    <option key={domain.value} value={domain.value}>{domain.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-1">
+                <label htmlFor="educationQualification" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Education
+                </label>
+                <select
+                  id="educationQualification"
+                  value={formData.educationQualification}
+                  onChange={(e) => handleChange('educationQualification', e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select...</option>
+                  {EDUCATION_QUALIFICATIONS.map((qual) => (
+                    <option key={qual.value} value={qual.value}>{qual.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 4: Skills (2), Variables (1), Age (1) */}
+              <div className="col-span-2">
+                <label htmlFor="skills" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Skills
+                </label>
+                <div className="h-[34px]">
+                  <MultiSelect
+                    id="skills"
+                    options={SKILLS}
+                    value={formData.skills}
+                    onChange={(skills) => handleChange('skills', skills)}
+                    placeholder="Select required skills..."
+                    searchPlaceholder="Search..."
+                    maxDisplayTags={4}
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-1">
+                <label htmlFor="variables" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Variables / Incentives
                 </label>
                 <input
@@ -521,36 +653,14 @@ export function JobCreationPage() {
                   type="text"
                   value={formData.variables}
                   onChange={(e) => handleChange('variables', e.target.value)}
-                  className="form-input"
-                  placeholder="e.g., Performance bonus, Stock options, Annual bonus up to 20%"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                  placeholder="e.g., Annual bonus"
                 />
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Describe any variable pay, bonuses, or incentives associated with this role
-                </p>
               </div>
 
-              {/* Education Qualification - Requirement 1.1 */}
-              <div className="form-group">
-                <label htmlFor="educationQualification" className="form-label">
-                  Education Qualification
-                </label>
-                <select
-                  id="educationQualification"
-                  value={formData.educationQualification}
-                  onChange={(e) => handleChange('educationQualification', e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Select qualification</option>
-                  {EDUCATION_QUALIFICATIONS.map((qual) => (
-                    <option key={qual.value} value={qual.value}>{qual.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Age Limit - Requirement 1.1 */}
-              <div className="form-group">
-                <label htmlFor="ageUpTo" className="form-label">
-                  Age Up To
+              <div className="col-span-1">
+                <label htmlFor="ageUpTo" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Max Age
                 </label>
                 <input
                   id="ageUpTo"
@@ -559,339 +669,128 @@ export function JobCreationPage() {
                   max="70"
                   value={formData.ageUpTo}
                   onChange={(e) => handleChange('ageUpTo', e.target.value === '' ? '' : parseInt(e.target.value))}
-                  className="form-input"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
                   placeholder="e.g., 35"
                 />
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Maximum age limit for candidates (optional)
-                </p>
-              </div>
-
-              {/* Skills Multi-Select - Requirement 1.1 */}
-              <div className="md:col-span-2 form-group">
-                <label htmlFor="skills" className="form-label">
-                  Skills
-                </label>
-                <MultiSelect
-                  id="skills"
-                  options={SKILLS}
-                  value={formData.skills}
-                  onChange={(skills) => handleChange('skills', skills)}
-                  placeholder="Select required skills..."
-                  searchPlaceholder="Search skills..."
-                  maxDisplayTags={8}
-                />
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Select the skills required for this position
-                </p>
-              </div>
-
-              {/* Preferred Industry - Requirement 1.1 */}
-              <div className="form-group">
-                <label htmlFor="preferredIndustry" className="form-label">
-                  Preferred Industry
-                </label>
-                <select
-                  id="preferredIndustry"
-                  value={formData.preferredIndustry}
-                  onChange={(e) => handleChange('preferredIndustry', e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Select industry</option>
-                  {INDUSTRIES.map((industry) => (
-                    <option key={industry.value} value={industry.value}>{industry.label}</option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Preferred industry background for candidates
-                </p>
-              </div>
-
-              {/* Work Mode - Requirement 1.5, 1.7 */}
-              <div className="form-group">
-                <label htmlFor="workMode" className="form-label form-label-required">
-                  Work Mode
-                </label>
-                <select
-                  id="workMode"
-                  value={formData.workMode}
-                  onChange={(e) => handleChange('workMode', e.target.value as WorkMode | '')}
-                  className={`form-select ${errors.workMode ? 'error' : ''}`}
-                >
-                  <option value="">Select work mode</option>
-                  {WORK_MODES.map((mode) => (
-                    <option key={mode.value} value={mode.value}>{mode.label}</option>
-                  ))}
-                </select>
-                {errors.workMode && <p className="form-error">{errors.workMode}</p>}
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Employment arrangement type for this position
-                </p>
-              </div>
-
-              {/* Job Locations Multi-Select - Requirement 1.4, 1.7 */}
-              <div className="form-group">
-                <label htmlFor="locations" className="form-label form-label-required">
-                  Job Locations
-                </label>
-                <MultiSelect
-                  id="locations"
-                  options={CITIES}
-                  value={formData.locations}
-                  onChange={(locations) => handleChange('locations', locations)}
-                  placeholder="Select job locations..."
-                  searchPlaceholder="Search cities..."
-                  maxDisplayTags={5}
-                  error={!!errors.locations}
-                />
-                {errors.locations && <p className="form-error">{errors.locations}</p>}
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Select one or more cities where this position is available
-                </p>
-              </div>
-
-              {/* Job Priority - Requirement 1.6 */}
-              <div className="form-group">
-                <label htmlFor="priority" className="form-label">
-                  Job Priority
-                </label>
-                <select
-                  id="priority"
-                  value={formData.priority}
-                  onChange={(e) => handleChange('priority', e.target.value as JobPriority | '')}
-                  className="form-select"
-                >
-                  <option value="">Select priority</option>
-                  {JOB_PRIORITIES.map((priority) => (
-                    <option key={priority.value} value={priority.value}>{priority.label}</option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Urgency level for filling this position
-                </p>
-              </div>
-
-              {/* Job Domain - Requirement 1.1 */}
-              <div className="form-group">
-                <label htmlFor="jobDomain" className="form-label">
-                  Job Domain
-                </label>
-                <select
-                  id="jobDomain"
-                  value={formData.jobDomain}
-                  onChange={(e) => handleChange('jobDomain', e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Select domain</option>
-                  {JOB_DOMAINS.map((domain) => (
-                    <option key={domain.value} value={domain.value}>{domain.label}</option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-[#64748b]">
-                  Functional area or category of the job role
-                </p>
-              </div>
-
-              {/* Assign Recruiter - Requirement 1.1 */}
-              <div className="form-group">
-                <label htmlFor="assignedRecruiterId" className="form-label">
-                  Assign Recruiter
-                </label>
-                <select
-                  id="assignedRecruiterId"
-                  value={formData.assignedRecruiterId}
-                  onChange={(e) => handleChange('assignedRecruiterId', e.target.value)}
-                  className="form-select"
-                  disabled={isLoadingUsers}
-                >
-                  <option value="">Select recruiter</option>
-                  {recruiters.map((recruiter) => (
-                    <option key={recruiter.id} value={recruiter.id}>
-                      {recruiter.name} ({recruiter.role === 'hiring_manager' ? 'Hiring Manager' : 'Recruiter'})
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-[#64748b]">
-                  {isLoadingUsers ? 'Loading recruiters...' : 'Assign a recruiter to manage this job posting'}
-                </p>
-              </div>
-
-
-              {/* Number of Openings */}
-              <div className="form-group">
-                <label htmlFor="openings" className="form-label">
-                  Number of Openings
-                </label>
-                <input
-                  id="openings"
-                  type="number"
-                  min="1"
-                  value={formData.openings}
-                  onChange={(e) => handleChange('openings', parseInt(e.target.value) || 1)}
-                  className={`form-input ${errors.openings ? 'error' : ''}`}
-                />
-                {errors.openings && <p className="form-error">{errors.openings}</p>}
               </div>
             </div>
           </div>
 
-          {/* Job Description Card - Requirement 20.2 */}
-          <div className="form-section">
-            <h3 className="form-section-header">Job Description</h3>
-            <p className="form-section-subtitle">
-              Provide a detailed description of the role, responsibilities, and requirements.
-            </p>
-            
-            {/* Rich Text Editor Toolbar */}
-            <div className="border border-[#e2e8f0] rounded-t-lg bg-[#f9fafb] px-3 py-2 flex items-center gap-1">
-              <button
-                type="button"
-                className="p-1.5 rounded hover:bg-gray-200 text-[#64748b]"
-                title="Bold"
-                onClick={() => {
-                  const textarea = document.getElementById('description') as HTMLTextAreaElement;
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-                  const text = formData.description;
-                  const selectedText = text.substring(start, end);
-                  const newText = text.substring(0, start) + `**${selectedText}**` + text.substring(end);
-                  handleChange('description', newText);
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12h8a4 4 0 100-8H6v8zm0 0h8a4 4 0 110 8H6v-8z" />
-                </svg>
-              </button>
+          {/* Bottom Section: Stacked vertical layout */}
+          <div className="space-y-4">
+            {/* Job Description */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Job Description</h3>
 
-              <button
-                type="button"
-                className="p-1.5 rounded hover:bg-gray-200 text-[#64748b]"
-                title="Italic"
-                onClick={() => {
-                  const textarea = document.getElementById('description') as HTMLTextAreaElement;
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-                  const text = formData.description;
-                  const selectedText = text.substring(start, end);
-                  const newText = text.substring(0, start) + `_${selectedText}_` + text.substring(end);
-                  handleChange('description', newText);
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                </svg>
-              </button>
-              <div className="w-px h-5 bg-[#e2e8f0] mx-1" />
-              <button
-                type="button"
-                className="p-1.5 rounded hover:bg-gray-200 text-[#64748b]"
-                title="Bullet List"
-                onClick={() => {
-                  const text = formData.description;
-                  const newText = text + (text.endsWith('\n') || text === '' ? '' : '\n') + '• ';
-                  handleChange('description', newText);
-                  setTimeout(() => {
+              {/* Rich Text Editor Toolbar */}
+              <div className="border border-[#e2e8f0] rounded-t-lg bg-[#f9fafb] px-3 py-1 flex items-center gap-1">
+                <button
+                  type="button"
+                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
+                  title="Bold"
+                  onClick={() => {
                     const textarea = document.getElementById('description') as HTMLTextAreaElement;
-                    textarea.focus();
-                    textarea.setSelectionRange(newText.length, newText.length);
-                  }, 0);
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="p-1.5 rounded hover:bg-gray-200 text-[#64748b]"
-                title="Heading"
-                onClick={() => {
-                  const text = formData.description;
-                  const newText = text + (text.endsWith('\n') || text === '' ? '' : '\n') + '## ';
-                  handleChange('description', newText);
-                  setTimeout(() => {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const text = formData.description;
+                    const newText = text.substring(0, start) + `**${text.substring(start, end)}**` + text.substring(end);
+                    handleChange('description', newText);
+                  }}
+                >
+                  <b className="font-serif">B</b>
+                </button>
+                <button
+                  type="button"
+                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
+                  title="Italic"
+                  onClick={() => {
                     const textarea = document.getElementById('description') as HTMLTextAreaElement;
-                    textarea.focus();
-                    textarea.setSelectionRange(newText.length, newText.length);
-                  }, 0);
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                </svg>
-              </button>
-            </div>
-
-            
-            {/* Description Textarea */}
-            <textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              rows={12}
-              className="w-full px-4 py-3 border border-t-0 border-[#e2e8f0] rounded-b-lg text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] focus:border-transparent resize-none font-mono"
-              placeholder={`## About the Role
-Describe the position and its importance to the team...
-
-## Responsibilities
-• Key responsibility 1
-• Key responsibility 2
-• Key responsibility 3
-
-## Requirements
-• Required skill or qualification 1
-• Required skill or qualification 2
-
-## Nice to Have
-• Preferred qualification 1
-• Preferred qualification 2
-
-## Benefits
-• Benefit 1
-• Benefit 2`}
-            />
-            <p className="mt-2 text-xs text-[#64748b]">
-              Supports basic markdown formatting: **bold**, _italic_, ## headings, • bullet points
-            </p>
-          </div>
-
-          {/* Mandatory Criteria Section - Requirement 3.1 */}
-          <MandatoryCriteriaSection 
-            value={formData.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA}
-            onChange={(criteria) => handleChange('mandatoryCriteria', criteria)}
-          />
-
-          {/* Screening Questions Section */}
-          <ScreeningQuestionsSection
-            value={formData.screeningQuestions}
-            onChange={(questions) => handleChange('screeningQuestions', questions)}
-          />
-
-          {/* Pipeline Stage Configuration - Requirement 4.1 */}
-          <div className="form-section">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="form-section-header">Pipeline Stages Configuration</h3>
-                <p className="form-section-subtitle">
-                  Configure the hiring pipeline stages organized by phases. Each phase can contain multiple stages.
-                </p>
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const text = formData.description;
+                    const newText = text.substring(0, start) + `_${text.substring(start, end)}_` + text.substring(end);
+                    handleChange('description', newText);
+                  }}
+                >
+                  <i className="font-serif">I</i>
+                </button>
+                <div className="w-px h-4 bg-[#e2e8f0] mx-1" />
+                <button
+                  type="button"
+                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
+                  title="Bullet List"
+                  onClick={() => {
+                    const text = formData.description;
+                    const newText = text + (text.endsWith('\n') || text === '' ? '' : '\n') + '• ';
+                    handleChange('description', newText);
+                  }}
+                >
+                  • Liste
+                </button>
+                <button
+                  type="button"
+                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
+                  title="Heading"
+                  onClick={() => {
+                    const text = formData.description;
+                    const newText = text + (text.endsWith('\n') || text === '' ? '' : '\n') + '## ';
+                    handleChange('description', newText);
+                  }}
+                >
+                  H2
+                </button>
               </div>
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setShowStageImportModal(true)}
-                className="flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                </svg>
-                Import Stages
-              </Button>
+
+              {/* Description Textarea */}
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+                rows={12}
+                className="w-full px-4 py-3 border border-t-0 border-[#e2e8f0] rounded-b-lg text-sm text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#0b6cf0] resize-none font-mono leading-relaxed"
+                placeholder="Describe the role..."
+              />
             </div>
-            <PipelineStageConfigurator
-              stages={formData.pipelineStages}
-              onChange={(stages) => handleChange('pipelineStages', stages)}
-            />
+
+            {/* Screening Requirements */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Screening Requirements</h3>
+
+              <div className="space-y-6">
+                <MandatoryCriteriaSection
+                  value={formData.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA}
+                  onChange={(criteria) => handleChange('mandatoryCriteria', criteria)}
+                />
+
+                <div className="pt-6 border-t border-gray-100">
+                  <ScreeningQuestionsSection
+                    value={formData.screeningQuestions}
+                    onChange={(questions) => handleChange('screeningQuestions', questions)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Pipeline Configuration */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-3">
+                <h3 className="text-sm font-bold text-gray-900">Pipeline Stages</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowStageImportModal(true)}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Import Stages
+                </button>
+              </div>
+              <PipelineStageConfigurator
+                stages={formData.pipelineStages}
+                onChange={(stages) => handleChange('pipelineStages', stages)}
+              />
+            </div>
           </div>
 
           {/* Action Buttons */}
