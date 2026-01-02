@@ -12,7 +12,7 @@
  * Requirements: 11.1, 11.2, 11.3, 12.1, 12.2, 12.5, 13.1, 13.2, 13.3, 13.4
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MdCalendarToday,
@@ -283,9 +283,15 @@ interface PipelineColumnProps {
   stage: typeof PIPELINE_STAGES[number];
   interviews: Interview[];
   onInterviewClick: (interview: Interview) => void;
+  visibleCount: number;
+  onViewMore: () => void;
 }
 
-function PipelineColumn({ stage, interviews, onInterviewClick }: PipelineColumnProps) {
+function PipelineColumn({ stage, interviews, onInterviewClick, visibleCount, onViewMore }: PipelineColumnProps) {
+  const visibleInterviews = interviews.slice(0, visibleCount);
+  const hasMore = interviews.length > visibleCount;
+  const remainingCount = interviews.length - visibleCount;
+
   return (
     <div className={`flex-1 min-w-[280px] max-w-[320px] rounded-xl ${stage.color} border ${stage.borderColor} p-3 flex flex-col`}>
       <div className="flex items-center justify-between mb-3 px-1">
@@ -298,19 +304,29 @@ function PipelineColumn({ stage, interviews, onInterviewClick }: PipelineColumnP
         </span>
       </div>
 
-      <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-[100px]">
+      <div className="space-y-3 flex-1 min-h-[100px]">
         {interviews.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-gray-200/50 rounded-lg">
             <p className="text-xs font-medium text-gray-400">No interviews</p>
           </div>
         ) : (
-          interviews.map(interview => (
-            <PipelineCard
-              key={interview.id}
-              interview={interview}
-              onClick={() => onInterviewClick(interview)}
-            />
-          ))
+          <>
+            {visibleInterviews.map(interview => (
+              <PipelineCard
+                key={interview.id}
+                interview={interview}
+                onClick={() => onInterviewClick(interview)}
+              />
+            ))}
+            {hasMore && (
+              <button
+                onClick={onViewMore}
+                className="w-full py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100"
+              >
+                View {remainingCount} more
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -790,6 +806,15 @@ export function InterviewDashboardPage() {
   // Filters
   const [selectedRecruiterId, setSelectedRecruiterId] = useState<string>('');
   const [selectedMode, setSelectedMode] = useState<string>('');
+  const [selectedJobId, setSelectedJobId] = useState<string>('');
+
+  // Pagination
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Pipeline cards visible count
+  const [pipelineVisibleCounts, setPipelineVisibleCounts] = useState<Record<string, number>>({});
+  const CARDS_PER_LOAD = 5;
 
   // Panel state
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
@@ -809,14 +834,39 @@ export function InterviewDashboardPage() {
     [users]
   );
 
+  // Extract unique jobs from interviews
+  const uniqueJobs = useMemo(() => {
+    const jobMap = new Map<string, { id: string; title: string }>();
+    interviews.forEach(interview => {
+      const job = interview.jobCandidate?.job;
+      if (job && job.id && job.title) {
+        jobMap.set(job.id, { id: job.id, title: job.title });
+      }
+    });
+    return Array.from(jobMap.values()).sort((a, b) => a.title.localeCompare(b.title));
+  }, [interviews]);
+
   // Filter interviews
   const filteredInterviews = useMemo(() => {
     return interviews.filter(interview => {
       if (selectedRecruiterId && interview.scheduledBy !== selectedRecruiterId) return false;
       if (selectedMode && interview.mode !== selectedMode) return false;
+      if (selectedJobId && interview.jobCandidate?.job?.id !== selectedJobId) return false;
       return true;
     });
-  }, [interviews, selectedRecruiterId, selectedMode]);
+  }, [interviews, selectedRecruiterId, selectedMode, selectedJobId]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRecruiterId, selectedMode, selectedJobId]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredInterviews.length / ITEMS_PER_PAGE);
+  const paginatedInterviews = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredInterviews.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredInterviews, currentPage]);
 
   // KPI calculations
   const kpiStats = useMemo(() => {
@@ -1058,9 +1108,23 @@ export function InterviewDashboardPage() {
                 <option value="in_person">In-Person</option>
               </select>
 
-              {hasFilters && (
+              <select
+                value={selectedJobId}
+                onChange={(e) => setSelectedJobId(e.target.value)}
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-white transition-colors cursor-pointer outline-none max-w-[180px]"
+              >
+                <option value="">All Job Roles</option>
+                {uniqueJobs.map(job => (
+                  <option key={job.id} value={job.id}>{job.title}</option>
+                ))}
+              </select>
+
+              {(hasFilters || selectedJobId) && (
                 <button
-                  onClick={handleClearFilters}
+                  onClick={() => {
+                    handleClearFilters();
+                    setSelectedJobId('');
+                  }}
                   className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 font-medium"
                 >
                   <MdClose className="w-4 h-4" />
@@ -1251,9 +1315,8 @@ export function InterviewDashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filteredInterviews
+                      {paginatedInterviews
                         .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
-                        .slice(0, 20)
                         .map(interview => (
                           <InterviewTableRow
                             key={interview.id}
@@ -1266,13 +1329,62 @@ export function InterviewDashboardPage() {
                     </tbody>
                   </table>
 
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+                      <div className="text-sm text-gray-500">
+                        Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredInterviews.length)} of {filteredInterviews.length} interviews
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Previous
+                        </button>
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${currentPage === pageNum
+                                ? 'bg-blue-600 text-white'
+                                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-50'
+                                }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {filteredInterviews.length === 0 && (
                     <div className="text-center py-16 bg-gray-50/30">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <MdSearch className="w-8 h-8 text-gray-300" />
                       </div>
                       <p className="text-gray-500 font-medium">No interviews match your filters</p>
-                      <button onClick={handleClearFilters} className="text-blue-600 text-sm font-semibold hover:underline mt-2">Clear all filters</button>
+                      <button onClick={() => { handleClearFilters(); setSelectedJobId(''); }} className="text-blue-600 text-sm font-semibold hover:underline mt-2">Clear all filters</button>
                     </div>
                   )}
                 </div>
@@ -1297,6 +1409,11 @@ export function InterviewDashboardPage() {
                       stage={stage}
                       interviews={pipelineData[stage.id]}
                       onInterviewClick={handleInterviewClick}
+                      visibleCount={pipelineVisibleCounts[stage.id] || CARDS_PER_LOAD}
+                      onViewMore={() => setPipelineVisibleCounts(prev => ({
+                        ...prev,
+                        [stage.id]: (prev[stage.id] || CARDS_PER_LOAD) + CARDS_PER_LOAD
+                      }))}
                     />
                   ))}
                 </div>

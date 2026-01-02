@@ -31,7 +31,6 @@ const tabs: Tab[] = [
   { id: 'company', label: 'Company Profile' },
   { id: 'users', label: 'User Management' },
   { id: 'vendors', label: 'Vendor Management' },
-  { id: 'roles', label: 'Role Configuration' },
   { id: 'sla', label: 'SLA Settings' },
   { id: 'calendar', label: 'Calendar Integration' },
 ];
@@ -94,13 +93,7 @@ interface UserData {
   isActive: boolean;
 }
 
-interface RoleConfig {
-  id: string;
-  name: string;
-  displayName: string;
-  description: string;
-  permissions: string[];
-}
+
 
 // Sample data - Enhanced for Requirements 2.1-2.8
 const sampleCompany: CompanyProfile = {
@@ -131,53 +124,6 @@ const sampleUsers: UserData[] = [
   { id: '3', name: 'Aarti Singh', email: 'aarti.singh@acmetech.com', role: 'recruiter', isActive: true },
   { id: '4', name: 'Vikram Patel', email: 'vikram.patel@acmetech.com', role: 'recruiter', isActive: true },
   { id: '5', name: 'Sneha Reddy', email: 'sneha.reddy@acmetech.com', role: 'hiring_manager', isActive: false },
-];
-
-const roleConfigs: RoleConfig[] = [
-  {
-    id: 'admin',
-    name: 'admin',
-    displayName: 'Admin',
-    description: 'Full system access with complete control over all features',
-    permissions: [
-      'Manage company settings and profile',
-      'Create, edit, and delete users',
-      'Assign roles to users',
-      'Access all job requisitions',
-      'View all candidates and pipelines',
-      'Access analytics and reports',
-      'Configure system settings',
-    ],
-  },
-  {
-    id: 'hiring_manager',
-    name: 'hiring_manager',
-    displayName: 'Hiring Manager',
-    description: 'Manages hiring decisions for assigned roles',
-    permissions: [
-      'View and edit assigned job requisitions',
-      'Review candidates in assigned pipelines',
-      'Provide interview feedback',
-      'Make hiring decisions',
-      'View team analytics',
-      'Cannot manage users or company settings',
-    ],
-  },
-  {
-    id: 'recruiter',
-    name: 'recruiter',
-    displayName: 'Recruiter',
-    description: 'Sources and manages candidates through the pipeline',
-    permissions: [
-      'Create and manage candidates',
-      'Move candidates through pipeline stages',
-      'Schedule interviews',
-      'Upload resumes and documents',
-      'Add notes and activities',
-      'Cannot make final hiring decisions',
-      'Cannot access company settings',
-    ],
-  },
 ];
 
 
@@ -1123,70 +1069,7 @@ function VendorManagementTab() {
 
 
 // Role Configuration Tab Component - Requirement 19.6
-function RoleConfigurationTab() {
-  return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-[#111827]">Role Configuration</h3>
-      <p className="text-sm text-[#64748b]">
-        View the permissions and access levels for each role in the system.
-      </p>
 
-      <div className="grid gap-6">
-        {roleConfigs.map((role) => (
-          <div
-            key={role.id}
-            className="bg-white rounded-xl border border-[#e2e8f0] p-6 shadow-sm"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h4 className="text-base font-semibold text-[#111827]">{role.displayName}</h4>
-                <p className="text-sm text-[#64748b] mt-1">{role.description}</p>
-              </div>
-              <Badge
-                text={role.displayName}
-                variant={
-                  role.name === 'admin' ? 'blue' :
-                    role.name === 'hiring_manager' ? 'green' : 'gray'
-                }
-              />
-            </div>
-
-            <div className="border-t border-[#e2e8f0] pt-4">
-              <h5 className="text-sm font-medium text-[#374151] mb-3">Permissions</h5>
-              <ul className="space-y-2">
-                {role.permissions.map((permission, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm text-[#64748b]">
-                    <svg
-                      className={`w-4 h-4 mt-0.5 flex-shrink-0 ${permission.startsWith('Cannot') ? 'text-red-500' : 'text-green-500'
-                        }`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      {permission.startsWith('Cannot') ? (
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      ) : (
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      )}
-                    </svg>
-                    {permission}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 
 // SLA Configuration Tab Component - Requirement 10.5
@@ -1229,8 +1112,7 @@ export function SettingsPage() {
         return <UserManagementTab />;
       case 'vendors':
         return <VendorManagementTab />;
-      case 'roles':
-        return <RoleConfigurationTab />;
+
       case 'sla':
         return <SLAConfigTab />;
       case 'calendar':
