@@ -125,6 +125,10 @@ const createCandidateSchema = z.object({
   availability: z.string().optional(),
   skills: z.array(z.string()).optional(),
   score: z.number().min(0).max(100).optional(),
+  // Score breakdown fields (Requirements 8.5)
+  domainScore: z.number().min(0).max(100).optional(),
+  industryScore: z.number().min(0).max(100).optional(),
+  keyResponsibilitiesScore: z.number().min(0).max(100).optional(),
 });
 
 const updateCandidateSchema = z.object({
@@ -142,6 +146,10 @@ const updateCandidateSchema = z.object({
   skills: z.array(z.string()).optional(),
   resumeUrl: z.string().optional(),
   score: z.number().min(0).max(100).optional(),
+  // Score breakdown fields (Requirements 8.5)
+  domainScore: z.number().min(0).max(100).optional(),
+  industryScore: z.number().min(0).max(100).optional(),
+  keyResponsibilitiesScore: z.number().min(0).max(100).optional(),
 });
 
 const searchQuerySchema = z.object({
@@ -168,6 +176,16 @@ const changeStageSchema = z.object({
 const updateScoreSchema = z.object({
   score: z.number().min(0, 'Score must be at least 0').max(100, 'Score must be at most 100'),
 });
+
+// Score breakdown update schema (Requirements 8.5)
+const updateScoreBreakdownSchema = z.object({
+  domainScore: z.number().min(0).max(100).optional(),
+  industryScore: z.number().min(0).max(100).optional(),
+  keyResponsibilitiesScore: z.number().min(0).max(100).optional(),
+}).refine(
+  (data) => data.domainScore !== undefined || data.industryScore !== undefined || data.keyResponsibilitiesScore !== undefined,
+  { message: 'At least one score must be provided' }
+);
 
 const createNoteSchema = z.object({
   content: z.string().min(1, 'Note content is required'),
@@ -340,6 +358,21 @@ router.put('/:id/score', authenticate, async (req: AuthenticatedRequest, res: Re
   try {
     const data = validateBody(updateScoreSchema, req.body);
     const result = await candidateService.updateScore(req.params.id, data.score);
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/candidates/:id/score-breakdown
+ * Update a candidate's score breakdown (individual sub-scores)
+ * Requirements: 8.3, 8.4, 8.5
+ */
+router.put('/:id/score-breakdown', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const data = validateBody(updateScoreBreakdownSchema, req.body);
+    const result = await candidateService.updateScoreBreakdown(req.params.id, data);
     return res.json(result);
   } catch (error) {
     next(error);

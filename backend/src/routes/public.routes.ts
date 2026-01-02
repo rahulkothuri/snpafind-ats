@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError } from '../middleware/errorHandler.js';
+import { processAutoRejection } from '../services/autoRejection.service.js';
 
 const router = Router();
 
@@ -386,12 +387,36 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
         },
       });
 
+      // Process auto-rejection rules (Requirements 4.6, 9.2, 9.3, 9.5, 9.6)
+      // This is non-retroactive - only applies to new applications (Requirements 4.11)
+      let wasAutoRejected = false;
+      try {
+        wasAutoRejected = await processAutoRejection(
+          jobCandidate.id,
+          candidate.id,
+          {
+            experience: candidate.experienceYears,
+            location: candidate.location,
+            skills: candidate.skills,
+            education: data.educationQualification,
+            salaryExpectation: data.desiredSalary ? parseFloat(data.desiredSalary) : undefined,
+          },
+          data.jobId
+        );
+      } catch (autoRejectionError) {
+        // Log but don't fail the application if auto-rejection fails
+        console.error('Auto-rejection processing failed:', autoRejectionError);
+      }
+
       res.status(201).json({
         success: true,
         applicationId: jobCandidate.id,
         candidateId: candidate.id,
         isNewCandidate,
-        message: 'Application submitted successfully',
+        wasAutoRejected,
+        message: wasAutoRejected 
+          ? 'Application submitted but did not meet minimum requirements'
+          : 'Application submitted successfully',
       });
     } catch (error) {
       next(error);

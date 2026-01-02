@@ -41,6 +41,7 @@ export {
   useTeamPerformanceAnalytics,
   useTimeAnalytics,
   useFunnelAnalyticsComplete,
+  useAnalyticsFilterOptions,
   analyticsKeys
 } from './useAnalytics';
 

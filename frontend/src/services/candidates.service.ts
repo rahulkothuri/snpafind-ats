@@ -30,6 +30,10 @@ export interface Candidate {
   department?: string;
   internalMobility?: boolean;
   education?: string;
+  // Score breakdown fields - Requirements 8.1, 8.2
+  domainScore?: number | null;
+  industryScore?: number | null;
+  keyResponsibilitiesScore?: number | null;
 }
 
 // Stage History Entry - Requirements 2.1, 2.2, 2.3

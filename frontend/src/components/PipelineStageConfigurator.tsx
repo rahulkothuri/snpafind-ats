@@ -9,13 +9,16 @@
  * - Drag-and-drop reordering functionality
  * - Stage validation and ordering logic
  * - Phase-based organization of stages
+ * 
+ * Note: Stage names should align with DEFAULT_PIPELINE_STAGES from constants/pipelineStages.ts
+ * The Selected stage is positioned between Interview and Offer per Requirements 5.1
  */
 
 import { useState, useCallback } from 'react';
 import type { PipelineStageConfig } from '../types';
 
-// Pipeline phases for organizing stages (Requirements 2.1, 2.2, 2.3)
-export type PipelinePhase = 'shortlisting' | 'screening' | 'interview' | 'offer' | 'hired';
+// Pipeline phases for organizing stages (Requirements 2.1, 2.2, 2.3, 5.1)
+export type PipelinePhase = 'shortlisting' | 'screening' | 'interview' | 'selected' | 'offer' | 'hired';
 
 export interface PipelinePhaseConfig {
   name: string;
@@ -25,7 +28,7 @@ export interface PipelinePhaseConfig {
   defaultStages: string[];
 }
 
-// Phase configuration (Requirements 2.1, 2.2, 2.3)
+// Phase configuration (Requirements 2.1, 2.2, 2.3, 5.1, 5.2)
 export const PIPELINE_PHASES: PipelinePhaseConfig[] = [
   {
     name: 'Shortlisting',
@@ -47,6 +50,13 @@ export const PIPELINE_PHASES: PipelinePhaseConfig[] = [
     allowMultiple: true,
     isMandatory: false,
     defaultStages: ['Technical Interview', 'HR Interview', 'Final Interview']
+  },
+  {
+    name: 'Selected',
+    type: 'selected',
+    allowMultiple: false,
+    isMandatory: false,
+    defaultStages: ['Selected']
   },
   {
     name: 'Offer',
@@ -73,12 +83,14 @@ export interface EnhancedPipelineStageConfig extends PipelineStageConfig {
   estimatedDuration?: number;
 }
 
-// Default pipeline stages configuration with phases
+// Default pipeline stages configuration with phases (Requirements 5.1, 5.2)
+// Order: Applied → Screening → Interview → Selected → Offer
 export const DEFAULT_PIPELINE_STAGES: EnhancedPipelineStageConfig[] = [
   { name: 'Applied', position: 0, isMandatory: false, subStages: [], type: 'shortlisting', isCustom: false },
   { name: 'Phone Screening', position: 1, isMandatory: true, subStages: [], type: 'screening', isCustom: false },
   { name: 'Technical Interview', position: 2, isMandatory: false, subStages: [], type: 'interview', isCustom: false },
-  { name: 'Offer', position: 3, isMandatory: true, subStages: [], type: 'offer', isCustom: false },
+  { name: 'Selected', position: 3, isMandatory: false, subStages: [], type: 'selected', isCustom: false },
+  { name: 'Offer', position: 4, isMandatory: true, subStages: [], type: 'offer', isCustom: false },
 ];
 
 interface PipelineStageConfiguratorProps {
@@ -91,7 +103,7 @@ export function PipelineStageConfigurator({ stages, onChange }: PipelineStageCon
   const [selectedPhase, setSelectedPhase] = useState<PipelinePhase>('shortlisting');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [expandedPhases, setExpandedPhases] = useState<Set<PipelinePhase>>(new Set(['shortlisting', 'screening', 'interview', 'offer']));
+  const [expandedPhases, setExpandedPhases] = useState<Set<PipelinePhase>>(new Set<PipelinePhase>(['shortlisting', 'screening', 'interview', 'selected', 'offer']));
 
   // Group stages by phase for better organization
   const stagesByPhase = stages.reduce((acc, stage) => {

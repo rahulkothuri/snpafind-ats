@@ -14,7 +14,7 @@ const router = Router();
 /**
  * POST /api/interviews
  * Create a new interview
- * Requirements: 1.1, 1.2, 1.3, 1.4
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 6.5
  */
 router.post('/', authenticate, async (req, res, next) => {
     try {
@@ -29,6 +29,7 @@ router.post('/', authenticate, async (req, res, next) => {
             panelMemberIds: req.body.panelMemberIds,
             notes: req.body.notes,
             scheduledBy: userId,
+            roundType: req.body.roundType, // Interview round type (Requirements 6.5)
         };
         const interview = await interviewService.createInterview(input);
         // Email notifications and calendar sync are now handled in the service (Task 21.1, 21.2)
@@ -120,6 +121,22 @@ router.get('/pending-feedback', authenticate, async (req, res, next) => {
     }
 });
 /**
+ * GET /api/interviews/round-options/:jobId
+ * Get interview round options for a job
+ * Returns custom sub-stages from the Interview stage if defined, otherwise returns default options
+ * Requirements: 6.2, 6.3, 6.4
+ */
+router.get('/round-options/:jobId', authenticate, async (req, res, next) => {
+    try {
+        const { jobId } = req.params;
+        const roundOptions = await interviewService.getInterviewRoundOptions(jobId);
+        res.json(roundOptions);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
  * GET /api/interviews/:id
  * Get interview details
  * Requirements: 17.1
@@ -140,7 +157,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
 /**
  * PUT /api/interviews/:id
  * Update/reschedule an interview
- * Requirements: 8.1, 8.2, 8.3
+ * Requirements: 8.1, 8.2, 8.3, 6.5
  */
 router.put('/:id', authenticate, async (req, res, next) => {
     try {
@@ -153,6 +170,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
             location: req.body.location,
             panelMemberIds: req.body.panelMemberIds,
             notes: req.body.notes,
+            roundType: req.body.roundType, // Interview round type (Requirements 6.5)
         };
         const interview = await interviewService.updateInterview(id, input);
         // Email notifications and calendar sync are now handled in the service (Task 21.1, 21.2)

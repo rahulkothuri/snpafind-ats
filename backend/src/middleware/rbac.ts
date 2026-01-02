@@ -38,6 +38,10 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'settings:update',
     'reports:read',
     'reports:export',
+    'vendor:read',
+    'vendor:create',
+    'vendor:update',
+    'vendor:delete',
   ],
   hiring_manager: [
     // Access to job requisitions, candidate review, and interview feedback for assigned roles
@@ -64,6 +68,17 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'interview:read',
     'interview:create',
     'interview:update',
+  ],
+  vendor: [
+    // Limited access to assigned jobs and their candidates only
+    // Requirements: 7.4, 7.6, 7.9, 10.2, 10.3
+    'job:read',
+    'candidate:read',
+    'candidate:create',
+    'candidate:update',
+    'pipeline:read',
+    'pipeline:update',
+    'interview:read',
   ],
 };
 
@@ -160,9 +175,10 @@ export function canAccessResource(role: UserRole, resourceType: string, action: 
  * Role hierarchy - higher roles include permissions of lower roles
  */
 export const roleHierarchy: Record<UserRole, number> = {
-  admin: 3,
-  hiring_manager: 2,
-  recruiter: 1,
+  admin: 4,
+  hiring_manager: 3,
+  recruiter: 2,
+  vendor: 1,
 };
 
 /**

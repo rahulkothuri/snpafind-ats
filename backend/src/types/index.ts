@@ -1,5 +1,5 @@
 // User types
-export type UserRole = 'admin' | 'hiring_manager' | 'recruiter';
+export type UserRole = 'admin' | 'hiring_manager' | 'recruiter' | 'vendor';
 
 export interface User {
   id: string;
@@ -53,7 +53,7 @@ export interface MandatoryCriteria {
 export type ScreeningQuestionType = 'text' | 'textarea' | 'single_choice' | 'multiple_choice' | 'yes_no' | 'number';
 
 export interface ScreeningQuestion {
-  id: string;
+  id?: string;
   question: string;
   type: ScreeningQuestionType;
   required: boolean;
@@ -64,6 +64,45 @@ export interface ScreeningQuestion {
 export interface ScreeningQuestionAnswer {
   questionId: string;
   answer: string | string[] | number | boolean;
+}
+
+// Flexible Auto-rejection rules structure (Requirements 9.1)
+// Supported candidate fields for auto-rejection
+export type RuleField = 'experience' | 'location' | 'skills' | 'education' | 'salary_expectation';
+
+// Operators by field type
+export type NumericOperator = 'less_than' | 'greater_than' | 'equals' | 'not_equals' | 'between';
+export type TextOperator = 'equals' | 'not_equals' | 'contains' | 'not_contains';
+export type ArrayOperator = 'contains' | 'not_contains' | 'contains_all' | 'contains_any';
+export type RuleOperator = NumericOperator | TextOperator | ArrayOperator;
+
+// Logic connector for multiple rules
+export type LogicConnector = 'AND' | 'OR';
+
+// Individual auto-rejection rule
+export interface AutoRejectionRule {
+  id: string;
+  field: RuleField;
+  operator: RuleOperator;
+  value: number | string | string[] | [number, number]; // [number, number] for 'between' operator
+  logicConnector?: LogicConnector; // How this rule connects to the next
+}
+
+// Complete auto-rejection rules configuration
+export interface AutoRejectionRules {
+  enabled: boolean;
+  rules: AutoRejectionRule[];
+}
+
+// Legacy auto-rejection rules structure (for backward compatibility)
+export interface LegacyAutoRejectionRules {
+  enabled: boolean;
+  rules: {
+    minExperience?: number;
+    maxExperience?: number;
+    requiredSkills?: string[];
+    requiredEducation?: string[];
+  };
 }
 
 // Job types
@@ -110,6 +149,9 @@ export interface Job {
   // Screening questions - questions candidates must answer before applying
   screeningQuestions?: ScreeningQuestion[];
   
+  // Auto-rejection rules (Requirements 9.1)
+  autoRejectionRules?: AutoRejectionRules;
+  
   // Existing fields
   status: JobStatus;
   openings: number;
@@ -141,7 +183,7 @@ export interface PipelineStageConfig {
   position: number;
   isMandatory: boolean;
   subStages?: SubStageConfig[];
-  type?: 'shortlisting' | 'screening' | 'interview' | 'offer' | 'hired';
+  type?: 'shortlisting' | 'screening' | 'interview' | 'selected' | 'offer' | 'hired';
   isCustom?: boolean;
   parentStageId?: string;
   requirements?: string[];
@@ -172,6 +214,10 @@ export interface Candidate {
   skills: string[];
   resumeUrl?: string;
   score?: number;
+  // Score breakdown fields (Requirements 8.1, 8.2)
+  domainScore?: number;
+  industryScore?: number;
+  keyResponsibilitiesScore?: number;
   createdAt: Date;
   updatedAt: Date;
   // Enhanced fields
@@ -280,6 +326,7 @@ export interface Interview {
   notes?: string;
   cancelReason?: string;
   scheduledBy: string;
+  roundType?: string; // Interview round type (Requirements 6.5, 6.6)
   createdAt: Date;
   updatedAt: Date;
   // Relations
@@ -303,6 +350,7 @@ export interface CreateInterviewInput {
   panelMemberIds: string[]; // User IDs of interviewers
   notes?: string;
   scheduledBy: string; // User ID
+  roundType?: string; // Interview round type (Requirements 6.5)
 }
 
 // Update interview input (Requirements 8.2, 8.3)
@@ -314,6 +362,7 @@ export interface UpdateInterviewInput {
   location?: string;
   panelMemberIds?: string[];
   notes?: string;
+  roundType?: string; // Interview round type (Requirements 6.5)
 }
 
 // Interview filters for querying (Requirements 17.2)
@@ -430,4 +479,47 @@ export interface FormattedDateTime {
   time: string;       // Formatted time string
   full: string;       // Full date and time string
   timezone: string;   // Timezone abbreviation
+}
+
+
+// Vendor Management Types (Requirements 7.1, 7.2, 10.1)
+
+/**
+ * Vendor job assignment
+ */
+export interface VendorJobAssignment {
+  id: string;
+  vendorId: string;
+  jobId: string;
+  createdAt: Date;
+  job?: Job;
+}
+
+/**
+ * Vendor user with job assignments
+ */
+export interface Vendor extends User {
+  vendorJobAssignments?: VendorJobAssignment[];
+  assignedJobs?: Array<{ id: string; title: string }>;
+}
+
+/**
+ * Create vendor input (Requirements 7.3, 10.1)
+ */
+export interface CreateVendorInput {
+  companyId: string;
+  name: string;
+  email: string;
+  password: string;
+  assignedJobIds?: string[];
+}
+
+/**
+ * Update vendor input (Requirements 7.7)
+ */
+export interface UpdateVendorInput {
+  name?: string;
+  email?: string;
+  isActive?: boolean;
+  assignedJobIds?: string[];
 }

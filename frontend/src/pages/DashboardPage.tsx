@@ -291,10 +291,10 @@ function QuickTasks({ tasks, onAddTask, onToggleTask, onDeleteTask }: {
 // --- Main Page Component ---
 
 // Types (Reused)
-// Columns Definition
-const pipelineColumns: Column<RolePipeline>[] = [
+// Columns Definition - using navigate from closure
+const createPipelineColumns = (navigate: (path: string) => void): Column<RolePipeline>[] => [
   { key: 'role', header: 'Role', render: (row) => <span className="font-semibold text-gray-900">{row.role}</span> },
-  { key: 'location', header: 'Location', width: '120px' },
+  { key: 'location', header: 'Location', width: '120px', render: (row) => <span className="text-gray-600">{row.location || 'Not specified'}</span> },
   { key: 'applicants', header: 'Applicants', align: 'center', width: '100px' },
   { key: 'interview', header: 'Interviews', align: 'center', width: '100px' },
   { key: 'offer', header: 'Offers', align: 'center', width: '80px' },
@@ -306,6 +306,19 @@ const pipelineColumns: Column<RolePipeline>[] = [
         }`}>
         {row.sla}
       </span>
+    )
+  },
+  {
+    key: 'actions', header: '', width: '80px', align: 'center', render: (row) => (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(`/roles?jobId=${row.id}`);
+        }}
+        className="px-2 py-1 text-[10px] font-semibold text-blue-600 border border-blue-200 rounded hover:bg-blue-50 transition-colors"
+      >
+        View
+      </button>
     )
   },
 ];
@@ -352,8 +365,7 @@ export function DashboardPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-500">Welcome back, {user?.name}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.name}</h1>
           </div>
           <div className="flex gap-3">
             <button
@@ -380,14 +392,12 @@ export function DashboardPage() {
             value={metrics.openRoles}
             trend={{ text: '2 this week', type: 'ok' }}
             icon={MdWork}
-            variant="default"
           />
           <KPICard
             label="Total Candidates"
             value={metrics.activeCandidates}
             trend={{ text: '12 today', type: 'ok' }}
             icon={MdPeople}
-            variant="default"
           />
           <KPICard
             label="Interviews"
@@ -395,7 +405,6 @@ export function DashboardPage() {
             subtitle={`${metrics.interviewsToday} today`}
             trend={{ text: 'Busy', type: 'ok' }}
             icon={MdEvent}
-            variant="default"
           />
           <KPICard
             label="Offers"
@@ -403,7 +412,6 @@ export function DashboardPage() {
             subtitle={`${metrics.totalHires} hired`}
             trend={{ text: 'On Track', type: 'ok' }}
             icon={MdAssignment}
-            variant="default"
           />
           <KPICard
             label="Time to Hire"
@@ -411,7 +419,6 @@ export function DashboardPage() {
             subtitle="Avg."
             trend={{ text: 'Stable', type: 'neutral' }}
             icon={MdAccessTime}
-            variant="solid-blue"
           />
         </div>
 
@@ -437,9 +444,9 @@ export function DashboardPage() {
               <div className="overflow-y-auto custom-scrollbar">
                 <Table
                   data={rolePipeline}
-                  columns={pipelineColumns}
+                  columns={createPipelineColumns(navigate)}
                   keyExtractor={(row) => row.id}
-                  onRowClick={(row) => navigate(`/jobs/${row.id}`)}
+                  onRowClick={(row) => navigate(`/roles?jobId=${row.id}`)}
                 />
               </div>
             </div>

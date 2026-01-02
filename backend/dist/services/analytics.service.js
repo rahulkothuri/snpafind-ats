@@ -9,6 +9,7 @@ export class AnalyticsService {
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfWeek = new Date(startOfToday);
         startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         // Build base where clause for role-based filtering
         const baseJobWhere = this.buildJobWhereClause(companyId, userId, userRole, filters);
         // Active roles count
@@ -22,6 +23,15 @@ export class AnalyticsService {
         const activeCandidates = await prisma.jobCandidate.count({
             where: {
                 job: baseJobWhere
+            }
+        });
+        // New candidates this month (candidates applied this month)
+        const newCandidatesThisMonth = await prisma.jobCandidate.count({
+            where: {
+                job: baseJobWhere,
+                appliedAt: {
+                    gte: startOfMonth
+                }
             }
         });
         // Interviews today
@@ -82,6 +92,16 @@ export class AnalyticsService {
                 updatedAt: dateFilter
             }
         });
+        // Total offers (candidates who reached Offer or Hired stage)
+        const totalOffers = await prisma.jobCandidate.count({
+            where: {
+                currentStageId: {
+                    in: [...offerStages.map(stage => stage.id), ...hiredStages.map(stage => stage.id)]
+                },
+                job: baseJobWhere,
+                updatedAt: dateFilter
+            }
+        });
         // Average time-to-fill calculation
         const avgTimeToFill = await this.calculateAverageTimeToFill(companyId, userId, userRole, filters);
         // Offer acceptance rate calculation
@@ -91,10 +111,12 @@ export class AnalyticsService {
         return {
             activeRoles,
             activeCandidates,
+            newCandidatesThisMonth,
             interviewsToday,
             interviewsThisWeek,
             offersPending,
             totalHires,
+            totalOffers,
             avgTimeToFill,
             offerAcceptanceRate,
             rolesOnTrack: slaStatus.summary.onTrack,
@@ -1020,8 +1042,8 @@ export class AnalyticsService {
         });
         // Calculate total rejections
         const totalRejections = Array.from(categorizedReasons.values()).reduce((sum, count) => sum + count, 0);
-        // Build reasons array with colors
-        const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e'];
+        // Build reasons array with colors (Requirements 3.4: red, orange, blue, green)
+        const colors = ['#ef4444', '#f97316', '#3b82f6', '#22c55e'];
         const reasons = Array.from(categorizedReasons.entries()).map(([reason, count], index) => ({
             reason,
             count,
@@ -1200,7 +1222,7 @@ export class AnalyticsService {
             // Location can be stored in either location field or locations JSON array
             baseWhere.OR = [
                 { location: filters.locationId },
-                { locations: { path: '$', array_contains: filters.locationId } }
+                { locations: { path: ['$'], array_contains: filters.locationId } }
             ];
         }
         if (filters.recruiterId && userRole !== 'recruiter') {

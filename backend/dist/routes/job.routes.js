@@ -22,12 +22,22 @@ const pipelineStageSchema = z.object({
     position: z.number().int().min(0),
     isMandatory: z.boolean().default(false),
     subStages: z.array(subStageSchema).optional(),
-    type: z.enum(['shortlisting', 'screening', 'interview', 'offer', 'hired']).optional(),
+    type: z.enum(['shortlisting', 'screening', 'interview', 'selected', 'offer', 'hired']).optional(),
     isCustom: z.boolean().optional(),
     parentStageId: z.string().optional(),
     requirements: z.array(z.string()).optional(),
     estimatedDuration: z.number().optional(),
 });
+// Auto-rejection rules schema (Requirements 9.1)
+const autoRejectionRulesSchema = z.object({
+    enabled: z.boolean(),
+    rules: z.object({
+        minExperience: z.number().min(0).optional(),
+        maxExperience: z.number().min(0).optional(),
+        requiredSkills: z.array(z.string()).optional(),
+        requiredEducation: z.array(z.string()).optional(),
+    }),
+}).optional();
 // Validation schemas with all new fields (Requirements 1.1)
 const createJobSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -70,6 +80,8 @@ const createJobSchema = z.object({
         options: z.array(z.string()).optional(),
         idealAnswer: z.union([z.string(), z.array(z.string())]).optional(),
     })).optional(),
+    // Auto-rejection rules (Requirements 9.1)
+    autoRejectionRules: autoRejectionRulesSchema,
     // Pipeline stages (Requirements 4.1)
     pipelineStages: z.array(pipelineStageSchema).optional(),
     // Legacy fields (kept for compatibility)
@@ -119,6 +131,16 @@ const updateJobSchema = z.object({
         options: z.array(z.string()).optional(),
         idealAnswer: z.union([z.string(), z.array(z.string())]).optional(),
     })).nullable().optional().or(z.undefined()),
+    // Auto-rejection rules (Requirements 9.1)
+    autoRejectionRules: z.object({
+        enabled: z.boolean(),
+        rules: z.object({
+            minExperience: z.number().min(0).optional(),
+            maxExperience: z.number().min(0).optional(),
+            requiredSkills: z.array(z.string()).optional(),
+            requiredEducation: z.array(z.string()).optional(),
+        }),
+    }).nullable().optional().or(z.undefined()),
     // Pipeline stages
     pipelineStages: z.array(pipelineStageSchema).optional(),
     // Legacy fields

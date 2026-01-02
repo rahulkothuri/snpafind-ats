@@ -46,6 +46,45 @@ export interface MandatoryCriteria {
   note: string;
 }
 
+// Flexible Auto-rejection rules structure for job postings
+// Supported candidate fields for auto-rejection
+export type RuleField = 'experience' | 'location' | 'skills' | 'education' | 'salary_expectation';
+
+// Operators by field type
+export type NumericOperator = 'less_than' | 'greater_than' | 'equals' | 'not_equals' | 'between';
+export type TextOperator = 'equals' | 'not_equals' | 'contains' | 'not_contains';
+export type ArrayOperator = 'contains' | 'not_contains' | 'contains_all' | 'contains_any';
+export type RuleOperator = NumericOperator | TextOperator | ArrayOperator;
+
+// Logic connector for multiple rules
+export type LogicConnector = 'AND' | 'OR';
+
+// Individual auto-rejection rule
+export interface AutoRejectionRule {
+  id: string;
+  field: RuleField;
+  operator: RuleOperator;
+  value: number | string | string[] | [number, number];
+  logicConnector?: LogicConnector;
+}
+
+// Complete auto-rejection rules configuration
+export interface AutoRejectionRules {
+  enabled: boolean;
+  rules: AutoRejectionRule[];
+}
+
+// Legacy auto-rejection rules structure (for backward compatibility)
+export interface LegacyAutoRejectionRules {
+  enabled: boolean;
+  rules: {
+    minExperience?: number;
+    maxExperience?: number;
+    requiredSkills?: string[];
+    requiredEducation?: string[];
+  };
+}
+
 // Screening Question types for job applications
 export type ScreeningQuestionType = 'text' | 'textarea' | 'single_choice' | 'multiple_choice' | 'yes_no' | 'number';
 
@@ -100,6 +139,7 @@ export interface Job {
   assignedRecruiterId?: string;
   mandatoryCriteria?: MandatoryCriteria;
   screeningQuestions?: ScreeningQuestion[];
+  autoRejectionRules?: AutoRejectionRules;
 }
 
 // Job form data for creating/editing jobs
@@ -143,7 +183,7 @@ export interface PipelineStageConfig {
   position: number;
   isMandatory: boolean;
   subStages: SubStageConfig[];
-  type?: 'shortlisting' | 'screening' | 'interview' | 'offer' | 'hired';
+  type?: 'shortlisting' | 'screening' | 'interview' | 'selected' | 'offer' | 'hired';
   isCustom?: boolean;
   parentStageId?: string;
   requirements?: string[];

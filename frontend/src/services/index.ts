@@ -13,6 +13,7 @@ export { default as interviewsService } from './interviews.service';
 export { default as calendarService } from './calendar.service';
 export { default as analyticsService } from './analytics.service';
 export { default as searchService } from './search.service';
+export { default as vendorsService } from './vendors.service';
 
 export type { Job, PipelineStage, CreateJobData, StageMetric, PipelineAnalytics } from './jobs.service';
 export type { Candidate, JobCandidate, CandidateActivity, CreateCandidateData, CandidateSearchParams } from './candidates.service';
@@ -62,3 +63,9 @@ export type {
   SearchSuggestion,
   SearchHistoryEntry
 } from './search.service';
+export type { 
+  Vendor,
+  AssignedJob,
+  CreateVendorData,
+  UpdateVendorData
+} from './vendors.service';

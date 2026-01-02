@@ -30,6 +30,11 @@ export class NotFoundError extends AppError {
         super(404, 'NOT_FOUND', `${resource} not found`);
     }
 }
+export class ForbiddenError extends AppError {
+    constructor(message = 'Access denied') {
+        super(403, 'FORBIDDEN', message);
+    }
+}
 export class ConflictError extends AppError {
     data;
     constructor(message, data) {

@@ -14,6 +14,9 @@ export interface CreateCandidateData {
     availability?: string;
     skills?: string[];
     score?: number;
+    domainScore?: number;
+    industryScore?: number;
+    keyResponsibilitiesScore?: number;
 }
 export interface UpdateCandidateData {
     name?: string;
@@ -30,6 +33,9 @@ export interface UpdateCandidateData {
     skills?: string[];
     resumeUrl?: string;
     score?: number;
+    domainScore?: number;
+    industryScore?: number;
+    keyResponsibilitiesScore?: number;
 }
 export interface CandidateSearchFilters {
     query?: string;
@@ -59,10 +65,19 @@ export interface ScoreUpdateResult {
     candidate: Candidate;
     activity: CandidateActivity;
 }
+/**
+ * Calculate overall score as the average of non-null sub-scores
+ * Requirements: 8.3, 8.4
+ * @param domainScore - Domain score (0-100 or null)
+ * @param industryScore - Industry score (0-100 or null)
+ * @param keyResponsibilitiesScore - Key responsibilities score (0-100 or null)
+ * @returns The average of non-null scores, or null if all scores are null
+ */
+export declare function calculateOverallScore(domainScore: number | null | undefined, industryScore: number | null | undefined, keyResponsibilitiesScore: number | null | undefined): number | null;
 export declare const candidateService: {
     /**
      * Create a new candidate
-     * Requirements: 8.1, 8.2, 8.4
+     * Requirements: 8.1, 8.2, 8.4, 8.5
      */
     create(data: CreateCandidateData): Promise<Candidate>;
     /**
@@ -75,7 +90,7 @@ export declare const candidateService: {
     getByEmail(email: string): Promise<Candidate | null>;
     /**
      * Update a candidate
-     * Requirements: 9.2
+     * Requirements: 9.2, 8.5
      */
     update(id: string, data: UpdateCandidateData): Promise<Candidate>;
     /**
@@ -120,6 +135,15 @@ export declare const candidateService: {
      * Requirements: 25.1, 25.2
      */
     updateScore(candidateId: string, score: number): Promise<ScoreUpdateResult>;
+    /**
+     * Update a candidate's score breakdown (individual sub-scores)
+     * Requirements: 8.3, 8.4, 8.5
+     */
+    updateScoreBreakdown(candidateId: string, scoreBreakdown: {
+        domainScore?: number;
+        industryScore?: number;
+        keyResponsibilitiesScore?: number;
+    }): Promise<ScoreUpdateResult>;
     /**
      * Get candidate's activity timeline
      */

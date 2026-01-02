@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError } from '../middleware/errorHandler.js';
+import { processAutoRejection } from '../services/autoRejection.service.js';
 const router = Router();
 // Configure multer for resume uploads (public applications)
 const UPLOAD_DIR = 'uploads/resumes';
@@ -337,12 +338,25 @@ router.post('/applications', (req, res, next) => {
                     },
                 },
             });
+            // Process auto-rejection rules (Requirements 4.3, 9.2, 9.3, 9.4)
+            // This is non-retroactive - only applies to new applications (Requirements 4.8)
+            let wasAutoRejected = false;
+            try {
+                wasAutoRejected = await processAutoRejection(jobCandidate.id, candidate.id, candidate.experienceYears, data.jobId);
+            }
+            catch (autoRejectionError) {
+                // Log but don't fail the application if auto-rejection fails
+                console.error('Auto-rejection processing failed:', autoRejectionError);
+            }
             res.status(201).json({
                 success: true,
                 applicationId: jobCandidate.id,
                 candidateId: candidate.id,
                 isNewCandidate,
-                message: 'Application submitted successfully',
+                wasAutoRejected,
+                message: wasAutoRejected
+                    ? 'Application submitted but did not meet minimum requirements'
+                    : 'Application submitted successfully',
             });
         }
         catch (error) {

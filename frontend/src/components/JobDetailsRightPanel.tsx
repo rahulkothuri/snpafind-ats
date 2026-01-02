@@ -16,13 +16,14 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, InterviewScheduleModal, JobActionsDropdown, ShareJobModal } from './index';
+import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, InterviewScheduleModal, JobActionsDropdown, ShareJobModal, calculateAverageScore } from './index';
 import { LegacyAdvancedFilters } from './AdvancedFilters';
 import type { Column } from './Table';
 import type { AdvancedFiltersState } from './AdvancedFilters';
 import { pipelineService, jobsService } from '../services';
 import type { BulkMoveResult, PipelineAnalytics } from '../services';
 import { extractUniqueSkills, extractUniqueSources, applyAdvancedFilters } from '../utils/filters';
+import { DEFAULT_PIPELINE_STAGES, STAGE_COLORS, getStageColors, getStageIndicatorColor } from '../constants';
 
 // Types
 export interface PipelineCandidate {
@@ -44,6 +45,10 @@ export interface PipelineCandidate {
   expectedCtc: string;
   noticePeriod: string;
   resumeUrl?: string;
+  // Score breakdown fields - Requirements 2.1, 8.2
+  domainScore?: number | null;
+  industryScore?: number | null;
+  keyResponsibilitiesScore?: number | null;
 }
 
 export interface Role {
@@ -89,7 +94,7 @@ export interface JobDetailsRightPanelProps {
 }
 
 
-const defaultStages = ['Queue', 'Applied', 'Screening', 'Shortlisted', 'Interview', 'Offer', 'Hired', 'Rejected'];
+const defaultStages = [...DEFAULT_PIPELINE_STAGES];
 
 // Helper functions
 function getInitials(name: string): string {
@@ -117,32 +122,11 @@ function getScoreVariant(score: number): 'green' | 'orange' | 'red' {
 }
 
 function getStageColor(stage: string): { bg: string; text: string } {
-  const colors: Record<string, { bg: string; text: string }> = {
-    'Queue': { bg: 'bg-[#f1f5f9]', text: 'text-[#475569]' },
-    'Applied': { bg: 'bg-[#e0f2fe]', text: 'text-[#0369a1]' },
-    'Screening': { bg: 'bg-[#fef3c7]', text: 'text-[#92400e]' },
-    'Shortlisted': { bg: 'bg-[#dcfce7]', text: 'text-[#166534]' },
-    'Interview': { bg: 'bg-[#e0e7ff]', text: 'text-[#4338ca]' },
-    'Offer': { bg: 'bg-[#f5f3ff]', text: 'text-[#6d28d9]' },
-    'Hired': { bg: 'bg-[#d1fae5]', text: 'text-[#047857]' },
-    'Rejected': { bg: 'bg-[#fee2e2]', text: 'text-[#b91c1c]' },
-  };
-  return colors[stage] || { bg: 'bg-[#dbeafe]', text: 'text-[#1d4ed8]' };
+  const colors = getStageColors(stage);
+  return { bg: colors.bg, text: colors.text };
 }
 
-function getStageIndicatorColor(stageName: string): string {
-  const colors: Record<string, string> = {
-    'Queue': 'bg-[#94a3b8]',
-    'Applied': 'bg-[#0ea5e9]',
-    'Screening': 'bg-[#f59e0b]',
-    'Shortlisted': 'bg-[#22c55e]',
-    'Interview': 'bg-[#6366f1]',
-    'Offer': 'bg-[#8b5cf6]',
-    'Hired': 'bg-[#10b981]',
-    'Rejected': 'bg-[#ef4444]',
-  };
-  return colors[stageName] || 'bg-[#94a3b8]';
-}
+// Using imported getStageIndicatorColor from constants
 
 // Stage Summary Strip Component
 function StageSummaryStrip({
@@ -264,6 +248,18 @@ function CandidateTableView({
       ),
     },
     {
+      key: 'contact',
+      header: 'Contact',
+      render: (row) => (
+        <div className="text-xs">
+          <div className="text-gray-600 truncate max-w-[150px]" title={row.email || undefined}>
+            {row.email || '-'}
+          </div>
+          <div className="text-gray-500">{row.phone || '-'}</div>
+        </div>
+      ),
+    },
+    {
       key: 'stage',
       header: 'Stage',
       sortable: true,
@@ -281,9 +277,18 @@ function CandidateTableView({
       header: 'Score',
       sortable: true,
       align: 'center',
-      render: (row) => (
-        <Badge text={String(row.score)} variant={getScoreVariant(row.score)} />
-      ),
+      render: (row) => {
+        // Calculate average from sub-scores if available, otherwise use existing score - Requirements 2.4
+        const calculatedScore = calculateAverageScore(
+          row.domainScore,
+          row.industryScore,
+          row.keyResponsibilitiesScore
+        );
+        const displayScore = calculatedScore ?? row.score;
+        return (
+          <Badge text={String(displayScore)} variant={getScoreVariant(displayScore)} />
+        );
+      },
     },
     {
       key: 'experience',
@@ -357,6 +362,14 @@ function KanbanCard({
   onDragEnd?: (e: React.DragEvent) => void;
   onScheduleInterview: () => void;
 }) {
+  // Calculate average from sub-scores if available, otherwise use existing score - Requirements 2.4
+  const calculatedScore = calculateAverageScore(
+    candidate.domainScore,
+    candidate.industryScore,
+    candidate.keyResponsibilitiesScore
+  );
+  const displayScore = calculatedScore ?? candidate.score;
+
   return (
     <div
       draggable
@@ -386,11 +399,28 @@ function KanbanCard({
             <div className="text-[10px] text-[#64748b]">{candidate.title}</div>
           </div>
         </div>
-        <Badge text={String(candidate.score)} variant={getScoreVariant(candidate.score)} />
+        <Badge text={String(displayScore)} variant={getScoreVariant(displayScore)} />
       </div>
 
-      <div className="text-[10px] text-[#64748b] mb-2">
+      <div className="text-[10px] text-[#64748b] mb-1.5">
         {candidate.experience} yrs · {candidate.location}
+      </div>
+
+      {/* Contact Information - Requirements 1.4 */}
+      <div className="text-[10px] text-[#64748b] mb-2 space-y-0.5">
+        {candidate.email && (
+          <div className="truncate" title={candidate.email}>
+            📧 {candidate.email}
+          </div>
+        )}
+        {candidate.phone && (
+          <div>
+            📞 {candidate.phone}
+          </div>
+        )}
+        {!candidate.email && !candidate.phone && (
+          <div className="text-[#94a3b8] italic">No contact info</div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-1 mb-3">
@@ -417,17 +447,17 @@ function KanbanCard({
   );
 }
 
-// Stage color mapping for pipeline indicators
-const stageColors: Record<string, { bg: string; border: string; indicator: string }> = {
-  'Queue': { bg: 'bg-[#f1f5f9]', border: 'border-[#e2e8f0]', indicator: 'bg-[#94a3b8]' },
-  'Applied': { bg: 'bg-[#e0f2fe]', border: 'border-[#bae6fd]', indicator: 'bg-[#0ea5e9]' },
-  'Screening': { bg: 'bg-[#fef3c7]', border: 'border-[#fde68a]', indicator: 'bg-[#f59e0b]' },
-  'Shortlisted': { bg: 'bg-[#dcfce7]', border: 'border-[#bbf7d0]', indicator: 'bg-[#22c55e]' },
-  'Interview': { bg: 'bg-[#e0e7ff]', border: 'border-[#c7d2fe]', indicator: 'bg-[#6366f1]' },
-  'Offer': { bg: 'bg-[#f5f3ff]', border: 'border-[#ddd6fe]', indicator: 'bg-[#8b5cf6]' },
-  'Hired': { bg: 'bg-[#d1fae5]', border: 'border-[#a7f3d0]', indicator: 'bg-[#10b981]' },
-  'Rejected': { bg: 'bg-[#fee2e2]', border: 'border-[#fecaca]', indicator: 'bg-[#ef4444]' },
-};
+// Stage color mapping for pipeline indicators - using imported STAGE_COLORS
+const stageColorsMapping: Record<string, { bg: string; border: string; indicator: string }> = Object.fromEntries(
+  Object.entries(STAGE_COLORS).map(([key, value]) => [
+    key,
+    { 
+      bg: value.bg, 
+      border: value.border || 'border-[#e2e8f0]', 
+      indicator: value.indicator 
+    }
+  ])
+);
 
 // Kanban Board View Component with checkbox selection and drag-drop - Requirements 1.1
 function KanbanBoardView({
@@ -457,7 +487,7 @@ function KanbanBoardView({
   const getCandidatesByStage = (stage: string) =>
     candidates.filter((c) => c.stage === stage);
 
-  const getStageStyle = (stage: string) => stageColors[stage] || stageColors['Queue'];
+  const getStageStyle = (stage: string) => stageColorsMapping[stage] || stageColorsMapping['Queue'];
 
   // Get stage ID from name
   const getStageId = (stageName: string): string => {
@@ -1011,6 +1041,7 @@ export function JobDetailsRightPanel({
           jobCandidateId={selectedCandidateForInterview.jobCandidateId || selectedCandidateForInterview.id}
           candidateName={selectedCandidateForInterview.name}
           jobTitle={role.title}
+          jobId={role.id}
         />
       )}
 

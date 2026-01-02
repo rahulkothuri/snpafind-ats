@@ -98,7 +98,7 @@ export function requireJobCreatePermission() {
     }
 
     // All authenticated users can create jobs, but they must be in the same company
-    // Additional role-based restrictions can be added here if needed
+    // Vendors cannot create jobs
     const { role } = req.user;
     
     if (!['admin', 'hiring_manager', 'recruiter'].includes(role)) {

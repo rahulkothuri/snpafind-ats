@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'hiring_manager' | 'recruiter';
+export type UserRole = 'admin' | 'hiring_manager' | 'recruiter' | 'vendor';
 export interface User {
     id: string;
     companyId: string;
@@ -51,6 +51,15 @@ export interface ScreeningQuestionAnswer {
     questionId: string;
     answer: string | string[] | number | boolean;
 }
+export interface AutoRejectionRules {
+    enabled: boolean;
+    rules: {
+        minExperience?: number;
+        maxExperience?: number;
+        requiredSkills?: string[];
+        requiredEducation?: string[];
+    };
+}
 export type JobStatus = 'active' | 'paused' | 'closed';
 export type WorkMode = 'Onsite' | 'WFH' | 'Hybrid' | 'C2C' | 'C2H';
 export type JobPriority = 'Low' | 'Medium' | 'High';
@@ -76,6 +85,7 @@ export interface Job {
     description: string;
     mandatoryCriteria?: MandatoryCriteria;
     screeningQuestions?: ScreeningQuestion[];
+    autoRejectionRules?: AutoRejectionRules;
     status: JobStatus;
     openings: number;
     createdAt: Date;
@@ -100,7 +110,7 @@ export interface PipelineStageConfig {
     position: number;
     isMandatory: boolean;
     subStages?: SubStageConfig[];
-    type?: 'shortlisting' | 'screening' | 'interview' | 'offer' | 'hired';
+    type?: 'shortlisting' | 'screening' | 'interview' | 'selected' | 'offer' | 'hired';
     isCustom?: boolean;
     parentStageId?: string;
     requirements?: string[];
@@ -128,6 +138,9 @@ export interface Candidate {
     skills: string[];
     resumeUrl?: string;
     score?: number;
+    domainScore?: number;
+    industryScore?: number;
+    keyResponsibilitiesScore?: number;
     createdAt: Date;
     updatedAt: Date;
     age?: number;
@@ -204,6 +217,7 @@ export interface Interview {
     notes?: string;
     cancelReason?: string;
     scheduledBy: string;
+    roundType?: string;
     createdAt: Date;
     updatedAt: Date;
     jobCandidate?: JobCandidate & {
@@ -224,6 +238,7 @@ export interface CreateInterviewInput {
     panelMemberIds: string[];
     notes?: string;
     scheduledBy: string;
+    roundType?: string;
 }
 export interface UpdateInterviewInput {
     scheduledAt?: Date;
@@ -233,6 +248,7 @@ export interface UpdateInterviewInput {
     location?: string;
     panelMemberIds?: string[];
     notes?: string;
+    roundType?: string;
 }
 export interface InterviewFilters {
     companyId?: string;
@@ -327,5 +343,44 @@ export interface FormattedDateTime {
     time: string;
     full: string;
     timezone: string;
+}
+/**
+ * Vendor job assignment
+ */
+export interface VendorJobAssignment {
+    id: string;
+    vendorId: string;
+    jobId: string;
+    createdAt: Date;
+    job?: Job;
+}
+/**
+ * Vendor user with job assignments
+ */
+export interface Vendor extends User {
+    vendorJobAssignments?: VendorJobAssignment[];
+    assignedJobs?: Array<{
+        id: string;
+        title: string;
+    }>;
+}
+/**
+ * Create vendor input (Requirements 7.3, 10.1)
+ */
+export interface CreateVendorInput {
+    companyId: string;
+    name: string;
+    email: string;
+    password: string;
+    assignedJobIds?: string[];
+}
+/**
+ * Update vendor input (Requirements 7.7)
+ */
+export interface UpdateVendorInput {
+    name?: string;
+    email?: string;
+    isActive?: boolean;
+    assignedJobIds?: string[];
 }
 //# sourceMappingURL=index.d.ts.map

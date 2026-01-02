@@ -10,10 +10,12 @@ export interface AnalyticsFilters {
 export interface KPIMetrics {
     activeRoles: number;
     activeCandidates: number;
+    newCandidatesThisMonth: number;
     interviewsToday: number;
     interviewsThisWeek: number;
     offersPending: number;
     totalHires: number;
+    totalOffers: number;
     avgTimeToFill: number;
     offerAcceptanceRate: number;
     rolesOnTrack: number;

@@ -733,11 +733,11 @@ function TimelineTab({ activities, stageHistory }: TimelineTabProps) {
                       {item.type === 'stage' && item.metadata?.movedBy && (
                         <p className="text-xs text-[#94a3b8] mt-1">by {item.metadata.movedBy as string}</p>
                       )}
-                      {item.type === 'activity' && item.metadata?.screeningAnswers && (
+                      {item.type === 'activity' && item.metadata?.screeningAnswers ? (
                         <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <p className="text-xs font-medium text-blue-800 mb-2">Screening Question Answers:</p>
                           <div className="space-y-1">
-                            {Object.entries(item.metadata.screeningAnswers as Record<string, any>).map(([questionId, answer]) => (
+                            {Object.entries(item.metadata.screeningAnswers as Record<string, unknown>).map(([questionId, answer]) => (
                               <div key={questionId} className="text-xs">
                                 <span className="text-blue-700 font-medium">Q{questionId.slice(-1)}:</span>
                                 <span className="text-blue-600 ml-1">
@@ -747,7 +747,7 @@ function TimelineTab({ activities, stageHistory }: TimelineTabProps) {
                             ))}
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                     <span className="text-xs text-[#94a3b8] whitespace-nowrap">
                       {formatDateTime(item.date)}
@@ -847,7 +847,9 @@ function ScreeningTab({ activities }: ScreeningTabProps) {
       <div className="p-4 border-b border-[#e2e8f0]">
         <h3 className="text-sm font-semibold text-[#111827]">Screening Question Answers</h3>
         <p className="text-xs text-[#64748b] mt-1">
-          Answered on {new Date(applicationActivity.createdAt).toLocaleDateString()}
+          {applicationActivity && (
+            <>Answered on {new Date(applicationActivity.createdAt).toLocaleDateString()}</>
+          )}
           {jobDetails && <span className="ml-2">• Job: {jobDetails.title}</span>}
         </p>
       </div>

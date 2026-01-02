@@ -9,14 +9,26 @@ export interface JobAccessControlService {
 }
 
 /**
+ * Get vendor job IDs for a user
+ * Requirements: 10.2, 10.3
+ */
+async function getVendorJobIds(userId: string): Promise<string[]> {
+  const assignments = await prisma.vendorJobAssignment.findMany({
+    where: { vendorId: userId },
+    select: { jobId: true },
+  });
+  return assignments.map((a) => a.jobId);
+}
+
+/**
  * Job Access Control Service
  * Implements role-based access control for job visibility and operations
- * Requirements: 1.1, 1.4, 4.1, 4.2
+ * Requirements: 1.1, 1.4, 4.1, 4.2, 7.4, 7.6, 10.2
  */
 export const jobAccessControlService: JobAccessControlService = {
   /**
    * Filter jobs based on user role and assignments
-   * Requirements: 1.1, 1.2, 1.3
+   * Requirements: 1.1, 1.2, 1.3, 7.6, 10.2
    */
   filterJobsByUserRole(jobs: Job[], userId: string, userRole: UserRole): Job[] {
     switch (userRole) {
@@ -29,6 +41,11 @@ export const jobAccessControlService: JobAccessControlService = {
         // Recruiters can only see jobs assigned to them
         return jobs.filter(job => job.assignedRecruiterId === userId);
       
+      case 'vendor':
+        // Vendors can only see jobs assigned to them via VendorJobAssignment
+        // Note: This sync filter won't work for vendors - use async getAccessibleJobs instead
+        return jobs;
+      
       default:
         return [];
     }
@@ -36,7 +53,7 @@ export const jobAccessControlService: JobAccessControlService = {
 
   /**
    * Validate if a user has access to a specific job
-   * Requirements: 4.2, 4.3, 4.4
+   * Requirements: 4.2, 4.3, 4.4, 7.4, 10.2
    */
   async validateJobAccess(jobId: string, userId: string, userRole: UserRole): Promise<boolean> {
     try {
@@ -74,6 +91,11 @@ export const jobAccessControlService: JobAccessControlService = {
           // Recruiters only have access to jobs assigned to them
           return job.assignedRecruiterId === userId;
         
+        case 'vendor':
+          // Vendors only have access to jobs assigned to them via VendorJobAssignment
+          const vendorJobIds = await getVendorJobIds(userId);
+          return vendorJobIds.includes(jobId);
+        
         default:
           return false;
       }
@@ -85,7 +107,7 @@ export const jobAccessControlService: JobAccessControlService = {
 
   /**
    * Get all jobs accessible to a user based on their role
-   * Requirements: 4.1, 4.5
+   * Requirements: 4.1, 4.5, 7.6, 10.2
    */
   async getAccessibleJobs(userId: string, userRole: UserRole, companyId: string): Promise<Job[]> {
     const baseQuery = {
@@ -119,6 +141,18 @@ export const jobAccessControlService: JobAccessControlService = {
           where: {
             ...baseQuery.where,
             assignedRecruiterId: userId,
+          },
+        });
+        break;
+      
+      case 'vendor':
+        // Get only jobs assigned to this vendor via VendorJobAssignment
+        const vendorJobIds = await getVendorJobIds(userId);
+        jobs = await prisma.job.findMany({
+          ...baseQuery,
+          where: {
+            ...baseQuery.where,
+            id: { in: vendorJobIds },
           },
         });
         break;

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MdFilterList, MdDateRange, MdBusiness, MdLocationOn, MdWork, MdPerson, MdClose, MdCheck } from 'react-icons/md';
+import { MdFilterList, MdDateRange, MdBusiness, MdLocationOn, MdWork, MdPerson, MdClose, MdCheck, MdViewModule } from 'react-icons/md';
 
 interface FilterOption {
     value: string;
@@ -11,12 +11,16 @@ interface DateRange {
     end: Date | null;
 }
 
+// Group by options for analytics view (Requirements 9.4)
+export type GroupByOption = 'role' | 'recruiter' | 'panel' | 'department';
+
 interface AnalyticsFilters {
     dateRange: DateRange;
     departmentId?: string;
     locationId?: string;
     jobId?: string;
     recruiterId?: string;
+    groupBy?: GroupByOption;
 }
 
 interface AnalyticsFilterBarProps {
@@ -29,6 +33,7 @@ interface AnalyticsFilterBarProps {
         recruiters?: FilterOption[];
     };
     className?: string;
+    isLoading?: boolean;
 }
 
 const predefinedDateRanges = [
@@ -39,11 +44,20 @@ const predefinedDateRanges = [
     { label: 'This year', days: 365 },
 ];
 
+// Group by options (Requirements 9.4)
+const groupByOptions: FilterOption[] = [
+    { value: 'role', label: 'Role-wise' },
+    { value: 'recruiter', label: 'Recruiter-wise' },
+    { value: 'panel', label: 'Panel-wise' },
+    { value: 'department', label: 'Department-wise' },
+];
+
 export function AnalyticsFilterBar({
     filters,
     onFilterChange,
     availableFilters,
     className = '',
+    isLoading = false,
 }: AnalyticsFilterBarProps) {
     const [activePopover, setActivePopover] = useState<string | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
@@ -65,6 +79,7 @@ export function AnalyticsFilterBar({
         filters.locationId,
         filters.jobId,
         filters.recruiterId,
+        filters.groupBy,
     ].filter(Boolean).length;
 
     const handlePredefinedDateRange = (days: number) => {
@@ -105,6 +120,15 @@ export function AnalyticsFilterBar({
             locationId: undefined,
             jobId: undefined,
             recruiterId: undefined,
+            groupBy: undefined,
+        });
+        setActivePopover(null);
+    };
+
+    const handleGroupByChange = (value: string) => {
+        onFilterChange({
+            ...filters,
+            groupBy: value as GroupByOption || undefined,
         });
         setActivePopover(null);
     };
@@ -222,20 +246,43 @@ export function AnalyticsFilterBar({
                         />
                     )}
 
+                    {/* Group By Selector - Requirements 9.4 */}
+                    <FilterDropdown
+                        icon={<MdViewModule size={14} />}
+                        label="Group by"
+                        value={filters.groupBy}
+                        options={groupByOptions}
+                        isOpen={activePopover === 'groupBy'}
+                        onToggle={() => setActivePopover(activePopover === 'groupBy' ? null : 'groupBy')}
+                        onSelect={handleGroupByChange}
+                    />
+
                     {activeFilterCount > 0 && (
                         <button
                             onClick={clearAllFilters}
                             className="text-xs text-red-600 hover:text-red-700 ml-2 px-2 py-1 flex items-center gap-1"
                         >
-                            <MdClose size={14} /> Clear Active
+                            <MdClose size={14} /> Clear All
                         </button>
                     )}
                 </div>
 
-                {/* Right: Last Updated Indicator (Optional) */}
+                {/* Right: Loading/Live Indicator - Requirements 10.4 */}
                 <div className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    Live Updates
+                    {isLoading ? (
+                        <>
+                            <svg className="w-3 h-3 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-blue-500">Loading data...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            Live Updates
+                        </>
+                    )}
                 </div>
             </div>
         </div>

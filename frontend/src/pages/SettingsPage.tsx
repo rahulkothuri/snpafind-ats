@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Layout, Button, Badge, Table, LoadingSpinner, ErrorMessage, SLAConfigSection, CalendarConnectionSettings } from '../components';
-import type { Column } from '../components';
+import { Layout, Button, Badge, Table, LoadingSpinner, ErrorMessage, SLAConfigSection, CalendarConnectionSettings, VendorManagementSection } from '../components';
+import type { Column, VendorFormData, JobOption } from '../components';
+import type { Vendor as VendorType } from '../components/VendorManagementSection';
 import { useAuth } from '../hooks/useAuth';
 import { useUsers, useCreateUser, useToggleUserStatus } from '../hooks/useUsers';
 import { useCompany, useUpdateCompany } from '../hooks/useCompany';
+import { useJobs } from '../hooks/useJobs';
 import type { User } from '../services';
+import { vendorsService } from '../services';
 
 /**
  * Settings Page - Requirements 19.1-19.6
@@ -17,7 +20,7 @@ import type { User } from '../services';
  * - Role configuration display with permissions
  */
 
-type TabId = 'company' | 'users' | 'roles' | 'sla' | 'calendar';
+type TabId = 'company' | 'users' | 'vendors' | 'roles' | 'sla' | 'calendar';
 
 interface Tab {
   id: TabId;
@@ -27,6 +30,7 @@ interface Tab {
 const tabs: Tab[] = [
   { id: 'company', label: 'Company Profile' },
   { id: 'users', label: 'User Management' },
+  { id: 'vendors', label: 'Vendor Management' },
   { id: 'roles', label: 'Role Configuration' },
   { id: 'sla', label: 'SLA Settings' },
   { id: 'calendar', label: 'Calendar Integration' },
@@ -1034,6 +1038,90 @@ function UserManagementTab() {
 }
 
 
+// Vendor Management Tab Component - Requirements 7.1, 7.2, 7.5, 7.7
+function VendorManagementTab() {
+  const { data: jobsData } = useJobs();
+  const [vendors, setVendors] = useState<VendorType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Map jobs to JobOption format
+  const jobs: JobOption[] = (jobsData || []).map((job) => ({
+    id: job.id,
+    title: job.title,
+  }));
+
+  // Fetch vendors on mount
+  const fetchVendors = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await vendorsService.getAll();
+      setVendors(data.map((v) => ({
+        id: v.id,
+        name: v.name,
+        email: v.email,
+        isActive: v.isActive,
+        assignedJobs: v.assignedJobs || [],
+        createdAt: v.createdAt,
+      })));
+    } catch (err: any) {
+      console.error('Failed to fetch vendors:', err);
+      setError(err.message || 'Failed to load vendors');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const handleAddVendor = async (data: VendorFormData) => {
+    await vendorsService.create({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      assignedJobIds: data.assignedJobIds,
+    });
+    await fetchVendors();
+  };
+
+  const handleUpdateVendor = async (id: string, data: Partial<VendorFormData>) => {
+    await vendorsService.update(id, {
+      name: data.name,
+      email: data.email,
+      assignedJobIds: data.assignedJobIds,
+    });
+    await fetchVendors();
+  };
+
+  const handleToggleVendorStatus = async (id: string) => {
+    await vendorsService.toggleStatus(id);
+    await fetchVendors();
+  };
+
+  const handleRemoveVendor = async (id: string) => {
+    await vendorsService.delete(id);
+    await fetchVendors();
+  };
+
+  return (
+    <VendorManagementSection
+      vendors={vendors}
+      jobs={jobs}
+      isLoading={isLoading}
+      error={error}
+      onAddVendor={handleAddVendor}
+      onUpdateVendor={handleUpdateVendor}
+      onToggleVendorStatus={handleToggleVendorStatus}
+      onRemoveVendor={handleRemoveVendor}
+      onRefresh={fetchVendors}
+    />
+  );
+}
+
+
 // Role Configuration Tab Component - Requirement 19.6
 function RoleConfigurationTab() {
   return (
@@ -1139,6 +1227,8 @@ export function SettingsPage() {
         return <CompanyProfileTab />;
       case 'users':
         return <UserManagementTab />;
+      case 'vendors':
+        return <VendorManagementTab />;
       case 'roles':
         return <RoleConfigurationTab />;
       case 'sla':

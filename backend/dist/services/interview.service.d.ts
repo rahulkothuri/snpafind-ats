@@ -44,6 +44,16 @@ export declare const interviewService: {
      */
     getDashboardInterviews(userId: string, companyId: string): Promise<DashboardInterviews>;
     /**
+     * Get interview round options for a job
+     * Returns custom sub-stages from the Interview stage if defined, otherwise returns default options
+     * Requirements: 6.2, 6.3, 6.4
+     */
+    getInterviewRoundOptions(jobId: string): Promise<{
+        id: string;
+        name: string;
+        isCustom: boolean;
+    }[]>;
+    /**
      * Get panel load distribution
      * Requirements: 13.1, 13.2
      */

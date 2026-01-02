@@ -1,4 +1,4 @@
-import type { Job, PipelineStage, PipelineStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion } from '../types/index.js';
+import type { Job, PipelineStage, PipelineStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion, AutoRejectionRules } from '../types/index.js';
 export interface CreateJobData {
     companyId: string;
     title: string;
@@ -21,6 +21,7 @@ export interface CreateJobData {
     openings?: number;
     mandatoryCriteria?: MandatoryCriteria;
     screeningQuestions?: ScreeningQuestion[];
+    autoRejectionRules?: AutoRejectionRules;
     pipelineStages?: PipelineStageConfig[];
     location?: string;
     employmentType?: string;
@@ -48,6 +49,7 @@ export interface UpdateJobData {
     openings?: number;
     mandatoryCriteria?: MandatoryCriteria | null;
     screeningQuestions?: ScreeningQuestion[] | null;
+    autoRejectionRules?: AutoRejectionRules | null;
     pipelineStages?: PipelineStageConfig[];
     location?: string | null;
     employmentType?: string | null;
@@ -61,7 +63,7 @@ export interface JobWithStages extends Job {
 export declare const jobService: {
     /**
      * Create a new job with pipeline stages
-     * Requirements: 1.1, 4.1, 4.2, 4.5, 5.1, 5.2, 6.1
+     * Requirements: 1.1, 4.1, 4.2, 4.5, 5.1, 5.2, 6.1, 9.1
      */
     create(data: CreateJobData): Promise<JobWithStages>;
     /**
@@ -94,7 +96,7 @@ export declare const jobService: {
     }, userId?: string, userRole?: UserRole): Promise<Job[]>;
     /**
      * Update a job with access control validation
-     * Requirements: 8.3, 4.3
+     * Requirements: 8.3, 4.3, 9.1, 9.5
      */
     update(id: string, data: UpdateJobData, userId?: string, userRole?: UserRole): Promise<JobWithStages>;
     /**
@@ -134,6 +136,7 @@ export declare const jobService: {
         salaryRange: string | null;
         mandatoryCriteria?: unknown;
         screeningQuestions?: unknown;
+        autoRejectionRules?: unknown;
     }, stages?: Array<{
         id: string;
         jobId: string;

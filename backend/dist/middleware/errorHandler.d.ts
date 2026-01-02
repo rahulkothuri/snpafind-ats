@@ -17,6 +17,9 @@ export declare class AuthorizationError extends AppError {
 export declare class NotFoundError extends AppError {
     constructor(resource: string);
 }
+export declare class ForbiddenError extends AppError {
+    constructor(message?: string);
+}
 export declare class ConflictError extends AppError {
     data?: Record<string, unknown>;
     constructor(message: string, data?: Record<string, unknown>);

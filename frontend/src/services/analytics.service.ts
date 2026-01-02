@@ -14,10 +14,12 @@ export interface AnalyticsFilters {
 export interface KPIMetrics {
   activeRoles: number;
   activeCandidates: number;
+  newCandidatesThisMonth: number;
   interviewsToday: number;
   interviewsThisWeek: number;
   offersPending: number;
   totalHires: number;
+  totalOffers: number;
   avgTimeToFill: number;
   offerAcceptanceRate: number;
   rolesOnTrack: number;
@@ -184,9 +186,37 @@ export interface ExportRequest {
   };
 }
 
+// Analytics Filter Options Interface (Requirements 9.1)
+export interface AnalyticsFilterOptions {
+  departments: { value: string; label: string }[];
+  locations: { value: string; label: string }[];
+  jobs: { value: string; label: string }[];
+  recruiters: { value: string; label: string }[];
+}
+
 // Analytics Service Class
 export class AnalyticsService {
   
+  /**
+   * Get filter options for analytics dashboard (Requirements 9.1)
+   * Fetches departments, locations, jobs, and recruiters from the database
+   */
+  async getFilterOptions(): Promise<AnalyticsFilterOptions> {
+    try {
+      const response = await api.get('/analytics/filter-options');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch filter options:', error);
+      // Return empty arrays on error to allow the page to still render
+      return {
+        departments: [],
+        locations: [],
+        jobs: [],
+        recruiters: []
+      };
+    }
+  }
+
   /**
    * Get KPI metrics for dashboard (Requirements 1.1, 5.1, 6.1, 7.1, 8.1)
    */
@@ -296,10 +326,42 @@ export class AnalyticsService {
   }
 
   /**
-   * Export analytics report (Requirements 16.1, 16.2, 16.3, 16.4)
+   * Export analytics report (Requirements 11.1, 11.2, 11.3)
+   * PDF export includes all visible data
+   * Excel export includes all visible data
+   * Exports respect current filters
    */
   async exportAnalytics(exportRequest: ExportRequest): Promise<Blob> {
-    const response = await api.post('/analytics/export', exportRequest, {
+    // Build query params from filters and export options
+    const params = new URLSearchParams();
+    
+    // Add format
+    params.append('format', exportRequest.format);
+    
+    // Add date range filters
+    if (exportRequest.dateRange.startDate) {
+      params.append('startDate', exportRequest.dateRange.startDate.toISOString());
+    }
+    if (exportRequest.dateRange.endDate) {
+      params.append('endDate', exportRequest.dateRange.endDate.toISOString());
+    }
+    
+    // Add other filters from the request
+    if (exportRequest.filters.departmentId) {
+      params.append('departmentId', exportRequest.filters.departmentId);
+    }
+    if (exportRequest.filters.locationId) {
+      params.append('locationId', exportRequest.filters.locationId);
+    }
+    if (exportRequest.filters.jobId) {
+      params.append('jobId', exportRequest.filters.jobId);
+    }
+    if (exportRequest.filters.recruiterId) {
+      params.append('recruiterId', exportRequest.filters.recruiterId);
+    }
+    
+    const queryString = params.toString();
+    const response = await api.get(`/analytics/export?${queryString}`, {
       responseType: 'blob'
     });
     return response.data;

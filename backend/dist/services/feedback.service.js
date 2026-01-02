@@ -11,9 +11,15 @@ export const DEFAULT_SCORECARD_CRITERIA = [
 /**
  * Feedback Service
  * Manages interview feedback and scorecards
+ * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 10.1, 10.2, 10.3, 10.4, 10.5
  */
 export const feedbackService = {
+    /**
+     * Submit feedback for an interview
+     * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+     */
     async submitFeedback(data) {
+        // Validate required fields
         const errors = {};
         if (!data.interviewId)
             errors.interviewId = ['Interview ID is required'];
@@ -25,6 +31,7 @@ export const feedbackService = {
             errors.overallComments = ['Overall comments are required'];
         if (!data.recommendation)
             errors.recommendation = ['Recommendation is required'];
+        // Validate rating scores (1-5)
         if (data.ratings) {
             for (const rating of data.ratings) {
                 if (rating.score < 1 || rating.score > 5) {
@@ -33,6 +40,7 @@ export const feedbackService = {
                 }
             }
         }
+        // Validate recommendation value
         const validRecommendations = ['strong_hire', 'hire', 'no_hire', 'strong_no_hire'];
         if (data.recommendation && !validRecommendations.includes(data.recommendation)) {
             errors.recommendation = ['Invalid recommendation value'];
@@ -40,26 +48,48 @@ export const feedbackService = {
         if (Object.keys(errors).length > 0) {
             throw new ValidationError(errors);
         }
+        // Verify interview exists
         const interview = await prisma.interview.findUnique({
             where: { id: data.interviewId },
             include: {
-                jobCandidate: { include: { candidate: true, job: true } },
-                panelMembers: { include: { user: true } },
+                jobCandidate: {
+                    include: {
+                        candidate: true,
+                        job: true,
+                    },
+                },
+                panelMembers: {
+                    include: {
+                        user: true,
+                    },
+                },
             },
         });
         if (!interview) {
             throw new NotFoundError('Interview');
         }
+        // Verify panel member is part of the interview
         const isPanelMember = interview.panelMembers.some(pm => pm.userId === data.panelMemberId);
         if (!isPanelMember) {
-            throw new ValidationError({ panelMemberId: ['User is not a panel member for this interview'] });
+            throw new ValidationError({
+                panelMemberId: ['User is not a panel member for this interview'],
+            });
         }
+        // Check if feedback already exists
         const existingFeedback = await prisma.interviewFeedback.findUnique({
-            where: { interviewId_panelMemberId: { interviewId: data.interviewId, panelMemberId: data.panelMemberId } },
+            where: {
+                interviewId_panelMemberId: {
+                    interviewId: data.interviewId,
+                    panelMemberId: data.panelMemberId,
+                },
+            },
         });
         if (existingFeedback) {
-            throw new ValidationError({ feedback: ['Feedback has already been submitted for this interview'] });
+            throw new ValidationError({
+                feedback: ['Feedback has already been submitted for this interview'],
+            });
         }
+        // Create feedback
         const feedback = await prisma.interviewFeedback.create({
             data: {
                 interviewId: data.interviewId,
@@ -68,9 +98,12 @@ export const feedbackService = {
                 overallComments: data.overallComments,
                 recommendation: data.recommendation,
             },
-            include: { panelMember: true },
+            include: {
+                panelMember: true,
+            },
         });
         const mappedFeedback = this.mapToFeedback(feedback);
+        // Record interview_feedback activity (Requirements 15.4)
         try {
             const mappedInterview = this.mapToInterview(interview);
             await interviewActivityService.recordInterviewFeedback(mappedInterview, mappedFeedback);
@@ -80,34 +113,64 @@ export const feedbackService = {
         }
         return mappedFeedback;
     },
+    /**
+     * Get all feedback for an interview
+     * Requirements: 14.5
+     */
     async getInterviewFeedback(interviewId) {
         const feedback = await prisma.interviewFeedback.findMany({
             where: { interviewId },
-            include: { panelMember: true },
+            include: {
+                panelMember: true,
+            },
             orderBy: { submittedAt: 'asc' },
         });
         return feedback.map(f => this.mapToFeedback(f));
     },
+    /**
+     * Check if all feedback is complete for an interview
+     * Requirements: 10.1
+     */
     async isAllFeedbackComplete(interviewId) {
         const interview = await prisma.interview.findUnique({
             where: { id: interviewId },
-            include: { panelMembers: true, feedback: true },
+            include: {
+                panelMembers: true,
+                feedback: true,
+            },
         });
-        if (!interview)
+        if (!interview) {
             return false;
+        }
+        // All panel members must have submitted feedback
         return interview.panelMembers.length === interview.feedback.length;
     },
+    /**
+     * Get feedback completion status for an interview
+     * Requirements: 14.5
+     */
     async getFeedbackCompletionStatus(interviewId) {
         const interview = await prisma.interview.findUnique({
             where: { id: interviewId },
-            include: { panelMembers: { include: { user: true } }, feedback: true },
+            include: {
+                panelMembers: {
+                    include: {
+                        user: true,
+                    },
+                },
+                feedback: true,
+            },
         });
-        if (!interview)
+        if (!interview) {
             throw new NotFoundError('Interview');
+        }
         const feedbackSubmittedBy = new Set(interview.feedback.map(f => f.panelMemberId));
         const pendingMembers = interview.panelMembers
             .filter(pm => !feedbackSubmittedBy.has(pm.userId))
-            .map(pm => ({ userId: pm.userId, userName: pm.user.name }));
+            .map(pm => ({
+            userId: pm.userId,
+            userName: pm.user.name,
+        }));
         return {
             total: interview.panelMembers.length,
             completed: interview.feedback.length,
@@ -116,49 +179,67 @@ export const feedbackService = {
             pendingMembers,
         };
     },
+    /**
+     * Get interviews pending feedback for a user
+     * Requirements: 14.2
+     */
     async getPendingFeedback(userId) {
         const interviews = await prisma.interview.findMany({
             where: {
                 status: 'completed',
-                panelMembers: { some: { userId } },
-                feedback: { none: { panelMemberId: userId } },
+                panelMembers: {
+                    some: {
+                        userId,
+                    },
+                },
+                feedback: {
+                    none: {
+                        panelMemberId: userId,
+                    },
+                },
             },
             include: {
-                jobCandidate: { include: { candidate: true, job: true } },
+                jobCandidate: {
+                    include: {
+                        candidate: true,
+                        job: true,
+                    },
+                },
                 scheduler: true,
-                panelMembers: { include: { user: true } },
-                feedback: { include: { panelMember: true } },
+                panelMembers: {
+                    include: {
+                        user: true,
+                    },
+                },
+                feedback: {
+                    include: {
+                        panelMember: true,
+                    },
+                },
             },
             orderBy: { scheduledAt: 'desc' },
         });
         return interviews.map(i => this.mapToInterview(i));
     },
-    async getScorecardTemplates(companyId) {
-        const templates = await prisma.scorecardTemplate.findMany({
-            where: { companyId },
-            orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
-        });
-        return templates.map(t => ({
-            id: t.id,
-            companyId: t.companyId,
-            name: t.name,
-            criteria: t.criteria,
-            isDefault: t.isDefault,
-            createdAt: t.createdAt,
-            updatedAt: t.updatedAt,
-        }));
-    },
-    getDefaultCriteria() {
-        return DEFAULT_SCORECARD_CRITERIA;
-    },
+    /**
+     * Process auto-stage movement based on feedback
+     * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
+     */
     async processAutoStageMovement(interviewId) {
+        // Get interview with all feedback
         const interview = await prisma.interview.findUnique({
             where: { id: interviewId },
             include: {
                 jobCandidate: {
                     include: {
                         candidate: true,
-                        job: { include: { pipelineStages: { orderBy: { position: 'asc' } } } },
+                        job: {
+                            include: {
+                                pipelineStages: {
+                                    orderBy: { position: 'asc' },
+                                },
+                            },
+                        },
                         currentStage: true,
                     },
                 },
@@ -166,45 +247,63 @@ export const feedbackService = {
                 feedback: true,
             },
         });
-        if (!interview || !interview.jobCandidate)
+        if (!interview || !interview.jobCandidate) {
             return;
-        if (interview.panelMembers.length !== interview.feedback.length)
-            return;
+        }
+        // Check if all feedback is complete
+        if (interview.panelMembers.length !== interview.feedback.length) {
+            return; // Not all feedback submitted yet
+        }
+        // Check company settings for auto-stage movement
         const companySettings = await prisma.companySettings.findUnique({
             where: { companyId: interview.jobCandidate.job.companyId },
         });
-        if (companySettings && !companySettings.autoStageMovementEnabled)
-            return;
+        if (companySettings && !companySettings.autoStageMovementEnabled) {
+            return; // Auto-stage movement is disabled
+        }
+        // Evaluate recommendations
         const recommendations = interview.feedback.map(f => f.recommendation);
         const hasStrongNoHire = recommendations.includes('strong_no_hire');
         const allPositive = recommendations.every(r => r === 'strong_hire' || r === 'hire');
+        // If any strong_no_hire, flag for review (don't auto-move)
         if (hasStrongNoHire) {
+            // Create notification for review
             await prisma.notification.create({
                 data: {
                     userId: interview.scheduledBy,
                     type: 'feedback_pending',
                     title: 'Candidate Flagged for Review',
-                    message: `Interview feedback for ${interview.jobCandidate.candidate?.name || 'candidate'} includes a "Strong No Hire" recommendation.`,
+                    message: `Interview feedback for ${interview.jobCandidate.candidate?.name || 'candidate'} includes a "Strong No Hire" recommendation. Please review.`,
                     entityType: 'interview',
                     entityId: interviewId,
                 },
             });
             return;
         }
+        // If all positive, move to next stage
         if (allPositive) {
             const stages = interview.jobCandidate.job.pipelineStages;
             const currentStageIndex = stages.findIndex(s => s.id === interview.jobCandidate.currentStageId);
             if (currentStageIndex >= 0 && currentStageIndex < stages.length - 1) {
                 const nextStage = stages[currentStageIndex + 1];
+                // Update candidate's current stage
                 await prisma.$transaction(async (tx) => {
+                    // Close current stage history
                     await tx.stageHistory.updateMany({
-                        where: { jobCandidateId: interview.jobCandidateId, exitedAt: null },
-                        data: { exitedAt: new Date() },
+                        where: {
+                            jobCandidateId: interview.jobCandidateId,
+                            exitedAt: null,
+                        },
+                        data: {
+                            exitedAt: new Date(),
+                        },
                     });
+                    // Update job candidate's current stage
                     await tx.jobCandidate.update({
                         where: { id: interview.jobCandidateId },
                         data: { currentStageId: nextStage.id },
                     });
+                    // Create new stage history record
                     await tx.stageHistory.create({
                         data: {
                             jobCandidateId: interview.jobCandidateId,
@@ -213,6 +312,7 @@ export const feedbackService = {
                             comment: 'Auto-moved based on interview feedback',
                         },
                     });
+                    // Create activity record
                     await tx.candidateActivity.create({
                         data: {
                             candidateId: interview.jobCandidate.candidateId,
@@ -232,11 +332,41 @@ export const feedbackService = {
                 });
             }
         }
+        // Mark interview as completed
         await prisma.interview.update({
             where: { id: interviewId },
             data: { status: 'completed' },
         });
     },
+    /**
+     * Get scorecard templates for a company
+     * Requirements: 9.1
+     */
+    async getScorecardTemplates(companyId) {
+        const templates = await prisma.scorecardTemplate.findMany({
+            where: { companyId },
+            orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+        });
+        return templates.map(t => ({
+            id: t.id,
+            companyId: t.companyId,
+            name: t.name,
+            criteria: t.criteria,
+            isDefault: t.isDefault,
+            createdAt: t.createdAt,
+            updatedAt: t.updatedAt,
+        }));
+    },
+    /**
+     * Get default scorecard criteria
+     * Requirements: 9.1
+     */
+    getDefaultCriteria() {
+        return DEFAULT_SCORECARD_CRITERIA;
+    },
+    /**
+     * Map Prisma feedback to InterviewFeedback type
+     */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mapToFeedback(feedback) {
         return {
@@ -259,6 +389,9 @@ export const feedbackService = {
             } : undefined,
         };
     },
+    /**
+     * Map Prisma interview to Interview type
+     */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mapToInterview(interview) {
         return {

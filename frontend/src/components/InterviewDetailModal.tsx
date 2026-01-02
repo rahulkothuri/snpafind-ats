@@ -206,6 +206,14 @@ export function InterviewDetailModal({
                 <span className="text-xl">{modeInfo.icon}</span>
                 <span className="text-sm font-medium text-[#111827]">{modeInfo.label}</span>
               </div>
+              {interview.roundType && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-[#94a3b8]">Round:</span>
+                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">
+                    {interview.roundType}
+                  </span>
+                </div>
+              )}
               {interview.meetingLink && (
                 <a 
                   href={interview.meetingLink}

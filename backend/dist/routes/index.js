@@ -16,6 +16,7 @@ import interviewRoutes from './interview.routes.js';
 import emailTemplateRoutes from './emailTemplate.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import analyticsRoutes from './analytics.routes.js';
+import vendorRoutes from './vendor.routes.js';
 // import searchRoutes from './search.routes.js';
 const router = Router();
 // Health check endpoint
@@ -40,6 +41,7 @@ router.use('/interviews', interviewRoutes);
 router.use('/email-templates', emailTemplateRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/vendors', vendorRoutes);
 // router.use('/search', searchRoutes);
 // SLA routes - mounted at root to support /api/alerts and /api/settings/sla
 router.use('/', slaRoutes);

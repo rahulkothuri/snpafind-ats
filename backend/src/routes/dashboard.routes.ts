@@ -355,20 +355,36 @@ async function getRolePipelineData(
       count + jc.interviews.length, 0
     );
 
-    // Simple SLA calculation (30 days threshold)
-    const slaThreshold = 30;
+    // Get location - handle both array and string formats
+    let locationDisplay = 'Not specified';
+    if (job.locations && Array.isArray(job.locations) && (job.locations as string[]).length > 0) {
+      locationDisplay = (job.locations as string[])[0];
+    } else if (job.location) {
+      locationDisplay = job.location;
+    }
+
+    // SLA calculation based on job age and priority
+    // High priority: 21 days, Medium: 30 days, Low: 45 days
+    const slaThresholds: Record<string, number> = {
+      'High': 21,
+      'Medium': 30,
+      'Low': 45
+    };
+    const slaThreshold = slaThresholds[job.priority || 'Medium'] || 30;
+    const atRiskThreshold = Math.floor(slaThreshold * 0.8); // 80% of threshold
+    
     let slaStatus: 'On track' | 'At risk' | 'Breached' = 'On track';
 
     if (ageInDays > slaThreshold) {
       slaStatus = 'Breached';
-    } else if (ageInDays > slaThreshold - 3) {
+    } else if (ageInDays > atRiskThreshold) {
       slaStatus = 'At risk';
     }
 
     return {
       id: job.id,
       roleName: job.title,
-      location: Array.isArray(job.locations) ? (job.locations as string[])[0] : job.location || 'Not specified',
+      location: locationDisplay,
       applicantCount: job._count.jobCandidates,
       interviewCount,
       offerCount,

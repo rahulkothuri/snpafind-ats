@@ -136,6 +136,9 @@ export function InterviewCard({
         </div>
         <div className="flex items-center gap-2">
           <Badge text={modeInfo.label} variant={modeInfo.variant} />
+          {interview.roundType && (
+            <Badge text={interview.roundType} variant="gray" />
+          )}
           <Badge text={getStatusText(interview.status)} variant={getStatusVariant(interview.status)} />
           {showActions && canJoin && onJoin && (
             <Button variant="mini" miniColor="schedule" onClick={() => onJoin(interview)}>
@@ -177,6 +180,9 @@ export function InterviewCard({
       <div className="flex items-center gap-2 mb-3">
         <span className="text-sm">{modeInfo.icon}</span>
         <Badge text={modeInfo.label} variant={modeInfo.variant} />
+        {interview.roundType && (
+          <Badge text={interview.roundType} variant="gray" />
+        )}
         {interview.mode === 'in_person' && interview.location && (
           <span className="text-xs text-[#64748b] truncate">{interview.location}</span>
         )}

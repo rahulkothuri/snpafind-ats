@@ -1,6 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError, AuthorizationError } from '../middleware/errorHandler.js';
-import type { Job, PipelineStage, PipelineStageConfig, SubStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion } from '../types/index.js';
+import type { Job, PipelineStage, PipelineStageConfig, SubStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion, AutoRejectionRules } from '../types/index.js';
 import { jobAccessControlService } from './jobAccessControl.service.js';
 
 // Mandatory stages that cannot be removed (Requirements 4.2)
@@ -17,6 +17,76 @@ const DEFAULT_STAGES: PipelineStageConfig[] = [
   { name: 'Offer', position: 6, isMandatory: true },
   { name: 'Hired', position: 7, isMandatory: false },
 ];
+
+/**
+ * Validate auto-rejection rules structure
+ * Requirements: 9.1, 9.5
+ */
+function validateAutoRejectionRules(rules: AutoRejectionRules | null | undefined): { valid: boolean; errors: Record<string, string[]> } {
+  const errors: Record<string, string[]> = {};
+  
+  if (!rules) {
+    return { valid: true, errors };
+  }
+  
+  // Validate enabled flag
+  if (typeof rules.enabled !== 'boolean') {
+    errors.autoRejectionRules = ['enabled must be a boolean'];
+    return { valid: false, errors };
+  }
+  
+  // If not enabled, no further validation needed
+  if (!rules.enabled) {
+    return { valid: true, errors };
+  }
+  
+  // Validate rules object
+  if (!rules.rules || typeof rules.rules !== 'object') {
+    errors.autoRejectionRules = ['rules must be an object when enabled'];
+    return { valid: false, errors };
+  }
+  
+  // Validate minExperience
+  if (rules.rules.minExperience !== undefined) {
+    if (typeof rules.rules.minExperience !== 'number' || rules.rules.minExperience < 0) {
+      errors['autoRejectionRules.minExperience'] = ['minExperience must be a non-negative number'];
+    }
+  }
+  
+  // Validate maxExperience
+  if (rules.rules.maxExperience !== undefined) {
+    if (typeof rules.rules.maxExperience !== 'number' || rules.rules.maxExperience < 0) {
+      errors['autoRejectionRules.maxExperience'] = ['maxExperience must be a non-negative number'];
+    }
+  }
+  
+  // Validate experience range
+  if (rules.rules.minExperience !== undefined && rules.rules.maxExperience !== undefined) {
+    if (rules.rules.minExperience > rules.rules.maxExperience) {
+      errors['autoRejectionRules.minExperience'] = ['minExperience cannot be greater than maxExperience'];
+    }
+  }
+  
+  // Validate requiredSkills
+  if (rules.rules.requiredSkills !== undefined) {
+    if (!Array.isArray(rules.rules.requiredSkills)) {
+      errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array'];
+    } else if (!rules.rules.requiredSkills.every(s => typeof s === 'string')) {
+      errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array of strings'];
+    }
+  }
+  
+  // Validate requiredEducation
+  if (rules.rules.requiredEducation !== undefined) {
+    if (!Array.isArray(rules.rules.requiredEducation)) {
+      errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array'];
+    } else if (!rules.rules.requiredEducation.every(s => typeof s === 'string')) {
+      errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array of strings'];
+    }
+  }
+  
+  return { valid: Object.keys(errors).length === 0, errors };
+}
 
 export interface CreateJobData {
   companyId: string;
@@ -56,6 +126,9 @@ export interface CreateJobData {
   
   // Screening questions - questions candidates must answer before applying
   screeningQuestions?: ScreeningQuestion[];
+  
+  // Auto-rejection rules (Requirements 9.1)
+  autoRejectionRules?: AutoRejectionRules;
   
   // Pipeline stages configuration (Requirements 4.1)
   pipelineStages?: PipelineStageConfig[];
@@ -105,6 +178,9 @@ export interface UpdateJobData {
   // Screening questions - questions candidates must answer before applying
   screeningQuestions?: ScreeningQuestion[] | null;
   
+  // Auto-rejection rules (Requirements 9.1)
+  autoRejectionRules?: AutoRejectionRules | null;
+  
   // Pipeline stages configuration
   pipelineStages?: PipelineStageConfig[];
   
@@ -123,7 +199,7 @@ export interface JobWithStages extends Job {
 export const jobService = {
   /**
    * Create a new job with pipeline stages
-   * Requirements: 1.1, 4.1, 4.2, 4.5, 5.1, 5.2, 6.1
+   * Requirements: 1.1, 4.1, 4.2, 4.5, 5.1, 5.2, 6.1, 9.1
    */
   async create(data: CreateJobData): Promise<JobWithStages> {
     // Validate required fields (Requirements 1.7)
@@ -147,6 +223,14 @@ export const jobService = {
       }
     }
 
+    // Validate auto-rejection rules (Requirements 9.1)
+    if (data.autoRejectionRules) {
+      const rulesValidation = validateAutoRejectionRules(data.autoRejectionRules);
+      if (!rulesValidation.valid) {
+        Object.assign(errors, rulesValidation.errors);
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       throw new ValidationError(errors);
     }
@@ -159,7 +243,7 @@ export const jobService = {
     // Create job with pipeline stages in a transaction
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await prisma.$transaction(async (tx: any) => {
-      // Create the job (Requirements 5.1, 5.2 - unique ID and active status)
+      // Create the job (Requirements 5.1, 5.2, 9.1 - unique ID and active status)
       const newJob = await tx.job.create({
         data: {
           companyId: data.companyId,
@@ -200,6 +284,9 @@ export const jobService = {
           
           // Screening questions
           screeningQuestions: data.screeningQuestions || [],
+          
+          // Auto-rejection rules (Requirements 9.1)
+          autoRejectionRules: data.autoRejectionRules || { enabled: false, rules: {} },
           
           // Legacy fields
           location: data.location || (data.locations && data.locations.length > 0 ? data.locations[0] : ''),
@@ -416,7 +503,7 @@ export const jobService = {
 
   /**
    * Update a job with access control validation
-   * Requirements: 8.3, 4.3
+   * Requirements: 8.3, 4.3, 9.1, 9.5
    */
   async update(id: string, data: UpdateJobData, userId?: string, userRole?: UserRole): Promise<JobWithStages> {
     // Validate access if user info is provided
@@ -452,6 +539,14 @@ export const jobService = {
         throw new ValidationError({ 
           salaryMin: ['Minimum salary cannot be greater than maximum'] 
         });
+      }
+    }
+
+    // Validate auto-rejection rules if provided (Requirements 9.1)
+    if (data.autoRejectionRules !== undefined && data.autoRejectionRules !== null) {
+      const rulesValidation = validateAutoRejectionRules(data.autoRejectionRules);
+      if (!rulesValidation.valid) {
+        throw new ValidationError(rulesValidation.errors);
       }
     }
 
@@ -504,6 +599,9 @@ export const jobService = {
           
           // Screening questions
           screeningQuestions: data.screeningQuestions,
+          
+          // Auto-rejection rules (Requirements 9.1, 9.5)
+          autoRejectionRules: data.autoRejectionRules,
           
           // Legacy fields
           location: data.location,
@@ -649,6 +747,7 @@ export const jobService = {
       salaryRange: string | null;
       mandatoryCriteria?: unknown;
       screeningQuestions?: unknown;
+      autoRejectionRules?: unknown;
     },
     stages?: Array<{
       id: string;
@@ -712,6 +811,9 @@ export const jobService = {
       
       // Screening questions
       screeningQuestions: job.screeningQuestions as ScreeningQuestion[] | undefined,
+      
+      // Auto-rejection rules (Requirements 9.5)
+      autoRejectionRules: job.autoRejectionRules as AutoRejectionRules | undefined,
       
       // Legacy fields
       location: job.location ?? undefined,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout, Button, MultiSelect, MandatoryCriteriaSection, ScreeningQuestionsSection, PipelineStageConfigurator, JobShareModal, StageImportModal } from '../components';
+import { Layout, Button, MultiSelect, MandatoryCriteriaSection, ScreeningQuestionsSection, PipelineStageConfigurator, JobShareModal, StageImportModal, AutoRejectionRulesSection, DEFAULT_AUTO_REJECTION_RULES } from '../components';
+import type { AutoRejectionRules } from '../components';
 import { DEFAULT_MANDATORY_CRITERIA } from '../components/MandatoryCriteriaSection';
 import { DEFAULT_PIPELINE_STAGES, type EnhancedPipelineStageConfig } from '../components/PipelineStageConfigurator';
 import { useAuth } from '../hooks/useAuth';
@@ -42,6 +43,7 @@ interface JobFormData {
   pipelineStages: EnhancedPipelineStageConfig[];
   mandatoryCriteria: MandatoryCriteria;
   screeningQuestions: ScreeningQuestion[];
+  autoRejectionRules: AutoRejectionRules;
 }
 
 const initialFormData: JobFormData = {
@@ -65,6 +67,7 @@ const initialFormData: JobFormData = {
   pipelineStages: DEFAULT_PIPELINE_STAGES,
   mandatoryCriteria: DEFAULT_MANDATORY_CRITERIA,
   screeningQuestions: [],
+  autoRejectionRules: DEFAULT_AUTO_REJECTION_RULES,
 };
 
 /**
@@ -163,6 +166,7 @@ export function JobCreationPage() {
             pipelineStages,
             mandatoryCriteria: job.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA,
             screeningQuestions: job.screeningQuestions || [],
+            autoRejectionRules: job.autoRejectionRules || DEFAULT_AUTO_REJECTION_RULES,
           });
         })
         .catch((err) => {
@@ -173,7 +177,7 @@ export function JobCreationPage() {
     }
   }, [isEditMode, id]);
 
-  const handleChange = (field: keyof JobFormData, value: string | number | '' | string[] | WorkMode | JobPriority | EnhancedPipelineStageConfig[] | MandatoryCriteria | ScreeningQuestion[]) => {
+  const handleChange = (field: keyof JobFormData, value: string | number | '' | string[] | WorkMode | JobPriority | EnhancedPipelineStageConfig[] | MandatoryCriteria | ScreeningQuestion[] | AutoRejectionRules) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: '' }));
     setSubmitError(null);
@@ -290,6 +294,11 @@ export function JobCreationPage() {
 
       if (formData.screeningQuestions && formData.screeningQuestions.length > 0) {
         payload.screeningQuestions = formData.screeningQuestions;
+      }
+
+      // Auto-rejection rules (Requirements 4.1, 4.2, 9.1)
+      if (formData.autoRejectionRules) {
+        payload.autoRejectionRules = formData.autoRejectionRules;
       }
 
       if (formData.pipelineStages && formData.pipelineStages.length > 0) {
@@ -752,23 +761,31 @@ export function JobCreationPage() {
               />
             </div>
 
-            {/* Screening Requirements */}
+            {/* Mandatory Criteria - Requirements 3.1, 3.2, 3.3 - Moved after Job Description */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Screening Requirements</h3>
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Mandatory Criteria</h3>
+              <MandatoryCriteriaSection
+                value={formData.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA}
+                onChange={(criteria) => handleChange('mandatoryCriteria', criteria)}
+              />
+            </div>
 
-              <div className="space-y-6">
-                <MandatoryCriteriaSection
-                  value={formData.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA}
-                  onChange={(criteria) => handleChange('mandatoryCriteria', criteria)}
-                />
+            {/* Auto-Rejection Rules - Requirements 4.1, 4.2, 4.5 */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Auto-Rejection Rules</h3>
+              <AutoRejectionRulesSection
+                value={formData.autoRejectionRules}
+                onChange={(rules) => handleChange('autoRejectionRules', rules)}
+              />
+            </div>
 
-                <div className="pt-6 border-t border-gray-100">
-                  <ScreeningQuestionsSection
-                    value={formData.screeningQuestions}
-                    onChange={(questions) => handleChange('screeningQuestions', questions)}
-                  />
-                </div>
-              </div>
+            {/* Screening Questions */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Screening Questions</h3>
+              <ScreeningQuestionsSection
+                value={formData.screeningQuestions}
+                onChange={(questions) => handleChange('screeningQuestions', questions)}
+              />
             </div>
 
             {/* Pipeline Configuration */}

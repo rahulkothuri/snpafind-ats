@@ -13,8 +13,31 @@ interface StageRejectionChartProps {
 }
 
 /**
+ * Generate a suggestion based on the highest drop-off stage
+ * Requirements 8.6: Show suggestion for reducing drop-offs
+ */
+function getSuggestionForStage(stageName: string): string {
+    const lowerStageName = stageName.toLowerCase();
+    
+    if (lowerStageName.includes('applied') || lowerStageName.includes('queue')) {
+        return 'Use AI-screening + better JD clarity to reduce early drop-offs.';
+    } else if (lowerStageName.includes('screening')) {
+        return 'Consider refining screening criteria or improving candidate communication.';
+    } else if (lowerStageName.includes('interview')) {
+        return 'Review interview process efficiency and candidate experience feedback.';
+    } else if (lowerStageName.includes('offer')) {
+        return 'Analyze offer competitiveness and improve negotiation process.';
+    } else if (lowerStageName.includes('shortlist')) {
+        return 'Ensure shortlisting criteria align with role requirements.';
+    }
+    
+    return 'Review this stage for process improvements and bottleneck reduction.';
+}
+
+/**
  * StageRejectionChart - Displays drop-off percentages by pipeline stage
- * Uses horizontal bar chart with red-tinted bars matching atsreport.html design
+ * Uses horizontal bar chart with light red bars matching atsreport.html design
+ * Requirements: 8.1, 8.3, 8.4, 8.5, 8.6
  */
 export function StageRejectionChart({
     data,
@@ -39,37 +62,44 @@ export function StageRejectionChart({
                 </div>
             </div>
 
-            {/* Bar Chart */}
+            {/* Bar Chart - Requirements 8.3, 8.4 */}
             <div className="space-y-3">
-                {data.map(item => (
-                    <div key={item.stageName} className="flex items-center gap-3">
-                        {/* Label */}
-                        <div className="w-28 text-xs text-gray-500 truncate" title={item.stageName}>
-                            {item.stageName}
+                {data.map(item => {
+                    const isHighestDropOff = item.stageName === highestDropOffStage;
+                    return (
+                        <div key={item.stageName} className="flex items-center gap-3">
+                            {/* Label */}
+                            <div 
+                                className={`w-28 text-xs truncate ${isHighestDropOff ? 'text-red-600 font-medium' : 'text-gray-500'}`} 
+                                title={item.stageName}
+                            >
+                                {item.stageName}
+                            </div>
+                            {/* Bar Track */}
+                            <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full rounded-full transition-all duration-300"
+                                    style={{
+                                        width: `${(item.dropOffPercentage / maxPercentage) * 100}%`,
+                                        // Light red color for bars - Requirements 8.4
+                                        backgroundColor: isHighestDropOff ? '#fca5a5' : '#fecaca', // red-300 for highest, red-200 for others
+                                    }}
+                                />
+                            </div>
+                            {/* Value */}
+                            <div className={`w-12 text-right text-xs font-medium ${isHighestDropOff ? 'text-red-600' : 'text-gray-600'}`}>
+                                {item.dropOffPercentage}%
+                            </div>
                         </div>
-                        {/* Bar Track */}
-                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full rounded-full transition-all duration-300"
-                                style={{
-                                    width: `${(item.dropOffPercentage / maxPercentage) * 100}%`,
-                                    backgroundColor: '#fee2e2', // red-100 tint
-                                }}
-                            />
-                        </div>
-                        {/* Value */}
-                        <div className="w-12 text-right text-xs text-gray-600 font-medium">
-                            {item.dropOffPercentage}%
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
-            {/* Footer Insight */}
+            {/* Footer Insight - Requirements 8.5, 8.6 */}
             {highestDropOffStage && (
                 <div className="mt-5 text-[10px] text-gray-500">
-                    Most rejections at <strong className="text-gray-700">{highestDropOffStage}</strong>.
-                    Use AI-screening + better JD clarity to reduce early drop-offs.
+                    Most rejections at <strong className="text-red-600">{highestDropOffStage}</strong>.{' '}
+                    {getSuggestionForStage(highestDropOffStage)}
                 </div>
             )}
         </div>

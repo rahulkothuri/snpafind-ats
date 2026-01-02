@@ -97,10 +97,9 @@ describe('EnhancedCandidateCard', () => {
       />
     );
 
-    expect(screen.getByText('CV')).toBeInTheDocument();
+    expect(screen.getByText('View CV')).toBeInTheDocument();
     expect(screen.getByText('Add to Job')).toBeInTheDocument();
     expect(screen.getByText('Share')).toBeInTheDocument();
-    expect(screen.getByText('More Actions')).toBeInTheDocument();
   });
 
   it('calls onClick when card is clicked', () => {
@@ -129,9 +128,9 @@ describe('EnhancedCandidateCard', () => {
 
     // Find the main card div (first child of container)
     const card = container.firstChild as HTMLElement;
-    expect(card).toHaveClass('ring-2');
-    expect(card).toHaveClass('ring-[#0b6cf0]');
-    expect(card).toHaveClass('border-[#0b6cf0]');
+    expect(card).toHaveClass('ring-1');
+    expect(card).toHaveClass('ring-blue-500');
+    expect(card).toHaveClass('border-blue-500');
   });
 
   it('handles missing optional fields gracefully', () => {

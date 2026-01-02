@@ -246,6 +246,11 @@ function PipelineCard({ interview, onClick }: PipelineCardProps) {
         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-gray-50 text-gray-600 rounded-md border border-gray-200/60">
           {getModeIcon(interview.mode)} {getModeLabel(interview.mode)}
         </span>
+        {interview.roundType && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">
+            {interview.roundType}
+          </span>
+        )}
         {panelMembers.length > 0 && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-100 truncate max-w-[120px]">
             <MdPerson className="w-3 h-3" />
@@ -402,6 +407,14 @@ function DayInterviewItem({ interview, onClick }: DayInterviewItemProps) {
           {getModeIcon(interview.mode)}
           {getModeLabel(interview.mode)}
         </span>
+        {interview.roundType && (
+          <>
+            <span className="text-gray-300">|</span>
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium bg-indigo-50 text-indigo-700 rounded">
+              {interview.roundType}
+            </span>
+          </>
+        )}
         <span className="text-gray-300">|</span>
         <span className="flex items-center gap-1 truncate max-w-[150px]">
           <MdPerson className="w-3.5 h-3.5" />
@@ -478,6 +491,15 @@ function InterviewTableRow({ interview, onClick, onJoin, onReschedule }: Intervi
           {getModeIcon(interview.mode)}
           <span className="text-xs font-medium">{getModeLabel(interview.mode)}</span>
         </span>
+      </td>
+      <td className="py-4 px-4 align-top">
+        {interview.roundType ? (
+          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">
+            {interview.roundType}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        )}
       </td>
       <td className="py-4 px-4 align-top">
         <span className="text-sm text-gray-600 truncate max-w-[150px] block" title={panelMembers}>{panelMembers}</span>
@@ -604,6 +626,14 @@ function DetailPanel({ interview, isOpen, onClose, onJoin, onReschedule, onCance
                   {getModeIcon(interview.mode)} {getModeLabel(interview.mode)}
                 </span>
               </div>
+              {interview.roundType && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Round Type</span>
+                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">
+                    {interview.roundType}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between center text-sm pt-1 border-t border-gray-200/50 mt-1">
                 <span className="text-gray-500 self-center">Status</span>
                 <StatusBadge status={interview.status} />
@@ -1213,6 +1243,7 @@ export function InterviewDashboardPage() {
                         <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Candidate</th>
                         <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Role</th>
                         <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Type</th>
+                        <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Round</th>
                         <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Panel</th>
                         <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Recruiter</th>
                         <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wider py-4 px-4">Status</th>

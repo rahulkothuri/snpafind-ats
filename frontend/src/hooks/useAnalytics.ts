@@ -1,9 +1,10 @@
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { analyticsService, type AnalyticsFilters, type KPIMetrics, type FunnelData, type ConversionData, type TimeToFillData, type TimeInStageData, type SourceData, type RecruiterData, type PanelData, type DropOffData, type RejectionData, type OfferData, type SLAStatusData, type ExportRequest, AnalyticsService } from '../services/analytics.service';
+import { analyticsService, type AnalyticsFilters, type AnalyticsFilterOptions, type KPIMetrics, type FunnelData, type ConversionData, type TimeToFillData, type TimeInStageData, type SourceData, type RecruiterData, type PanelData, type DropOffData, type RejectionData, type OfferData, type SLAStatusData, type ExportRequest, AnalyticsService } from '../services/analytics.service';
 
 // Query keys for React Query caching
 export const analyticsKeys = {
   all: ['analytics'] as const,
+  filterOptions: () => [...analyticsKeys.all, 'filter-options'] as const,
   kpis: (filters?: AnalyticsFilters) => [...analyticsKeys.all, 'kpis', filters] as const,
   funnel: (filters?: AnalyticsFilters) => [...analyticsKeys.all, 'funnel', filters] as const,
   conversionRates: (filters?: AnalyticsFilters) => [...analyticsKeys.all, 'conversion-rates', filters] as const,
@@ -26,6 +27,23 @@ const defaultQueryOptions = {
   retry: 2,
   refetchOnWindowFocus: false,
 };
+
+/**
+ * Hook for fetching analytics filter options
+ * Requirements: 9.1 - Fetch departments, locations, jobs, and recruiters from database
+ */
+export function useAnalyticsFilterOptions(
+  options?: Omit<UseQueryOptions<AnalyticsFilterOptions>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: analyticsKeys.filterOptions(),
+    queryFn: () => analyticsService.getFilterOptions(),
+    staleTime: 10 * 60 * 1000, // 10 minutes - filter options don't change often
+    retry: 2,
+    refetchOnWindowFocus: false,
+    ...options,
+  });
+}
 
 /**
  * Hook for fetching KPI metrics

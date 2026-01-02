@@ -126,6 +126,7 @@ export const interviewService = {
           notes: data.notes,
           scheduledBy: data.scheduledBy,
           status: 'scheduled',
+          roundType: data.roundType, // Interview round type (Requirements 6.5)
         },
       });
 
@@ -369,6 +370,7 @@ export const interviewService = {
           mode: data.mode as InterviewMode | undefined,
           location: data.location,
           notes: data.notes,
+          roundType: data.roundType, // Interview round type (Requirements 6.5)
         },
       });
 
@@ -845,6 +847,56 @@ export const interviewService = {
   },
 
   /**
+   * Get interview round options for a job
+   * Returns custom sub-stages from the Interview stage if defined, otherwise returns default options
+   * Requirements: 6.2, 6.3, 6.4
+   */
+  async getInterviewRoundOptions(jobId: string): Promise<{ id: string; name: string; isCustom: boolean }[]> {
+    // Default interview round options
+    const defaultOptions = [
+      { id: 'technical', name: 'Technical Round', isCustom: false },
+      { id: 'hr', name: 'HR Round', isCustom: false },
+      { id: 'managerial', name: 'Managerial Round', isCustom: false },
+      { id: 'final', name: 'Final Round', isCustom: false },
+    ];
+
+    // Try to find the Interview stage for this job
+    const interviewStage = await prisma.pipelineStage.findFirst({
+      where: {
+        jobId,
+        name: 'Interview',
+        parentId: null, // Main stage, not a sub-stage
+      },
+    });
+
+    if (!interviewStage) {
+      // No Interview stage found, return defaults
+      return defaultOptions;
+    }
+
+    // Get sub-stages of the Interview stage
+    const subStages = await prisma.pipelineStage.findMany({
+      where: {
+        jobId,
+        parentId: interviewStage.id,
+      },
+      orderBy: { position: 'asc' },
+    });
+
+    if (subStages.length === 0) {
+      // No custom sub-stages defined, return defaults
+      return defaultOptions;
+    }
+
+    // Return custom sub-stages as interview round options
+    return subStages.map((stage) => ({
+      id: stage.id,
+      name: stage.name,
+      isCustom: true,
+    }));
+  },
+
+  /**
    * Get panel load distribution
    * Requirements: 13.1, 13.2
    */
@@ -940,6 +992,7 @@ export const interviewService = {
       notes: interview.notes ?? undefined,
       cancelReason: interview.cancelReason ?? undefined,
       scheduledBy: interview.scheduledBy,
+      roundType: interview.roundType ?? undefined, // Interview round type (Requirements 6.5, 6.6)
       createdAt: interview.createdAt,
       updatedAt: interview.updatedAt,
       jobCandidate: interview.jobCandidate

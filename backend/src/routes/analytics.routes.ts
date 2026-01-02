@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AnalyticsService } from '../services/analytics.service.js';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
+import prisma from '../lib/prisma.js';
 
 const router = Router();
 const analyticsService = new AnalyticsService();
@@ -39,6 +40,99 @@ function parseFilters(query: any) {
     endDate: filtersResult.data.endDate ? new Date(filtersResult.data.endDate) : undefined,
   };
 }
+
+/**
+ * GET /api/analytics/filter-options
+ * Get filter options for analytics dashboard (departments, locations, jobs, recruiters)
+ * Requirements: 9.1 - Fetch departments, locations, jobs, and recruiters from database
+ */
+router.get(
+  '/filter-options',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      // Fetch jobs for the company
+      const jobs = await prisma.job.findMany({
+        where: {
+          companyId: req.user!.companyId,
+        },
+        select: {
+          id: true,
+          title: true,
+          jobDomain: true,
+          locations: true,
+          location: true, // Legacy field
+        },
+      });
+
+      // Fetch recruiters (users with recruiter or hiring_manager role)
+      const recruiters = await prisma.user.findMany({
+        where: {
+          companyId: req.user!.companyId,
+          role: {
+            in: ['recruiter', 'hiring_manager', 'admin'],
+          },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      // Extract unique departments (jobDomain) from jobs
+      const departmentSet = new Set<string>();
+      const locationSet = new Set<string>();
+
+      jobs.forEach((job) => {
+        if (job.jobDomain) {
+          departmentSet.add(job.jobDomain);
+        }
+        // Handle both locations array and legacy location field
+        if (Array.isArray(job.locations)) {
+          (job.locations as string[]).forEach((loc) => {
+            if (loc && typeof loc === 'string') locationSet.add(loc);
+          });
+        } else if (job.location) {
+          locationSet.add(job.location);
+        }
+      });
+
+      const departments = Array.from(departmentSet)
+        .sort()
+        .map((dept) => ({
+          value: dept,
+          label: dept,
+        }));
+
+      const locations = Array.from(locationSet)
+        .sort()
+        .map((loc) => ({
+          value: loc,
+          label: loc,
+        }));
+
+      const jobOptions = jobs.map((job) => ({
+        value: job.id,
+        label: job.title,
+      }));
+
+      const recruiterOptions = recruiters.map((user) => ({
+        value: user.id,
+        label: user.name,
+      }));
+
+      res.json({
+        departments,
+        locations,
+        jobs: jobOptions,
+        recruiters: recruiterOptions,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /**
  * GET /api/analytics/kpis
@@ -497,61 +591,138 @@ router.get(
 
 /**
  * Generate PDF report from analytics data
+ * Requirements: 11.1 - PDF export includes all visible data
  */
 async function generatePDFReport(exportData: any): Promise<Buffer> {
-  // For now, return a simple text-based PDF
-  // In a real implementation, you'd use a library like puppeteer or pdfkit
+  // Generate a text-based PDF-like report
+  // In production, use a library like puppeteer or pdfkit
   const reportContent = `
-Analytics Report
-Generated: ${exportData.metadata.generatedAt}
+================================================================================
+                           ANALYTICS REPORT
+================================================================================
+Generated: ${new Date(exportData.metadata.generatedAt).toLocaleString()}
+Filters Applied: ${JSON.stringify(exportData.metadata.filters, null, 2)}
 
-KPI Metrics:
-- Active Roles: ${exportData.data.kpis.activeRoles}
-- Active Candidates: ${exportData.data.kpis.activeCandidates}
-- Interviews Today: ${exportData.data.kpis.interviewsToday}
-- Interviews This Week: ${exportData.data.kpis.interviewsThisWeek}
-- Offers Pending: ${exportData.data.kpis.offersPending}
-- Total Hires: ${exportData.data.kpis.totalHires}
-- Avg Time to Fill: ${exportData.data.kpis.avgTimeToFill} days
-- Offer Acceptance Rate: ${exportData.data.kpis.offerAcceptanceRate}%
+================================================================================
+                           KPI METRICS
+================================================================================
+Active Roles:           ${exportData.data.kpis.activeRoles}
+Active Candidates:      ${exportData.data.kpis.activeCandidates}
+New Candidates (Month): ${exportData.data.kpis.newCandidatesThisMonth || 0}
+Interviews Today:       ${exportData.data.kpis.interviewsToday}
+Interviews This Week:   ${exportData.data.kpis.interviewsThisWeek}
+Offers Pending:         ${exportData.data.kpis.offersPending}
+Total Hires:            ${exportData.data.kpis.totalHires}
+Total Offers:           ${exportData.data.kpis.totalOffers || 0}
+Avg Time to Fill:       ${exportData.data.kpis.avgTimeToFill} days
+Offer Acceptance Rate:  ${exportData.data.kpis.offerAcceptanceRate}%
 
-Funnel Analytics:
-Total Applicants: ${exportData.data.funnel.totalApplicants}
-Total Hired: ${exportData.data.funnel.totalHired}
-Overall Conversion Rate: ${exportData.data.funnel.overallConversionRate}%
+================================================================================
+                           FUNNEL ANALYTICS
+================================================================================
+Total Applicants:       ${exportData.data.funnel.totalApplicants}
+Total Hired:            ${exportData.data.funnel.totalHired}
+Overall Conversion:     ${exportData.data.funnel.overallConversionRate}%
 
-Source Performance:
-${exportData.data.sources.map((source: any) => 
-  `- ${source.source}: ${source.candidateCount} candidates (${source.percentage}%), ${source.hireRate}% hire rate`
-).join('\n')}
+Stage Breakdown:
+${exportData.data.funnel.stages?.map((stage: any) => 
+  `  ${stage.name.padEnd(20)} ${String(stage.count).padStart(6)} candidates (${stage.percentage}%)`
+).join('\n') || 'No stage data available'}
 
-Time to Fill:
-- Overall Average: ${exportData.data.timeToFill.overall.average} days
-- Overall Median: ${exportData.data.timeToFill.overall.median} days
-- Target: ${exportData.data.timeToFill.overall.target} days
+================================================================================
+                           TIME TO FILL
+================================================================================
+Overall Average:        ${exportData.data.timeToFill.overall?.average || 0} days
+Overall Median:         ${exportData.data.timeToFill.overall?.median || 0} days
+Target:                 ${exportData.data.timeToFill.overall?.target || 30} days
 
-SLA Status:
-- On Track: ${exportData.data.sla.summary.onTrack}
-- At Risk: ${exportData.data.sla.summary.atRisk}
-- Breached: ${exportData.data.sla.summary.breached}
+By Role:
+${exportData.data.timeToFill.byRole?.map((role: any) => 
+  `  ${role.roleName.padEnd(30)} ${String(role.average).padStart(4)} days ${role.isOverTarget ? '⚠️ OVER TARGET' : ''}`
+).join('\n') || 'No role data available'}
+
+================================================================================
+                           TIME IN STAGE
+================================================================================
+${exportData.data.timeInStage.stages?.map((stage: any) => 
+  `  ${stage.stageName.padEnd(25)} ${String(stage.avgDays).padStart(4)} days ${stage.isBottleneck ? '🔴 BOTTLENECK' : ''}`
+).join('\n') || 'No stage data available'}
+
+Bottleneck Stage:       ${exportData.data.timeInStage.bottleneckStage || 'None identified'}
+Suggestion:             ${exportData.data.timeInStage.suggestion || 'N/A'}
+
+================================================================================
+                           SOURCE PERFORMANCE
+================================================================================
+${exportData.data.sources?.map((source: any) => 
+  `  ${source.source.padEnd(20)} ${String(source.candidateCount).padStart(5)} candidates (${source.percentage}%), ${source.hireRate}% hire rate`
+).join('\n') || 'No source data available'}
+
+================================================================================
+                           RECRUITER PRODUCTIVITY
+================================================================================
+${'Name'.padEnd(25)} ${'Roles'.padStart(6)} ${'CVs'.padStart(6)} ${'Interviews'.padStart(10)} ${'Offers'.padStart(7)} ${'Hires'.padStart(6)} ${'TTF'.padStart(6)}
+${'-'.repeat(80)}
+${exportData.data.recruiters?.map((r: any) => 
+  `${r.name.padEnd(25)} ${String(r.activeRoles).padStart(6)} ${String(r.cvsAdded).padStart(6)} ${String(r.interviewsScheduled).padStart(10)} ${String(r.offersMade).padStart(7)} ${String(r.hires).padStart(6)} ${String(r.avgTimeToFill).padStart(5)}d`
+).join('\n') || 'No recruiter data available'}
+
+================================================================================
+                           PANEL PERFORMANCE
+================================================================================
+${'Panel'.padEnd(25)} ${'Rounds'.padStart(7)} ${'Offer%'.padStart(7)} ${'Top Rejection'.padStart(20)} ${'Feedback'.padStart(10)}
+${'-'.repeat(80)}
+${exportData.data.panels?.map((p: any) => 
+  `${p.panelName.padEnd(25)} ${String(p.interviewRounds).padStart(7)} ${String(p.offerPercentage).padStart(6)}% ${p.topRejectionReason.padStart(20)} ${String(p.avgFeedbackTime).padStart(9)}h`
+).join('\n') || 'No panel data available'}
+
+================================================================================
+                           DROP-OFF ANALYSIS
+================================================================================
+${exportData.data.dropOff.byStage?.map((stage: any) => 
+  `  ${stage.stageName.padEnd(20)} ${String(stage.dropOffCount).padStart(5)} dropped (${stage.dropOffPercentage}%)`
+).join('\n') || 'No drop-off data available'}
+
+Highest Drop-off Stage: ${exportData.data.dropOff.highestDropOffStage || 'None identified'}
+
+================================================================================
+                           REJECTION REASONS
+================================================================================
+${exportData.data.rejections.reasons?.map((r: any) => 
+  `  ${r.reason.padEnd(25)} ${String(r.count).padStart(5)} (${r.percentage}%)`
+).join('\n') || 'No rejection data available'}
+
+Top Stage for Rejection: ${exportData.data.rejections.topStageForRejection || 'N/A'}
+
+================================================================================
+                           SLA STATUS
+================================================================================
+On Track:               ${exportData.data.sla.summary?.onTrack || 0}
+At Risk:                ${exportData.data.sla.summary?.atRisk || 0}
+Breached:               ${exportData.data.sla.summary?.breached || 0}
+
+================================================================================
+                           END OF REPORT
+================================================================================
 `;
 
-  // Simple text-to-PDF conversion (in real implementation, use proper PDF library)
   return Buffer.from(reportContent, 'utf-8');
 }
 
 /**
  * Generate Excel report from analytics data
+ * Requirements: 11.2 - Excel export includes all visible data
  */
 async function generateExcelReport(exportData: any): Promise<Buffer> {
-  // For now, return CSV-like data as Excel
-  // In a real implementation, you'd use a library like exceljs
+  // Generate CSV format that can be opened in Excel
+  // In production, use a library like exceljs
   const csvContent = await generateCSVReport(exportData);
   return Buffer.from(csvContent, 'utf-8');
 }
 
 /**
  * Generate CSV report from analytics data
+ * Requirements: 11.3 - Exports respect current filters
  */
 async function generateCSVReport(exportData: any): Promise<string> {
   const lines: string[] = [];
@@ -559,6 +730,7 @@ async function generateCSVReport(exportData: any): Promise<string> {
   // Add metadata
   lines.push('Analytics Report');
   lines.push(`Generated,${exportData.metadata.generatedAt}`);
+  lines.push(`Filters Applied,"${JSON.stringify(exportData.metadata.filters).replace(/"/g, '""')}"`);
   lines.push('');
   
   // Add KPI metrics
@@ -566,36 +738,108 @@ async function generateCSVReport(exportData: any): Promise<string> {
   lines.push('Metric,Value');
   lines.push(`Active Roles,${exportData.data.kpis.activeRoles}`);
   lines.push(`Active Candidates,${exportData.data.kpis.activeCandidates}`);
+  lines.push(`New Candidates This Month,${exportData.data.kpis.newCandidatesThisMonth || 0}`);
   lines.push(`Interviews Today,${exportData.data.kpis.interviewsToday}`);
   lines.push(`Interviews This Week,${exportData.data.kpis.interviewsThisWeek}`);
   lines.push(`Offers Pending,${exportData.data.kpis.offersPending}`);
   lines.push(`Total Hires,${exportData.data.kpis.totalHires}`);
+  lines.push(`Total Offers,${exportData.data.kpis.totalOffers || 0}`);
   lines.push(`Avg Time to Fill,${exportData.data.kpis.avgTimeToFill}`);
   lines.push(`Offer Acceptance Rate,${exportData.data.kpis.offerAcceptanceRate}`);
+  lines.push('');
+  
+  // Add funnel data
+  lines.push('Funnel Analytics');
+  lines.push('Stage,Count,Percentage,Conversion to Next');
+  if (exportData.data.funnel.stages) {
+    exportData.data.funnel.stages.forEach((stage: any) => {
+      lines.push(`${stage.name},${stage.count},${stage.percentage},${stage.conversionToNext || 0}`);
+    });
+  }
+  lines.push(`Total Applicants,${exportData.data.funnel.totalApplicants},,`);
+  lines.push(`Total Hired,${exportData.data.funnel.totalHired},,`);
+  lines.push(`Overall Conversion Rate,${exportData.data.funnel.overallConversionRate},,`);
+  lines.push('');
+  
+  // Add time to fill data
+  lines.push('Time to Fill by Role');
+  lines.push('Role,Average Days,Over Target');
+  if (exportData.data.timeToFill.byRole) {
+    exportData.data.timeToFill.byRole.forEach((role: any) => {
+      lines.push(`"${role.roleName}",${role.average},${role.isOverTarget ? 'Yes' : 'No'}`);
+    });
+  }
+  lines.push('');
+  
+  // Add time in stage data
+  lines.push('Time in Stage');
+  lines.push('Stage,Average Days,Is Bottleneck');
+  if (exportData.data.timeInStage.stages) {
+    exportData.data.timeInStage.stages.forEach((stage: any) => {
+      lines.push(`${stage.stageName},${stage.avgDays},${stage.isBottleneck ? 'Yes' : 'No'}`);
+    });
+  }
+  lines.push(`Bottleneck Stage,${exportData.data.timeInStage.bottleneckStage || 'None'},`);
   lines.push('');
   
   // Add source performance
   lines.push('Source Performance');
   lines.push('Source,Candidates,Percentage,Hires,Hire Rate,Avg Time to Hire');
-  exportData.data.sources.forEach((source: any) => {
-    lines.push(`${source.source},${source.candidateCount},${source.percentage},${source.hireCount},${source.hireRate},${source.avgTimeToHire}`);
-  });
+  if (exportData.data.sources) {
+    exportData.data.sources.forEach((source: any) => {
+      lines.push(`${source.source},${source.candidateCount},${source.percentage},${source.hireCount},${source.hireRate},${source.avgTimeToHire}`);
+    });
+  }
   lines.push('');
   
   // Add recruiter productivity
   lines.push('Recruiter Productivity');
   lines.push('Name,Active Roles,CVs Added,Interviews,Offers,Hires,Avg Time to Fill,Score');
-  exportData.data.recruiters.forEach((recruiter: any) => {
-    lines.push(`${recruiter.name},${recruiter.activeRoles},${recruiter.cvsAdded},${recruiter.interviewsScheduled},${recruiter.offersMade},${recruiter.hires},${recruiter.avgTimeToFill},${recruiter.productivityScore}`);
-  });
+  if (exportData.data.recruiters) {
+    exportData.data.recruiters.forEach((recruiter: any) => {
+      lines.push(`"${recruiter.name}",${recruiter.activeRoles},${recruiter.cvsAdded},${recruiter.interviewsScheduled},${recruiter.offersMade},${recruiter.hires},${recruiter.avgTimeToFill},${recruiter.productivityScore}`);
+    });
+  }
+  lines.push('');
+  
+  // Add panel performance
+  lines.push('Panel Performance');
+  lines.push('Panel Name,Interview Rounds,Offer Percentage,Top Rejection Reason,Avg Feedback Time');
+  if (exportData.data.panels) {
+    exportData.data.panels.forEach((panel: any) => {
+      lines.push(`"${panel.panelName}",${panel.interviewRounds},${panel.offerPercentage},"${panel.topRejectionReason}",${panel.avgFeedbackTime}`);
+    });
+  }
+  lines.push('');
+  
+  // Add drop-off analysis
+  lines.push('Drop-off Analysis');
+  lines.push('Stage,Drop-off Count,Drop-off Percentage');
+  if (exportData.data.dropOff.byStage) {
+    exportData.data.dropOff.byStage.forEach((stage: any) => {
+      lines.push(`${stage.stageName},${stage.dropOffCount},${stage.dropOffPercentage}`);
+    });
+  }
+  lines.push(`Highest Drop-off Stage,${exportData.data.dropOff.highestDropOffStage || 'None'},`);
+  lines.push('');
+  
+  // Add rejection reasons
+  lines.push('Rejection Reasons');
+  lines.push('Reason,Count,Percentage');
+  if (exportData.data.rejections.reasons) {
+    exportData.data.rejections.reasons.forEach((reason: any) => {
+      lines.push(`"${reason.reason}",${reason.count},${reason.percentage}`);
+    });
+  }
+  lines.push(`Top Stage for Rejection,${exportData.data.rejections.topStageForRejection || 'N/A'},`);
   lines.push('');
   
   // Add SLA status
   lines.push('SLA Status Summary');
   lines.push('Status,Count');
-  lines.push(`On Track,${exportData.data.sla.summary.onTrack}`);
-  lines.push(`At Risk,${exportData.data.sla.summary.atRisk}`);
-  lines.push(`Breached,${exportData.data.sla.summary.breached}`);
+  lines.push(`On Track,${exportData.data.sla.summary?.onTrack || 0}`);
+  lines.push(`At Risk,${exportData.data.sla.summary?.atRisk || 0}`);
+  lines.push(`Breached,${exportData.data.sla.summary?.breached || 0}`);
   
   return lines.join('\n');
 }

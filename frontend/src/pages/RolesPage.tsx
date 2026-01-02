@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Layout,
   Button,
@@ -17,6 +17,7 @@ import {
   RolesLeftPanel,
   JobDetailsRightPanel,
   InterviewScheduleModal,
+  ScoreBreakdown,
 } from '../components';
 import type { ViewMode, PipelineCandidate } from '../components';
 import { useAuth } from '../hooks/useAuth';
@@ -116,6 +117,16 @@ function CandidateDetailContent({
         <SummaryRow label="Notice period" value={candidate.noticePeriod} />
       </DetailSection>
 
+      {/* Score Breakdown Section - Requirements 2.1 */}
+      <DetailSection title="Score Breakdown">
+        <ScoreBreakdown
+          domainScore={candidate.domainScore}
+          industryScore={candidate.industryScore}
+          keyResponsibilitiesScore={candidate.keyResponsibilitiesScore}
+          overallScore={candidate.score}
+        />
+      </DetailSection>
+
       <DetailSection title="CV">
         <CVSection
           filename={`${candidate.name.replace(' ', '_')}_Resume.pdf`}
@@ -156,6 +167,10 @@ export function RolesPage() {
   const { user, logout } = useAuth();
   const { data: apiJobs, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useJobs();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get jobId from URL query parameter
+  const jobIdFromUrl = searchParams.get('jobId');
 
   // Role selection and filtering state
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -284,14 +299,30 @@ export function RolesPage() {
     return result;
   }, [allRoles, statusFilter, roleSearchQuery]);
 
-  // Set initial selected role when filtered roles change
+  // Set initial selected role when filtered roles change or when jobId is in URL
   useEffect(() => {
+    // If there's a jobId in the URL, try to select that job
+    if (jobIdFromUrl && allRoles.length > 0) {
+      const jobFromUrl = allRoles.find(r => r.id === jobIdFromUrl);
+      if (jobFromUrl) {
+        // If the job is closed, switch to closed filter
+        if (jobFromUrl.status === 'closed' && statusFilter === 'open') {
+          setStatusFilter('closed');
+        }
+        setSelectedRole(jobFromUrl);
+        // Clear the URL parameter after selecting
+        setSearchParams({}, { replace: true });
+        return;
+      }
+    }
+    
+    // Default behavior: select first role if none selected
     if (filteredRoles.length > 0 && (!selectedRole || !filteredRoles.find(r => r.id === selectedRole.id))) {
       setSelectedRole(filteredRoles[0]);
     } else if (filteredRoles.length === 0) {
       setSelectedRole(null);
     }
-  }, [filteredRoles, selectedRole]);
+  }, [filteredRoles, selectedRole, jobIdFromUrl, allRoles, statusFilter, setSearchParams]);
 
   // Fetch candidates for the selected job
   useEffect(() => {
@@ -336,6 +367,10 @@ export function RolesPage() {
           expectedCtc: jc.candidate?.expectedCtc || '',
           noticePeriod: jc.candidate?.noticePeriod || '',
           resumeUrl: jc.candidate?.resumeUrl,
+          // Score breakdown fields - Requirements 2.1, 8.2
+          domainScore: jc.candidate?.domainScore ?? null,
+          industryScore: jc.candidate?.industryScore ?? null,
+          keyResponsibilitiesScore: jc.candidate?.keyResponsibilitiesScore ?? null,
         }));
         setJobCandidates(mappedCandidates);
         setPipelineStages(stages.map(s => ({ id: s.id, name: s.name, position: s.position })));
@@ -498,6 +533,7 @@ export function RolesPage() {
           jobCandidateId={selectedCandidate.jobCandidateId || selectedCandidate.id}
           candidateName={selectedCandidate.name}
           jobTitle={selectedRole.title}
+          jobId={selectedRole.id}
         />
       )}
 

@@ -97,6 +97,13 @@ export interface InterviewJobCandidate {
   job?: InterviewJob;
 }
 
+// Interview round option (Requirements 6.2, 6.3, 6.4)
+export interface InterviewRoundOption {
+  id: string;
+  name: string;
+  isCustom: boolean;
+}
+
 // Main Interview type
 export interface Interview {
   id: string;
@@ -111,6 +118,7 @@ export interface Interview {
   notes?: string;
   cancelReason?: string;
   scheduledBy: string;
+  roundType?: string; // Interview round type (Requirements 6.5, 6.6)
   createdAt: string;
   updatedAt: string;
   // Relations
@@ -130,6 +138,7 @@ export interface CreateInterviewInput {
   location?: string; // Required for in_person
   panelMemberIds: string[]; // User IDs of interviewers
   notes?: string;
+  roundType?: string; // Interview round type (Requirements 6.5)
 }
 
 // Update interview input (Requirements 8.2, 8.3)
@@ -141,6 +150,7 @@ export interface UpdateInterviewInput {
   location?: string;
   panelMemberIds?: string[];
   notes?: string;
+  roundType?: string; // Interview round type (Requirements 6.5)
 }
 
 // Interview filters for querying (Requirements 17.2)
@@ -294,6 +304,16 @@ export const interviewsService = {
   async getTimezones(): Promise<TimezoneOption[]> {
     const response = await api.get('/timezones');
     return response.data.timezones;
+  },
+
+  /**
+   * Get interview round options for a job
+   * Returns custom sub-stages from the Interview stage if defined, otherwise returns default options
+   * Requirements: 6.2, 6.3, 6.4
+   */
+  async getInterviewRoundOptions(jobId: string): Promise<InterviewRoundOption[]> {
+    const response = await api.get(`/interviews/round-options/${jobId}`);
+    return response.data;
   },
 };
 

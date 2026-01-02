@@ -33,12 +33,12 @@ describe('Chart Components Rendering', () => {
       expect(screen.getByText('Offer')).toBeInTheDocument();
       expect(screen.getByText('Hired')).toBeInTheDocument();
       
-      // Check that counts are displayed (using getAllByText since some numbers appear multiple times)
-      expect(screen.getAllByText('100')).toHaveLength(3); // Header count, bar label, and total applicants
-      expect(screen.getAllByText('60')).toHaveLength(2); // Header count and bar label
-      expect(screen.getAllByText('30')).toHaveLength(2); // Header count and bar label
-      expect(screen.getAllByText('20')).toHaveLength(2); // Header count and bar label
-      expect(screen.getAllByText('16')).toHaveLength(2); // Header count and bar label
+      // Check that candidate counts are displayed in the new format
+      expect(screen.getByText('100 candidates')).toBeInTheDocument();
+      expect(screen.getByText(/60 candidates/)).toBeInTheDocument();
+      expect(screen.getByText(/30 candidates/)).toBeInTheDocument();
+      expect(screen.getByText(/20 candidates/)).toBeInTheDocument();
+      expect(screen.getByText(/16 candidates/)).toBeInTheDocument();
     });
 
     it('renders empty state when no data', () => {
@@ -46,16 +46,18 @@ describe('Chart Components Rendering', () => {
       expect(screen.getByText('No funnel data available')).toBeInTheDocument();
     });
 
-    it('shows conversion rates', () => {
-      render(<FunnelChart stages={sampleFunnelData} />);
-      expect(screen.getByText('60.0% conversion')).toBeInTheDocument();
-      expect(screen.getByText('50.0% conversion')).toBeInTheDocument();
+    it('shows percentages for non-first stages', () => {
+      render(<FunnelChart stages={sampleFunnelData} showPercentages={true} />);
+      // Percentages are shown for stages after the first one
+      expect(screen.getByText(/· 60\.0%/)).toBeInTheDocument();
+      expect(screen.getByText(/· 30\.0%/)).toBeInTheDocument();
     });
 
     it('shows overall conversion in summary', () => {
       render(<FunnelChart stages={sampleFunnelData} />);
-      expect(screen.getByText('Total Applicants:')).toBeInTheDocument();
-      expect(screen.getByText('Overall Conversion:')).toBeInTheDocument();
+      expect(screen.getByText(/Total:/)).toBeInTheDocument();
+      expect(screen.getByText(/applicants/)).toBeInTheDocument();
+      expect(screen.getByText(/Overall conversion:/)).toBeInTheDocument();
     });
   });
 

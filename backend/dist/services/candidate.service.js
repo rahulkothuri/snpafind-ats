@@ -20,6 +20,10 @@ function mapPrismaCandidateToCandidate(candidate) {
         skills: Array.isArray(candidate.skills) ? candidate.skills : [],
         resumeUrl: candidate.resumeUrl ?? undefined,
         score: candidate.score ?? undefined,
+        // Score breakdown fields (Requirements 8.2)
+        domainScore: candidate.domainScore ?? undefined,
+        industryScore: candidate.industryScore ?? undefined,
+        keyResponsibilitiesScore: candidate.keyResponsibilitiesScore ?? undefined,
         createdAt: candidate.createdAt,
         updatedAt: candidate.updatedAt,
         // Enhanced fields
@@ -33,10 +37,26 @@ function mapPrismaCandidateToCandidate(candidate) {
         internalMobility: candidate.internalMobility ?? false,
     };
 }
+/**
+ * Calculate overall score as the average of non-null sub-scores
+ * Requirements: 8.3, 8.4
+ * @param domainScore - Domain score (0-100 or null)
+ * @param industryScore - Industry score (0-100 or null)
+ * @param keyResponsibilitiesScore - Key responsibilities score (0-100 or null)
+ * @returns The average of non-null scores, or null if all scores are null
+ */
+export function calculateOverallScore(domainScore, industryScore, keyResponsibilitiesScore) {
+    const scores = [domainScore, industryScore, keyResponsibilitiesScore].filter((score) => score !== null && score !== undefined);
+    if (scores.length === 0) {
+        return null;
+    }
+    const sum = scores.reduce((acc, score) => acc + score, 0);
+    return Math.round(sum / scores.length);
+}
 export const candidateService = {
     /**
      * Create a new candidate
-     * Requirements: 8.1, 8.2, 8.4
+     * Requirements: 8.1, 8.2, 8.4, 8.5
      */
     async create(data) {
         // Validate required fields
@@ -53,6 +73,16 @@ export const candidateService = {
         if (!data.source || data.source.trim() === '') {
             errors.source = ['Source is required'];
         }
+        // Validate score breakdown fields (0-100 range)
+        if (data.domainScore !== undefined && (data.domainScore < 0 || data.domainScore > 100)) {
+            errors.domainScore = ['Domain score must be between 0 and 100'];
+        }
+        if (data.industryScore !== undefined && (data.industryScore < 0 || data.industryScore > 100)) {
+            errors.industryScore = ['Industry score must be between 0 and 100'];
+        }
+        if (data.keyResponsibilitiesScore !== undefined && (data.keyResponsibilitiesScore < 0 || data.keyResponsibilitiesScore > 100)) {
+            errors.keyResponsibilitiesScore = ['Key responsibilities score must be between 0 and 100'];
+        }
         if (Object.keys(errors).length > 0) {
             throw new ValidationError(errors);
         }
@@ -65,7 +95,9 @@ export const candidateService = {
                 existingId: existingCandidate.id,
             });
         }
-        // Create candidate (Requirements 8.1, 8.2)
+        // Calculate overall score from sub-scores if not provided (Requirements 8.3)
+        const calculatedScore = data.score ?? calculateOverallScore(data.domainScore, data.industryScore, data.keyResponsibilitiesScore);
+        // Create candidate (Requirements 8.1, 8.2, 8.5)
         const candidate = await prisma.candidate.create({
             data: {
                 companyId: data.companyId,
@@ -81,7 +113,11 @@ export const candidateService = {
                 source: data.source.trim(),
                 availability: data.availability?.trim(),
                 skills: data.skills ?? [],
-                score: data.score,
+                score: calculatedScore,
+                // Score breakdown fields
+                domainScore: data.domainScore,
+                industryScore: data.industryScore,
+                keyResponsibilitiesScore: data.keyResponsibilitiesScore,
             },
         });
         return mapPrismaCandidateToCandidate(candidate);
@@ -112,7 +148,7 @@ export const candidateService = {
     },
     /**
      * Update a candidate
-     * Requirements: 9.2
+     * Requirements: 9.2, 8.5
      */
     async update(id, data) {
         const existing = await prisma.candidate.findUnique({
@@ -132,6 +168,34 @@ export const candidateService = {
                 });
             }
         }
+        // Validate score breakdown fields (0-100 range)
+        const errors = {};
+        if (data.domainScore !== undefined && (data.domainScore < 0 || data.domainScore > 100)) {
+            errors.domainScore = ['Domain score must be between 0 and 100'];
+        }
+        if (data.industryScore !== undefined && (data.industryScore < 0 || data.industryScore > 100)) {
+            errors.industryScore = ['Industry score must be between 0 and 100'];
+        }
+        if (data.keyResponsibilitiesScore !== undefined && (data.keyResponsibilitiesScore < 0 || data.keyResponsibilitiesScore > 100)) {
+            errors.keyResponsibilitiesScore = ['Key responsibilities score must be between 0 and 100'];
+        }
+        if (Object.keys(errors).length > 0) {
+            throw new ValidationError(errors);
+        }
+        // Determine the final sub-scores (use new values if provided, otherwise keep existing)
+        const finalDomainScore = data.domainScore !== undefined ? data.domainScore : existing.domainScore;
+        const finalIndustryScore = data.industryScore !== undefined ? data.industryScore : existing.industryScore;
+        const finalKeyResponsibilitiesScore = data.keyResponsibilitiesScore !== undefined
+            ? data.keyResponsibilitiesScore
+            : existing.keyResponsibilitiesScore;
+        // Recalculate overall score if any sub-score is being updated and score is not explicitly provided
+        // Requirements: 8.3
+        let finalScore = data.score;
+        if (finalScore === undefined && (data.domainScore !== undefined ||
+            data.industryScore !== undefined ||
+            data.keyResponsibilitiesScore !== undefined)) {
+            finalScore = calculateOverallScore(finalDomainScore, finalIndustryScore, finalKeyResponsibilitiesScore) ?? undefined;
+        }
         const candidate = await prisma.candidate.update({
             where: { id },
             data: {
@@ -148,7 +212,11 @@ export const candidateService = {
                 availability: data.availability?.trim(),
                 skills: data.skills,
                 resumeUrl: data.resumeUrl,
-                score: data.score,
+                score: finalScore,
+                // Score breakdown fields (Requirements 8.5)
+                domainScore: data.domainScore,
+                industryScore: data.industryScore,
+                keyResponsibilitiesScore: data.keyResponsibilitiesScore,
             },
         });
         return mapPrismaCandidateToCandidate(candidate);
@@ -433,6 +501,91 @@ export const candidateService = {
                     metadata: {
                         oldScore,
                         newScore: score,
+                    },
+                },
+            });
+            return { updatedCandidate, activity };
+        });
+        return {
+            candidate: mapPrismaCandidateToCandidate(result.updatedCandidate),
+            activity: {
+                id: result.activity.id,
+                candidateId: result.activity.candidateId,
+                jobCandidateId: result.activity.jobCandidateId ?? undefined,
+                activityType: result.activity.activityType,
+                description: result.activity.description,
+                metadata: result.activity.metadata,
+                createdAt: result.activity.createdAt,
+            },
+        };
+    },
+    /**
+     * Update a candidate's score breakdown (individual sub-scores)
+     * Requirements: 8.3, 8.4, 8.5
+     */
+    async updateScoreBreakdown(candidateId, scoreBreakdown) {
+        // Validate score ranges
+        const errors = {};
+        if (scoreBreakdown.domainScore !== undefined && (scoreBreakdown.domainScore < 0 || scoreBreakdown.domainScore > 100)) {
+            errors.domainScore = ['Domain score must be between 0 and 100'];
+        }
+        if (scoreBreakdown.industryScore !== undefined && (scoreBreakdown.industryScore < 0 || scoreBreakdown.industryScore > 100)) {
+            errors.industryScore = ['Industry score must be between 0 and 100'];
+        }
+        if (scoreBreakdown.keyResponsibilitiesScore !== undefined && (scoreBreakdown.keyResponsibilitiesScore < 0 || scoreBreakdown.keyResponsibilitiesScore > 100)) {
+            errors.keyResponsibilitiesScore = ['Key responsibilities score must be between 0 and 100'];
+        }
+        if (Object.keys(errors).length > 0) {
+            throw new ValidationError(errors);
+        }
+        const existing = await prisma.candidate.findUnique({
+            where: { id: candidateId },
+        });
+        if (!existing) {
+            throw new NotFoundError('Candidate');
+        }
+        // Determine final sub-scores (use new values if provided, otherwise keep existing)
+        const finalDomainScore = scoreBreakdown.domainScore !== undefined
+            ? scoreBreakdown.domainScore
+            : existing.domainScore;
+        const finalIndustryScore = scoreBreakdown.industryScore !== undefined
+            ? scoreBreakdown.industryScore
+            : existing.industryScore;
+        const finalKeyResponsibilitiesScore = scoreBreakdown.keyResponsibilitiesScore !== undefined
+            ? scoreBreakdown.keyResponsibilitiesScore
+            : existing.keyResponsibilitiesScore;
+        // Calculate new overall score (Requirements 8.3)
+        const newOverallScore = calculateOverallScore(finalDomainScore, finalIndustryScore, finalKeyResponsibilitiesScore);
+        const oldScores = {
+            score: existing.score,
+            domainScore: existing.domainScore,
+            industryScore: existing.industryScore,
+            keyResponsibilitiesScore: existing.keyResponsibilitiesScore,
+        };
+        // Update scores and create activity in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            const updatedCandidate = await tx.candidate.update({
+                where: { id: candidateId },
+                data: {
+                    domainScore: scoreBreakdown.domainScore,
+                    industryScore: scoreBreakdown.industryScore,
+                    keyResponsibilitiesScore: scoreBreakdown.keyResponsibilitiesScore,
+                    score: newOverallScore,
+                },
+            });
+            const activity = await tx.candidateActivity.create({
+                data: {
+                    candidateId,
+                    activityType: 'score_updated',
+                    description: `Score breakdown updated. Overall score: ${oldScores.score ?? 'unset'} → ${newOverallScore ?? 'unset'}`,
+                    metadata: {
+                        oldScores,
+                        newScores: {
+                            score: newOverallScore,
+                            domainScore: updatedCandidate.domainScore,
+                            industryScore: updatedCandidate.industryScore,
+                            keyResponsibilitiesScore: updatedCandidate.keyResponsibilitiesScore,
+                        },
                     },
                 },
             });

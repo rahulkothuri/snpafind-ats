@@ -23,7 +23,8 @@ import type {
   InterviewMode, 
   TimezoneOption,
   CreateInterviewInput,
-  Interview 
+  Interview,
+  InterviewRoundOption,
 } from '../services/interviews.service';
 
 export interface InterviewScheduleModalProps {
@@ -33,6 +34,7 @@ export interface InterviewScheduleModalProps {
   jobCandidateId: string;
   candidateName: string;
   jobTitle: string;
+  jobId?: string; // Job ID for fetching interview round options (Requirements 6.2)
 }
 
 interface InterviewFormData {
@@ -45,6 +47,7 @@ interface InterviewFormData {
   customUrl: string;
   panelMemberIds: string[];
   notes: string;
+  roundType: string; // Interview round type (Requirements 6.5)
 }
 
 const DURATION_OPTIONS = [
@@ -59,6 +62,14 @@ const MODE_OPTIONS: { value: InterviewMode; label: string; icon: string }[] = [
   { value: 'microsoft_teams', label: 'Microsoft Teams', icon: '📹' },
   { value: 'in_person', label: 'In-Person', icon: '🏢' },
   { value: 'custom_url', label: 'Custom URL', icon: '🔗' },
+];
+
+// Default interview round options (Requirements 6.4)
+const DEFAULT_INTERVIEW_ROUNDS: InterviewRoundOption[] = [
+  { id: 'technical', name: 'Technical Round', isCustom: false },
+  { id: 'hr', name: 'HR Round', isCustom: false },
+  { id: 'managerial', name: 'Managerial Round', isCustom: false },
+  { id: 'final', name: 'Final Round', isCustom: false },
 ];
 
 // Get user's timezone or default to IST (Asia/Kolkata)
@@ -98,6 +109,7 @@ export function InterviewScheduleModal({
   jobCandidateId,
   candidateName,
   jobTitle,
+  jobId,
 }: InterviewScheduleModalProps) {
   const [formData, setFormData] = useState<InterviewFormData>({
     scheduledDate: getTodayDate(),
@@ -109,10 +121,12 @@ export function InterviewScheduleModal({
     customUrl: '',
     panelMemberIds: [],
     notes: '',
+    roundType: '', // Interview round type (Requirements 6.5)
   });
 
   const [users, setUsers] = useState<User[]>([]);
   const [timezones, setTimezones] = useState<TimezoneOption[]>([]);
+  const [interviewRounds, setInterviewRounds] = useState<InterviewRoundOption[]>(DEFAULT_INTERVIEW_ROUNDS);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -133,6 +147,24 @@ export function InterviewScheduleModal({
       ]);
       setUsers(usersData.filter(u => u.isActive));
       setTimezones(timezonesData);
+
+      // Fetch interview round options if jobId is provided (Requirements 6.2, 6.3)
+      if (jobId) {
+        try {
+          const roundOptions = await interviewsService.getInterviewRoundOptions(jobId);
+          if (roundOptions && roundOptions.length > 0) {
+            setInterviewRounds(roundOptions);
+          } else {
+            setInterviewRounds(DEFAULT_INTERVIEW_ROUNDS);
+          }
+        } catch (error) {
+          console.error('Failed to load interview round options:', error);
+          // Fall back to default options (Requirements 6.4)
+          setInterviewRounds(DEFAULT_INTERVIEW_ROUNDS);
+        }
+      } else {
+        setInterviewRounds(DEFAULT_INTERVIEW_ROUNDS);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -153,8 +185,10 @@ export function InterviewScheduleModal({
         customUrl: '',
         panelMemberIds: [],
         notes: '',
+        roundType: '',
       });
       setErrors({});
+      setInterviewRounds(DEFAULT_INTERVIEW_ROUNDS);
     }
   }, [isOpen]);
 
@@ -263,6 +297,7 @@ export function InterviewScheduleModal({
                  formData.mode === 'custom_url' ? formData.customUrl : undefined,
         panelMemberIds: formData.panelMemberIds,
         notes: formData.notes || undefined,
+        roundType: formData.roundType || undefined, // Interview round type (Requirements 6.5)
       };
 
       const interview = await interviewsService.create(input);
@@ -441,6 +476,32 @@ export function InterviewScheduleModal({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Interview Round/Type - Requirements 6.1, 6.2, 6.3, 6.4 */}
+              <div>
+                <label htmlFor="roundType" className="block text-sm font-medium text-[#374151] mb-1.5">
+                  Interview Round/Type
+                </label>
+                <select
+                  id="roundType"
+                  name="roundType"
+                  value={formData.roundType}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-[#e2e8f0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0]"
+                >
+                  <option value="">Select interview round...</option>
+                  {interviewRounds.map(round => (
+                    <option key={round.id} value={round.name}>
+                      {round.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-[#64748b] mt-1">
+                  {interviewRounds.some(r => r.isCustom) 
+                    ? 'Options based on job pipeline sub-stages' 
+                    : 'Default interview round options'}
+                </p>
               </div>
 
               {/* Location (for in-person) */}

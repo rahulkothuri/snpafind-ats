@@ -261,10 +261,24 @@ async function main() {
     const companyUsers = users.filter(u => u.companyId === company.id);
     const recruiters = companyUsers.filter(u => u.role === 'recruiter' || u.role === 'hiring_manager');
 
-    for (let i = 0; i < 12; i++) { // 12 jobs per company = 36 total jobs
+    for (let i = 0; i < 14; i++) { // 14 jobs per company = 42 total jobs
       const jobTitle = faker.helpers.arrayElement(JOB_TITLES);
       const selectedSkills = faker.helpers.arrayElements(SKILLS, { min: 3, max: 8 });
       const selectedLocations = faker.helpers.arrayElements(CITIES, { min: 1, max: 3 });
+      
+      // Create varied job ages for realistic SLA status distribution
+      // Some jobs are new (0-10 days), some are mid-age (15-25 days), some are old (30-60 days)
+      const ageDistribution = faker.helpers.arrayElement([
+        { min: 0, max: 10 },   // New jobs - On track
+        { min: 0, max: 10 },   // New jobs - On track
+        { min: 15, max: 25 },  // Mid-age jobs - potentially At risk
+        { min: 15, max: 25 },  // Mid-age jobs - potentially At risk
+        { min: 25, max: 35 },  // Older jobs - At risk or Breached
+        { min: 35, max: 60 },  // Old jobs - likely Breached
+      ]);
+      const daysAgo = faker.number.int(ageDistribution);
+      const jobCreatedAt = new Date();
+      jobCreatedAt.setDate(jobCreatedAt.getDate() - daysAgo);
       
       const job = await prisma.job.create({
         data: {
@@ -277,6 +291,7 @@ async function main() {
           experienceMax: faker.number.int({ min: 4, max: 10 }),
           salaryMin: faker.number.int({ min: 300000, max: 800000 }),
           salaryMax: faker.number.int({ min: 800000, max: 2000000 }),
+          createdAt: jobCreatedAt,
           variables: faker.helpers.arrayElement([
             'Performance bonus up to 20%',
             'Stock options available',
@@ -329,7 +344,7 @@ async function main() {
   console.log('👨‍💼 Creating candidates...');
   const candidates = [];
   for (const company of companies) {
-    for (let i = 0; i < 40; i++) { // 40 candidates per company = 120 total candidates
+    for (let i = 0; i < 67; i++) { // 67 candidates per company = 201 total candidates
       const firstName = faker.person.firstName();
       const lastName = faker.person.lastName();
       const fullName = `${firstName} ${lastName}`;
@@ -437,19 +452,45 @@ async function main() {
   const interviewModes = ['google_meet', 'microsoft_teams', 'in_person'] as const;
   const interviewStatuses = ['scheduled', 'completed', 'cancelled', 'no_show'] as const;
   
-  for (let i = 0; i < 150; i++) { // 150 interviews
+  // Define date ranges for interviews
+  // Past interviews: October 2025 - December 2025
+  // Future interviews: January 2026 - February 2026
+  const pastInterviewStart = new Date('2025-10-01');
+  const pastInterviewEnd = new Date('2025-12-31');
+  const futureInterviewStart = new Date('2026-01-01');
+  const futureInterviewEnd = new Date('2026-02-28');
+  
+  for (let i = 0; i < 200; i++) { // 200 interviews total
     const jobCandidate = faker.helpers.arrayElement(jobCandidates);
     const job = jobs.find(j => j.id === jobCandidate.jobId)!;
     const companyUsers = users.filter(u => u.companyId === job.companyId);
     const panelMembers = faker.helpers.arrayElements(companyUsers, { min: 1, max: 3 });
     
-    const scheduledAt = faker.date.between({ 
-      from: new Date('2024-01-01'), 
-      to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Next 30 days
-    });
+    // 60% future interviews (Jan-Feb 2026), 40% past interviews (Oct-Dec 2025)
+    const isFutureInterview = i < 120; // First 120 are future interviews
+    
+    let scheduledAt: Date;
+    let status: typeof interviewStatuses[number];
+    
+    if (isFutureInterview) {
+      // Future interviews in January and February 2026
+      scheduledAt = faker.date.between({ 
+        from: futureInterviewStart, 
+        to: futureInterviewEnd 
+      });
+      // Future interviews are mostly scheduled, some cancelled
+      status = faker.helpers.arrayElement(['scheduled', 'scheduled', 'scheduled', 'cancelled']);
+    } else {
+      // Past interviews in October-December 2025
+      scheduledAt = faker.date.between({ 
+        from: pastInterviewStart, 
+        to: pastInterviewEnd 
+      });
+      // Past interviews have varied statuses
+      status = faker.helpers.arrayElement(interviewStatuses);
+    }
     
     const mode = faker.helpers.arrayElement(interviewModes);
-    const status = faker.helpers.arrayElement(interviewStatuses);
     
     const interview = await prisma.interview.create({
       data: {
@@ -528,7 +569,7 @@ async function main() {
     - ${jobs.length} jobs
     - ${candidates.length} candidates
     - ${jobCandidates.length} job applications
-    - 150 interviews
+    - 200 interviews (120 in Jan-Feb 2026, 80 in Oct-Dec 2025)
     - Multiple activities and feedback entries`);
 }
 

@@ -16,7 +16,7 @@ const dashboardFiltersSchema = z.object({
     recruiterId: z.string().optional(),
 });
 const interviewPeriodSchema = z.object({
-    period: z.enum(['today', 'week']).default('today'),
+    period: z.enum(['today', 'week', 'all']).default('today'),
 });
 /**
  * GET /api/dashboard
@@ -39,9 +39,9 @@ router.get('/', authenticate, async (req, res, next) => {
         // Get KPI metrics with role-based filtering
         const kpis = await analyticsService.getKPIMetrics(req.user.companyId, req.user.userId, req.user.role, filters);
         // Get role pipeline data (top 7 roles)
-        const rolePipeline = await getRolePipelineData(req.user.companyId, req.user.userId, req.user.role, 7);
-        // Get upcoming interviews (today, limit 5)
-        const upcomingInterviews = await getUpcomingInterviews(req.user.companyId, req.user.userId, 'today', 5);
+        const rolePipeline = await getRolePipelineData(req.user.companyId, req.user.userId, req.user.role, 50);
+        // Get upcoming interviews (all upcoming, limit 50)
+        const upcomingInterviews = await getUpcomingInterviews(req.user.companyId, req.user.userId, 'all', 50);
         // Get activity feed (limit 10)
         const activityFeed = await getActivityFeed(req.user.companyId, 10);
         // Get funnel data
@@ -239,19 +239,34 @@ async function getRolePipelineData(companyId, userId, userRole, limit = 7, sortB
         const offerCount = job.jobCandidates.filter(jc => jc.currentStageId && jc.currentStageId.includes('offer')).length;
         // Calculate interview count from job candidates
         const interviewCount = job.jobCandidates.reduce((count, jc) => count + jc.interviews.length, 0);
-        // Simple SLA calculation (30 days threshold)
-        const slaThreshold = 30;
+        // Get location - handle both array and string formats
+        let locationDisplay = 'Not specified';
+        if (job.locations && Array.isArray(job.locations) && job.locations.length > 0) {
+            locationDisplay = job.locations[0];
+        }
+        else if (job.location) {
+            locationDisplay = job.location;
+        }
+        // SLA calculation based on job age and priority
+        // High priority: 21 days, Medium: 30 days, Low: 45 days
+        const slaThresholds = {
+            'High': 21,
+            'Medium': 30,
+            'Low': 45
+        };
+        const slaThreshold = slaThresholds[job.priority || 'Medium'] || 30;
+        const atRiskThreshold = Math.floor(slaThreshold * 0.8); // 80% of threshold
         let slaStatus = 'On track';
         if (ageInDays > slaThreshold) {
             slaStatus = 'Breached';
         }
-        else if (ageInDays > slaThreshold - 3) {
+        else if (ageInDays > atRiskThreshold) {
             slaStatus = 'At risk';
         }
         return {
             id: job.id,
             roleName: job.title,
-            location: Array.isArray(job.locations) ? job.locations[0] : job.location || 'Not specified',
+            location: locationDisplay,
             applicantCount: job._count.jobCandidates,
             interviewCount,
             offerCount,
@@ -287,7 +302,9 @@ async function getUpcomingInterviews(companyId, userId, period, limit = 5) {
     endOfWeek.setDate(endOfWeek.getDate() + 7);
     const dateRange = period === 'today'
         ? { gte: startOfToday, lt: endOfToday }
-        : { gte: startOfWeek, lt: endOfWeek };
+        : period === 'week'
+            ? { gte: startOfWeek, lt: endOfWeek }
+            : { gte: startOfToday }; // 'all' - upcoming from today onwards
     const interviews = await prisma.interview.findMany({
         where: {
             jobCandidate: {

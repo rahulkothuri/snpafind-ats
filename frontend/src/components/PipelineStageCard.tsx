@@ -29,6 +29,7 @@ const stageColors: Record<string, { bg: string; border: string; indicator: strin
   'Screening': { bg: 'bg-[#fffbeb]', border: 'border-[#fde68a]', indicator: 'bg-[#f59e0b]', selectedBg: 'bg-[#fef3c7]' },
   'Shortlisted': { bg: 'bg-[#f0fdf4]', border: 'border-[#bbf7d0]', indicator: 'bg-[#22c55e]', selectedBg: 'bg-[#dcfce7]' },
   'Interview': { bg: 'bg-[#eef2ff]', border: 'border-[#c7d2fe]', indicator: 'bg-[#6366f1]', selectedBg: 'bg-[#e0e7ff]' },
+  'Selected': { bg: 'bg-[#fdf2f8]', border: 'border-[#fbcfe8]', indicator: 'bg-[#ec4899]', selectedBg: 'bg-[#fce7f3]' },
   'Offer': { bg: 'bg-[#faf5ff]', border: 'border-[#ddd6fe]', indicator: 'bg-[#8b5cf6]', selectedBg: 'bg-[#f5f3ff]' },
   'Hired': { bg: 'bg-[#ecfdf5]', border: 'border-[#a7f3d0]', indicator: 'bg-[#10b981]', selectedBg: 'bg-[#d1fae5]' },
   'Rejected': { bg: 'bg-[#fef2f2]', border: 'border-[#fecaca]', indicator: 'bg-[#ef4444]', selectedBg: 'bg-[#fee2e2]' },

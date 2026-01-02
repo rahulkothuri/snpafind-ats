@@ -36,6 +36,12 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class ForbiddenError extends AppError {
+  constructor(message: string = 'Access denied') {
+    super(403, 'FORBIDDEN', message);
+  }
+}
+
 export class ConflictError extends AppError {
   public data?: Record<string, unknown>;
   

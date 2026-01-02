@@ -7,7 +7,7 @@ export interface JobAccessControlService {
 /**
  * Job Access Control Service
  * Implements role-based access control for job visibility and operations
- * Requirements: 1.1, 1.4, 4.1, 4.2
+ * Requirements: 1.1, 1.4, 4.1, 4.2, 7.4, 7.6, 10.2
  */
 export declare const jobAccessControlService: JobAccessControlService;
 /**
