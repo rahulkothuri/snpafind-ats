@@ -27,7 +27,7 @@ export { AnalyticsErrorState } from './AnalyticsErrorState';
 export { AnalyticsEmptyState, EmptyStateIcons } from './AnalyticsEmptyState';
 
 // Detail Panel Components
-export { 
+export {
   DetailPanel,
   DetailSection,
   SummaryRow,
@@ -151,3 +151,6 @@ export type { AutoRejectionRulesSectionProps, AutoRejectionRules } from './AutoR
 // Vendor Management Component - Requirements 7.1, 7.2, 7.5, 7.7
 export { VendorManagementSection } from './VendorManagementSection';
 export type { VendorManagementSectionProps, Vendor as VendorType, VendorFormData, JobOption } from './VendorManagementSection';
+
+// Floating Task Widget Component - Dashboard task toggle feature
+export { FloatingTaskWidget, useFloatingTaskEnabled } from './FloatingTaskWidget';

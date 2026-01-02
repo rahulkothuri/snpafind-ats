@@ -1,23 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { LoginPage, SignupPage, DashboardPage, RolesPage, CandidateDatabasePage, SettingsPage, JobCreationPage, JobDetailsPage, ApplicationPage, CandidateProfilePage, InterviewDashboardPage, AnalyticsPage, GoogleOAuthCallbackPage, MicrosoftOAuthCallbackPage } from './pages';
 import ChartDemoPage from './pages/ChartDemoPage';
 import { useAuth } from './hooks/useAuth';
 import { JobProtectedRoute, RoleProtectedRoute } from './components';
+import { queryClient } from './lib/queryClient';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
-    },
-  },
-});
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -25,11 +18,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return <>{children}</>;
 }
 

@@ -11,10 +11,10 @@ function createPrismaClient(): PrismaClient {
   if (!connectionString) {
     throw new Error('DATABASE_URL environment variable is not set');
   }
-  
+
   const pool = new pg.Pool({ connectionString });
   const adapter = new PrismaPg(pool);
-  
+
   return new PrismaClient({ adapter });
 }
 
@@ -205,11 +205,11 @@ async function main() {
   console.log('👥 Creating users...');
   const users = [];
   const defaultPassword = await bcrypt.hash('password123', 10);
-  
+
   for (let companyIndex = 0; companyIndex < companies.length; companyIndex++) {
     const company = companies[companyIndex];
     const companyData = COMPANIES[companyIndex];
-    
+
     // Create admin
     const admin = await prisma.user.create({
       data: {
@@ -265,7 +265,7 @@ async function main() {
       const jobTitle = faker.helpers.arrayElement(JOB_TITLES);
       const selectedSkills = faker.helpers.arrayElements(SKILLS, { min: 3, max: 8 });
       const selectedLocations = faker.helpers.arrayElements(CITIES, { min: 1, max: 3 });
-      
+
       // Create varied job ages for realistic SLA status distribution
       // Some jobs are new (0-10 days), some are mid-age (15-25 days), some are old (30-60 days)
       const ageDistribution = faker.helpers.arrayElement([
@@ -279,7 +279,7 @@ async function main() {
       const daysAgo = faker.number.int(ageDistribution);
       const jobCreatedAt = new Date();
       jobCreatedAt.setDate(jobCreatedAt.getDate() - daysAgo);
-      
+
       const job = await prisma.job.create({
         data: {
           companyId: company.id,
@@ -349,7 +349,7 @@ async function main() {
       const lastName = faker.person.lastName();
       const fullName = `${firstName} ${lastName}`;
       const selectedSkills = faker.helpers.arrayElements(SKILLS, { min: 2, max: 6 });
-      
+
       const candidate = await prisma.candidate.create({
         data: {
           companyId: company.id,
@@ -395,9 +395,9 @@ async function main() {
 
     for (const candidate of applicants) {
       const currentStage = faker.helpers.arrayElement(jobStages);
-      const appliedAt = faker.date.between({ 
-        from: new Date('2024-01-01'), 
-        to: new Date() 
+      const appliedAt = faker.date.between({
+        from: new Date('2024-01-01'),
+        to: new Date()
       });
 
       const jobCandidate = await prisma.jobCandidate.create({
@@ -430,19 +430,78 @@ async function main() {
         },
       });
 
-      // Create stage history
-      await prisma.stageHistory.create({
-        data: {
-          jobCandidateId: jobCandidate.id,
-          stageId: currentStage.id,
-          stageName: currentStage.name,
-          enteredAt: appliedAt,
-          exitedAt: currentStage.name === 'Hired' || currentStage.name === 'Rejected' ? 
-            faker.date.between({ from: appliedAt, to: new Date() }) : null,
-          durationHours: faker.number.float({ min: 1, max: 168 }), // 1 hour to 1 week
-          comment: faker.lorem.sentence(),
-          movedBy: faker.helpers.arrayElement(users.filter(u => u.companyId === job.companyId)).id,
-        },
+      // Create stage history with realistic drop-offs
+      // Candidates progress through stages with some dropping off at each stage
+      const stages = jobStages; // Already ordered by position
+      let currentStageIndex = 0;
+      const appliedDate = new Date(appliedAt);
+
+      // Determine how far this candidate progresses (simulate real hiring funnel)
+      // Drop-off rates: ~30% at Screening, ~25% at Technical, ~20% at Manager, etc.
+      const dropOffChances = [0.15, 0.30, 0.25, 0.20, 0.15, 0.10, 0]; // per stage
+      let droppedOff = false;
+      let dropOffStageIndex = -1;
+
+      for (let stageIdx = 0; stageIdx < stages.length && !droppedOff; stageIdx++) {
+        if (Math.random() < (dropOffChances[stageIdx] || 0.1)) {
+          droppedOff = true;
+          dropOffStageIndex = stageIdx;
+        }
+      }
+
+      // If not dropped off, either currently in pipeline or hired
+      if (!droppedOff) {
+        dropOffStageIndex = faker.number.int({ min: Math.floor(stages.length / 2), max: stages.length - 1 });
+      }
+
+      // Create stage history for each stage the candidate went through
+      let currentDate = new Date(appliedDate);
+      for (let stageIdx = 0; stageIdx <= Math.min(dropOffStageIndex, stages.length - 1); stageIdx++) {
+        const stage = stages[stageIdx];
+        const enteredAt = new Date(currentDate);
+
+        // Duration in this stage (1-14 days)
+        const durationDays = faker.number.int({ min: 1, max: 14 });
+        const exitDate = new Date(enteredAt);
+        exitDate.setDate(exitDate.getDate() + durationDays);
+
+        // Determine if this is the drop-off stage
+        const isDropOffStage = droppedOff && stageIdx === dropOffStageIndex;
+        const isFinalStage = stageIdx === dropOffStageIndex;
+
+        await prisma.stageHistory.create({
+          data: {
+            jobCandidateId: jobCandidate.id,
+            stageId: stage.id,
+            stageName: stage.name,
+            enteredAt,
+            exitedAt: isDropOffStage ? exitDate : (isFinalStage ? null : exitDate),
+            durationHours: durationDays * 24,
+            comment: isDropOffStage
+              ? faker.helpers.arrayElement([
+                'Did not meet technical requirements',
+                'Candidate withdrew from process',
+                'Better candidates available',
+                'Failed technical assessment',
+                'Salary expectations too high',
+                'Culture fit concerns',
+                'Candidate not responsive',
+                'Position filled by another candidate'
+              ])
+              : faker.lorem.sentence(),
+            movedBy: faker.helpers.arrayElement(users.filter(u => u.companyId === job.companyId)).id,
+          },
+        });
+
+        // Move to next stage date
+        currentDate = new Date(exitDate);
+      }
+
+      // Update the jobCandidate's current stage to where they ended up
+      const finalStage = stages[Math.min(dropOffStageIndex, stages.length - 1)];
+      await prisma.jobCandidate.update({
+        where: { id: jobCandidate.id },
+        data: { currentStageId: finalStage.id }
       });
     }
   }
@@ -451,7 +510,7 @@ async function main() {
   console.log('🎤 Creating interviews...');
   const interviewModes = ['google_meet', 'microsoft_teams', 'in_person'] as const;
   const interviewStatuses = ['scheduled', 'completed', 'cancelled', 'no_show'] as const;
-  
+
   // Define date ranges for interviews
   // Past interviews: October 2025 - December 2025
   // Future interviews: January 2026 - February 2026
@@ -459,39 +518,39 @@ async function main() {
   const pastInterviewEnd = new Date('2025-12-31');
   const futureInterviewStart = new Date('2026-01-01');
   const futureInterviewEnd = new Date('2026-02-28');
-  
+
   for (let i = 0; i < 200; i++) { // 200 interviews total
     const jobCandidate = faker.helpers.arrayElement(jobCandidates);
     const job = jobs.find(j => j.id === jobCandidate.jobId)!;
     const companyUsers = users.filter(u => u.companyId === job.companyId);
     const panelMembers = faker.helpers.arrayElements(companyUsers, { min: 1, max: 3 });
-    
+
     // 60% future interviews (Jan-Feb 2026), 40% past interviews (Oct-Dec 2025)
     const isFutureInterview = i < 120; // First 120 are future interviews
-    
+
     let scheduledAt: Date;
     let status: typeof interviewStatuses[number];
-    
+
     if (isFutureInterview) {
       // Future interviews in January and February 2026
-      scheduledAt = faker.date.between({ 
-        from: futureInterviewStart, 
-        to: futureInterviewEnd 
+      scheduledAt = faker.date.between({
+        from: futureInterviewStart,
+        to: futureInterviewEnd
       });
       // Future interviews are mostly scheduled, some cancelled
       status = faker.helpers.arrayElement(['scheduled', 'scheduled', 'scheduled', 'cancelled']);
     } else {
       // Past interviews in October-December 2025
-      scheduledAt = faker.date.between({ 
-        from: pastInterviewStart, 
-        to: pastInterviewEnd 
+      scheduledAt = faker.date.between({
+        from: pastInterviewStart,
+        to: pastInterviewEnd
       });
       // Past interviews have varied statuses
       status = faker.helpers.arrayElement(interviewStatuses);
     }
-    
+
     const mode = faker.helpers.arrayElement(interviewModes);
-    
+
     const interview = await prisma.interview.create({
       data: {
         jobCandidateId: jobCandidate.id,
@@ -500,7 +559,7 @@ async function main() {
         timezone: 'Asia/Kolkata',
         mode,
         meetingLink: mode === 'google_meet' ? 'https://meet.google.com/abc-defg-hij' :
-                    mode === 'microsoft_teams' ? 'https://teams.microsoft.com/l/meetup-join/...' : null,
+          mode === 'microsoft_teams' ? 'https://teams.microsoft.com/l/meetup-join/...' : null,
         location: mode === 'in_person' ? faker.location.streetAddress() : null,
         status,
         notes: faker.lorem.paragraph(),
@@ -553,9 +612,9 @@ async function main() {
           metadata: {
             additionalInfo: faker.lorem.sentence(),
           },
-          createdAt: faker.date.between({ 
-            from: new Date('2024-01-01'), 
-            to: new Date() 
+          createdAt: faker.date.between({
+            from: new Date('2024-01-01'),
+            to: new Date()
           }),
         },
       });

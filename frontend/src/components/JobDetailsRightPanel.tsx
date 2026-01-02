@@ -251,11 +251,15 @@ function CandidateTableView({
       key: 'contact',
       header: 'Contact',
       render: (row) => (
-        <div className="text-xs">
-          <div className="text-gray-600 truncate max-w-[150px]" title={row.email || undefined}>
+        <div className="text-xs min-w-[140px] max-w-[180px]">
+          <div
+            className="text-gray-600 break-all leading-tight"
+            title={row.email || undefined}
+            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          >
             {row.email || '-'}
           </div>
-          <div className="text-gray-500">{row.phone || '-'}</div>
+          <div className="text-gray-500 mt-0.5">{row.phone || '-'}</div>
         </div>
       ),
     },
@@ -409,7 +413,11 @@ function KanbanCard({
       {/* Contact Information - Requirements 1.4 */}
       <div className="text-[10px] text-[#64748b] mb-2 space-y-0.5">
         {candidate.email && (
-          <div className="truncate" title={candidate.email}>
+          <div
+            className="break-all leading-tight"
+            title={candidate.email}
+            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          >
             📧 {candidate.email}
           </div>
         )}
@@ -451,10 +459,10 @@ function KanbanCard({
 const stageColorsMapping: Record<string, { bg: string; border: string; indicator: string }> = Object.fromEntries(
   Object.entries(STAGE_COLORS).map(([key, value]) => [
     key,
-    { 
-      bg: value.bg, 
-      border: value.border || 'border-[#e2e8f0]', 
-      indicator: value.indicator 
+    {
+      bg: value.bg,
+      border: value.border || 'border-[#e2e8f0]',
+      indicator: value.indicator
     }
   ])
 );

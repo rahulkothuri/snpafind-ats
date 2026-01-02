@@ -5,25 +5,31 @@ import { useAuth } from './useAuth';
 
 export const taskKeys = {
     all: ['tasks'] as const,
-    list: (status?: TaskStatus) => [...taskKeys.all, 'list', status] as const,
+    // Include userId in key for proper user isolation
+    list: (userId?: string, status?: TaskStatus) => [...taskKeys.all, 'list', userId, status] as const,
+    byUser: (userId: string) => [...taskKeys.all, 'user', userId] as const,
 };
 
 export function useTasks() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
-    // Fetch all tasks (open and closed)
+    // Fetch all tasks for the current user - include userId in query key for isolation
     const tasksQuery = useQuery({
-        queryKey: taskKeys.all,
+        queryKey: taskKeys.byUser(user?.id || ''),
         queryFn: () => tasksService.getAll(),
-        enabled: !!user,
+        enabled: !!user?.id, // Only fetch when user is authenticated
+        staleTime: 0, // Always refetch to ensure fresh data
     });
 
     // Create Task Mutation
     const createTask = useMutation({
         mutationFn: (data: CreateTaskData) => tasksService.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            // Invalidate user-specific tasks query
+            if (user?.id) {
+                queryClient.invalidateQueries({ queryKey: taskKeys.byUser(user.id) });
+            }
         },
     });
 
@@ -37,7 +43,10 @@ export function useTasks() {
             }
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            // Invalidate user-specific tasks query
+            if (user?.id) {
+                queryClient.invalidateQueries({ queryKey: taskKeys.byUser(user.id) });
+            }
         },
     });
 
@@ -45,7 +54,10 @@ export function useTasks() {
     const deleteTask = useMutation({
         mutationFn: (id: string) => tasksService.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            // Invalidate user-specific tasks query
+            if (user?.id) {
+                queryClient.invalidateQueries({ queryKey: taskKeys.byUser(user.id) });
+            }
         },
     });
 

@@ -100,14 +100,14 @@ export function AnalyticsPage() {
   }, [filterOptionsQuery.data]);
 
   // Check if any data is loading
-  const isLoading = kpis.isLoading || funnelData.isLoading || timeData.isLoading || 
-                    teamData.isLoading || slaData.isLoading || dropOffData.isLoading || 
-                    rejectionData.isLoading || panelData.isLoading;
+  const isLoading = kpis.isLoading || funnelData.isLoading || timeData.isLoading ||
+    teamData.isLoading || slaData.isLoading || dropOffData.isLoading ||
+    rejectionData.isLoading || panelData.isLoading;
 
   // Check if any data has errors
-  const hasError = kpis.isError || funnelData.isError || timeData.isError || 
-                   teamData.isError || slaData.isError || dropOffData.isError || 
-                   rejectionData.isError || panelData.isError;
+  const hasError = kpis.isError || funnelData.isError || timeData.isError ||
+    teamData.isError || slaData.isError || dropOffData.isError ||
+    rejectionData.isError || panelData.isError;
 
   // Refetch all data
   const refetchAll = () => {
@@ -305,7 +305,7 @@ export function AnalyticsPage() {
                   </div>
                   <div className="flex flex-col gap-1 mt-1">
                     <div className="text-xs text-gray-500">
-                      At risk: <span className="text-amber-600 font-semibold">{slaData.data?.summary?.atRisk ?? 0}</span> · 
+                      At risk: <span className="text-amber-600 font-semibold">{slaData.data?.summary?.atRisk ?? 0}</span> ·
                       Breached: <span className="text-red-600 font-semibold">{slaData.data?.summary?.breached ?? 0}</span>
                     </div>
                     <div className="text-[10px] text-gray-400">Based on SLA for time to fill</div>
@@ -321,14 +321,14 @@ export function AnalyticsPage() {
               </div>
             ) : kpis.isError ? (
               <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <AnalyticsErrorState 
-                  message="Failed to load KPI metrics" 
-                  onRetry={() => kpis.refetch()} 
+                <AnalyticsErrorState
+                  message="Failed to load KPI metrics"
+                  onRetry={() => kpis.refetch()}
                 />
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <AnalyticsEmptyState 
+                <AnalyticsEmptyState
                   title="No KPI data available"
                   message="Try adjusting your filters or date range"
                   icon={EmptyStateIcons.chart}
@@ -336,11 +336,11 @@ export function AnalyticsPage() {
               </div>
             )}
 
-            {/* Row 2: Main Charts (Funnel & Rejection Pie) */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-              {/* STAGE FUNNEL (Wider) - Requirements 2.1, 2.3, 2.4, 2.5, 2.6 */}
-              <div className="xl:col-span-7 bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <div className="flex justify-between items-center mb-6">
+            {/* Row 2: Tall Charts (Funnel & Time-Spent) */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {/* STAGE FUNNEL - Requirements 2.1, 2.3, 2.4, 2.5, 2.6 */}
+              <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="flex justify-between items-center mb-4">
                   <div>
                     <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
                       <MdTrendingUp className="text-blue-500" /> Stage Funnel Conversion
@@ -354,7 +354,6 @@ export function AnalyticsPage() {
                   </div>
                 </div>
                 <div>
-                  {/* Loading State - Requirements 10.4 */}
                   {funnelData.funnel.isLoading ? (
                     <div className="space-y-3">
                       {[...Array(6)].map((_, i) => (
@@ -368,21 +367,18 @@ export function AnalyticsPage() {
                       ))}
                     </div>
                   ) : funnelData.funnel.isError ? (
-                    /* Error State - Requirements 10.3 */
-                    <AnalyticsErrorState 
-                      message="Failed to load funnel data" 
-                      onRetry={() => funnelData.funnel.refetch()} 
+                    <AnalyticsErrorState
+                      message="Failed to load funnel data"
+                      onRetry={() => funnelData.funnel.refetch()}
                     />
                   ) : funnelData.funnel.data?.stages && funnelData.funnel.data.stages.length > 0 ? (
-                    /* Funnel Chart with real data - Requirements 2.1, 2.3, 2.4, 2.5 */
                     <FunnelChart
                       stages={funnelData.funnel.data.stages}
                       showPercentages={true}
-                      className="h-full border-none shadow-none p-0"
+                      className="border-none shadow-none p-0"
                     />
                   ) : (
-                    /* Empty State - Requirements 10.2 */
-                    <AnalyticsEmptyState 
+                    <AnalyticsEmptyState
                       title="No funnel data available"
                       message="Try adjusting your filters or date range"
                       icon={EmptyStateIcons.chart}
@@ -391,16 +387,82 @@ export function AnalyticsPage() {
                 </div>
               </div>
 
-              {/* REJECTION REASONS (Narrower) - Requirements 3.1, 3.3, 3.4, 3.5, 3.6 */}
-              <div className="xl:col-span-5">
+              {/* TIME SPENT AT EACH STAGE - Requirements 4.1, 4.3, 4.4, 4.5 */}
+              <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="mb-3">
+                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <MdTimer className="text-blue-400" /> Average Time Spent at Each Stage
+                  </h3>
+                  <div className="text-xs text-gray-500 mt-0.5">In days · Closed roles only</div>
+                </div>
+                {timeData.timeInStage.isLoading ? (
+                  <div className="space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="flex justify-between">
+                          <Skeleton className="h-3 w-32" />
+                          <Skeleton className="h-3 w-12" />
+                        </div>
+                        <Skeleton className="h-2 rounded-full" width={`${80 - i * 10}%`} />
+                      </div>
+                    ))}
+                  </div>
+                ) : timeData.timeInStage.isError ? (
+                  <AnalyticsErrorState
+                    message="Failed to load time-in-stage data"
+                    onRetry={() => timeData.timeInStage.refetch()}
+                  />
+                ) : timeData.timeInStage.data?.stages && timeData.timeInStage.data.stages.length > 0 ? (
+                  <>
+                    <HorizontalBarChart
+                      title=""
+                      valueLabel="Days"
+                      data={timeData.timeInStage.data.stages.map(stage => ({
+                        id: stage.stageName,
+                        label: stage.stageName,
+                        value: stage.avgDays,
+                        displayValue: `${stage.avgDays}d`,
+                        isOverThreshold: stage.isBottleneck,
+                      }))}
+                      showValues={true}
+                      colorScheme={{
+                        normal: '#bfdbfe',
+                        warning: '#fca5a5',
+                        threshold: '#fbbf24'
+                      }}
+                      className="border-none shadow-none p-0"
+                    />
+                    {timeData.timeInStage.data.bottleneckStage && (
+                      <div className="mt-4 text-[10px] text-gray-500">
+                        Bottleneck: <strong className="text-gray-700">{timeData.timeInStage.data.bottleneckStage}</strong>
+                        {timeData.timeInStage.data.suggestion && (
+                          <span className="block mt-1 text-gray-400">{timeData.timeInStage.data.suggestion}</span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <AnalyticsEmptyState
+                    title="No time-in-stage data available"
+                    message="Try adjusting your filters or date range"
+                    icon={EmptyStateIcons.time}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Row 3: Compact Cards (Rejection Pie & Recruiter) */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {/* REJECTION REASONS - Requirements 3.1, 3.3, 3.4, 3.5, 3.6 */}
+              <div>
                 {rejectionData.isLoading ? (
-                  <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] h-full">
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                     <div className="flex items-center gap-2 mb-4">
                       <Skeleton className="h-5 w-5 rounded" />
                       <Skeleton className="h-5 w-40" />
                     </div>
                     <div className="flex items-center justify-center py-4">
-                      <Skeleton className="h-40 w-40 rounded-full" />
+                      <Skeleton className="h-32 w-32 rounded-full" />
                     </div>
                     <div className="space-y-2 mt-4">
                       {[...Array(4)].map((_, i) => (
@@ -422,15 +484,15 @@ export function AnalyticsPage() {
                     topStage={rejectionData.data.topStageForRejection}
                   />
                 ) : rejectionData.isError ? (
-                  <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                    <AnalyticsErrorState 
-                      message="Failed to load rejection data" 
-                      onRetry={() => rejectionData.refetch()} 
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                    <AnalyticsErrorState
+                      message="Failed to load rejection data"
+                      onRetry={() => rejectionData.refetch()}
                     />
                   </div>
                 ) : (
-                  <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                    <AnalyticsEmptyState 
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                    <AnalyticsEmptyState
                       title="No rejection data available"
                       message="Try adjusting your filters or date range"
                       icon={EmptyStateIcons.pie}
@@ -438,81 +500,10 @@ export function AnalyticsPage() {
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Row 3: Secondary Metrics (Time & Recruiter) */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {/* TIME SPENT AT EACH STAGE - Requirements 4.1, 4.3, 4.4, 4.5 */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <div className="mb-6">
-                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                    <MdTimer className="text-blue-400" /> Average Time Spent at Each Stage
-                  </h3>
-                  <div className="text-xs text-gray-500 mt-0.5">In days · Closed roles only</div>
-                </div>
-                {/* Loading State - Requirements 10.4 */}
-                {timeData.timeInStage.isLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="space-y-2">
-                        <div className="flex justify-between">
-                          <Skeleton className="h-3 w-32" />
-                          <Skeleton className="h-3 w-12" />
-                        </div>
-                        <Skeleton className="h-2 rounded-full" width={`${80 - i * 10}%`} />
-                      </div>
-                    ))}
-                  </div>
-                ) : timeData.timeInStage.isError ? (
-                  /* Error State - Requirements 10.3 */
-                  <AnalyticsErrorState 
-                    message="Failed to load time-in-stage data" 
-                    onRetry={() => timeData.timeInStage.refetch()} 
-                  />
-                ) : timeData.timeInStage.data?.stages && timeData.timeInStage.data.stages.length > 0 ? (
-                  /* Chart with real data - Requirements 4.1, 4.3, 4.4 */
-                  <>
-                    <HorizontalBarChart
-                      title=""
-                      valueLabel="Days"
-                      data={timeData.timeInStage.data.stages.map(stage => ({
-                        id: stage.stageName,
-                        label: stage.stageName,
-                        value: stage.avgDays,
-                        displayValue: `${stage.avgDays}d`,
-                        isOverThreshold: stage.isBottleneck, // Highlight bottleneck stage - Requirements 4.3
-                      }))}
-                      showValues={true}
-                      colorScheme={{
-                        normal: '#bfdbfe', // blue-200 to match reference
-                        warning: '#fca5a5', // red-300 for bottleneck
-                        threshold: '#fbbf24'
-                      }}
-                      className="border-none shadow-none p-0"
-                    />
-                    {/* Suggestion text - Requirements 4.5 */}
-                    {timeData.timeInStage.data.bottleneckStage && (
-                      <div className="mt-4 text-[10px] text-gray-500">
-                        Bottleneck: <strong className="text-gray-700">{timeData.timeInStage.data.bottleneckStage}</strong>
-                        {timeData.timeInStage.data.suggestion && (
-                          <span className="block mt-1 text-gray-400">{timeData.timeInStage.data.suggestion}</span>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  /* Empty State - Requirements 10.2 */
-                  <AnalyticsEmptyState 
-                    title="No time-in-stage data available"
-                    message="Try adjusting your filters or date range"
-                    icon={EmptyStateIcons.time}
-                  />
-                )}
-              </div>
 
               {/* RECRUITER PRODUCTIVITY - Requirements 5.1, 5.3, 5.4, 5.5 */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                <div className="mb-6">
+              <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] h-full">
+                <div className="mb-3">
                   <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
                     <MdGroup className="text-purple-500" /> Recruiter Productivity
                   </h3>
@@ -536,9 +527,9 @@ export function AnalyticsPage() {
                   </div>
                 ) : teamData.recruiters.isError ? (
                   /* Error State - Requirements 10.3 */
-                  <AnalyticsErrorState 
-                    message="Failed to load recruiter data" 
-                    onRetry={() => teamData.recruiters.refetch()} 
+                  <AnalyticsErrorState
+                    message="Failed to load recruiter data"
+                    onRetry={() => teamData.recruiters.refetch()}
                   />
                 ) : teamData.recruiters.data && teamData.recruiters.data.length > 0 ? (
                   /* Recruiter Table with real data - Requirements 5.1, 5.3, 5.4 */
@@ -573,14 +564,14 @@ export function AnalyticsPage() {
                   </div>
                 ) : (
                   /* Empty State - Requirements 10.2 */
-                  <AnalyticsEmptyState 
+                  <AnalyticsEmptyState
                     title="No recruiter data available"
                     message="Try adjusting your filters or date range"
                     icon={EmptyStateIcons.people}
                   />
                 )}
                 {/* Footer with metric info and link to full report - Requirements 5.5 */}
-                <div className="mt-4 flex justify-between items-center text-[10px] text-gray-500">
+                <div className="mt-3 flex justify-between items-center text-[10px] text-gray-500">
                   <span>Metric: Time to fill (TTF) + hires per recruiter</span>
                   <button className="text-blue-600 hover:underline">View full report</button>
                 </div>
@@ -588,10 +579,10 @@ export function AnalyticsPage() {
             </div>
 
             {/* Row 4: Panel Performance & Role-wise TTF */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               {/* PANEL PERFORMANCE - Requirements 6.1, 6.3, 6.4, 6.5 */}
               {panelData.isLoading ? (
-                <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] h-full">
                   <div className="flex items-center gap-2 mb-6">
                     <Skeleton className="h-5 w-5 rounded" />
                     <Skeleton className="h-5 w-40" />
@@ -624,14 +615,14 @@ export function AnalyticsPage() {
                 />
               ) : panelData.isError ? (
                 <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                  <AnalyticsErrorState 
-                    message="Failed to load panel performance data" 
-                    onRetry={() => panelData.refetch()} 
+                  <AnalyticsErrorState
+                    message="Failed to load panel performance data"
+                    onRetry={() => panelData.refetch()}
                   />
                 </div>
               ) : (
                 <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                  <AnalyticsEmptyState 
+                  <AnalyticsEmptyState
                     title="No panel performance data available"
                     message="Try adjusting your filters or date range"
                     icon={EmptyStateIcons.people}
@@ -662,9 +653,9 @@ export function AnalyticsPage() {
                   </div>
                 ) : timeData.timeToFill.isError ? (
                   /* Error State - Requirements 10.3 */
-                  <AnalyticsErrorState 
-                    message="Failed to load time-to-fill data" 
-                    onRetry={() => timeData.timeToFill.refetch()} 
+                  <AnalyticsErrorState
+                    message="Failed to load time-to-fill data"
+                    onRetry={() => timeData.timeToFill.refetch()}
                   />
                 ) : timeData.timeToFill.data?.byRole && timeData.timeToFill.data.byRole.length > 0 ? (
                   /* Chart with real data - Requirements 7.1, 7.3, 7.4 */
@@ -690,7 +681,7 @@ export function AnalyticsPage() {
                   />
                 ) : (
                   /* Empty State - Requirements 10.2 */
-                  <AnalyticsEmptyState 
+                  <AnalyticsEmptyState
                     title="No time-to-fill data available"
                     message="Try adjusting your filters or date range"
                     icon={EmptyStateIcons.document}
@@ -727,9 +718,9 @@ export function AnalyticsPage() {
               ) : dropOffData.isError ? (
                 /* Error State - Requirements 10.3 */
                 <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] min-h-[200px]">
-                  <AnalyticsErrorState 
-                    message="Failed to load drop-off data" 
-                    onRetry={() => dropOffData.refetch()} 
+                  <AnalyticsErrorState
+                    message="Failed to load drop-off data"
+                    onRetry={() => dropOffData.refetch()}
                   />
                 </div>
               ) : dropOffData.data?.byStage && dropOffData.data.byStage.length > 0 ? (
@@ -745,7 +736,7 @@ export function AnalyticsPage() {
               ) : (
                 /* Empty State - Requirements 10.2 */
                 <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] min-h-[200px]">
-                  <AnalyticsEmptyState 
+                  <AnalyticsEmptyState
                     title="No drop-off data available"
                     message="Try adjusting your filters or date range"
                     icon={EmptyStateIcons.chart}

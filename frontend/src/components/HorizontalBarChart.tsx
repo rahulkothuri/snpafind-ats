@@ -1,12 +1,20 @@
 /**
- * HorizontalBarChart Component - Requirements 5.1, 6.4, 7.2
- * 
- * Features:
- * - Support color coding based on thresholds
- * - Display labels and values
- * - Horizontal bar layout for better label readability
- * - Threshold-based warning indicators
+ * HorizontalBarChart Component - Using Recharts for Professional Power BI-like design
+ * Requirements: 5.1, 6.4, 7.2
  */
+
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  ReferenceLine,
+  LabelList
+} from 'recharts';
 
 interface BarData {
   id: string;
@@ -35,8 +43,23 @@ interface HorizontalBarChartProps {
 
 const defaultColorScheme = {
   normal: '#3b82f6',    // blue-500
-  warning: '#f43f5e',   // rose-500 (softer red)
+  warning: '#f43f5e',   // rose-500
   threshold: '#fbbf24', // amber-400
+};
+
+// Custom tooltip component
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white px-3 py-2 shadow-lg rounded-lg border border-gray-100">
+        <p className="text-sm font-semibold text-gray-800">{label}</p>
+        <p className="text-sm text-gray-600">
+          {payload[0].payload.displayValue || `${payload[0].value}`}
+        </p>
+      </div>
+    );
+  }
+  return null;
 };
 
 export function HorizontalBarChart({
@@ -47,7 +70,6 @@ export function HorizontalBarChart({
   thresholdLabel,
   colorScheme = defaultColorScheme,
   showValues = true,
-  maxBarWidth = 100,
   className = '',
 }: HorizontalBarChartProps) {
   if (!data || data.length === 0) {
@@ -56,15 +78,21 @@ export function HorizontalBarChart({
         {title && (
           <h3 className="text-lg font-semibold text-[#111827] mb-4">{title}</h3>
         )}
-        <div className="text-center text-[#64748b]">
+        <div className="text-center text-[#64748b] py-8">
           No data available
         </div>
       </div>
     );
   }
 
-  // Find the maximum value to calculate proportional widths
-  const maxValue = Math.max(...data.map(item => item.value), threshold || 0);
+  // Transform data for Recharts
+  const chartData = data.map(item => ({
+    ...item,
+    name: item.label,
+    fill: item.isOverThreshold || (threshold && item.value > threshold)
+      ? colorScheme.warning
+      : colorScheme.normal
+  }));
 
   return (
     <div className={`bg-white rounded-xl border border-[#e2e8f0] p-6 ${className}`}>
@@ -77,73 +105,69 @@ export function HorizontalBarChart({
         </div>
       )}
 
-      <div className="space-y-4">
-        {data.map((item) => {
-          const widthPercentage = maxValue > 0 ? (item.value / maxValue) * maxBarWidth : 0;
-          const isWarning = item.isOverThreshold || (threshold && item.value > threshold);
-          const barColor = isWarning ? colorScheme.warning : colorScheme.normal;
+      <div className="w-full" style={{ height: Math.max(data.length * 50, 200) }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            layout="vertical"
+            data={chartData}
+            margin={{ top: 5, right: 50, left: 10, bottom: 5 }}
+            barCategoryGap="20%"
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+            <XAxis
+              type="number"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: '#64748b' }}
+              domain={[0, 'auto']}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#374151', fontWeight: 500 }}
+              width={120}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
 
-          return (
-            <div key={item.id} className="space-y-2">
-              {/* Label and Value */}
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#374151] truncate">
-                      {item.label}
-                    </span>
-                    {isWarning && (
-                      <svg
-                        className="w-4 h-4 text-[#ef4444] flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  {item.subtitle && (
-                    <span className="text-xs text-[#64748b]">{item.subtitle}</span>
-                  )}
-                </div>
-                {showValues && (
-                  <span className="text-sm font-semibold text-[#111827] ml-4">
-                    {item.displayValue || item.value.toLocaleString()}
-                  </span>
-                )}
-              </div>
+            {threshold && (
+              <ReferenceLine
+                x={threshold}
+                stroke={colorScheme.threshold}
+                strokeWidth={2}
+                strokeDasharray="4 4"
+                label={{
+                  value: thresholdLabel || `${threshold}`,
+                  position: 'top',
+                  fill: colorScheme.threshold,
+                  fontSize: 10
+                }}
+              />
+            )}
 
-              {/* Bar */}
-              <div className="relative flex items-center">
-                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${widthPercentage}%`,
-                      backgroundColor: barColor,
-                      minWidth: item.value > 0 ? '4px' : '0px',
-                    }}
-                  />
-                </div>
-
-                {/* Threshold Line */}
-                {threshold && threshold <= maxValue && (
-                  <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10"
-                    style={{
-                      left: `${(threshold / maxValue) * maxBarWidth}%`,
-                    }}
-                  >
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+            <Bar
+              dataKey="value"
+              radius={[0, 4, 4, 0]}
+              maxBarSize={24}
+              animationDuration={800}
+              animationEasing="ease-out"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+              {showValues && (
+                <LabelList
+                  dataKey="displayValue"
+                  position="right"
+                  fill="#374151"
+                  fontSize={11}
+                  fontWeight={600}
+                />
+              )}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Legend */}
@@ -160,9 +184,9 @@ export function HorizontalBarChart({
             </div>
             {threshold && (
               <div className="flex items-center gap-2">
-                <div className="w-3 h-0.5 bg-amber-500" />
+                <div className="w-6 h-0.5" style={{ backgroundColor: colorScheme.threshold }} />
                 <span className="text-[#64748b]">
-                  {thresholdLabel || `Threshold: ${threshold}`}
+                  {thresholdLabel || `Target: ${threshold}`}
                 </span>
               </div>
             )}

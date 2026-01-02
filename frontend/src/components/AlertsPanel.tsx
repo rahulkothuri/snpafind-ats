@@ -104,28 +104,28 @@ export function AlertsPanel({
   const totalAlerts = slaBreaches.length + pendingFeedback.length;
   const criticalCount = slaBreaches.filter(a => getSeverity(a.daysOverdue) === 'critical').length;
 
-  // Severity styles
+  // Severity styles - Refined for a cleaner, more aesthetic look
   const severityStyles = {
     critical: {
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      icon: '🚨',
-      iconBg: 'bg-red-100',
-      text: 'text-red-700',
+      bg: 'bg-gradient-to-r from-rose-50/80 to-white',
+      border: 'border-l-4 border-l-rose-400 border-y border-r border-y-gray-100 border-r-gray-100',
+      icon: '!',
+      iconBg: 'bg-rose-100 text-rose-600',
+      text: 'text-gray-800',
     },
     warning: {
-      bg: 'bg-amber-50',
-      border: 'border-amber-200',
-      icon: '⚠️',
-      iconBg: 'bg-amber-100',
-      text: 'text-amber-700',
+      bg: 'bg-gradient-to-r from-amber-50/60 to-white',
+      border: 'border-l-4 border-l-amber-400 border-y border-r border-y-gray-100 border-r-gray-100',
+      icon: '!',
+      iconBg: 'bg-amber-100 text-amber-600',
+      text: 'text-gray-800',
     },
     info: {
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      icon: 'ℹ️',
-      iconBg: 'bg-blue-100',
-      text: 'text-blue-700',
+      bg: 'bg-gradient-to-r from-sky-50/60 to-white',
+      border: 'border-l-4 border-l-sky-400 border-y border-r border-y-gray-100 border-r-gray-100',
+      icon: 'i',
+      iconBg: 'bg-sky-100 text-sky-600',
+      text: 'text-gray-800',
     },
   };
 
@@ -166,7 +166,7 @@ export function AlertsPanel({
             No alerts
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 pb-3">
             {filteredSlaBreaches.slice(0, maxAlerts).map((alert) => {
               const severity = getSeverity(alert.daysOverdue);
               const style = severityStyles[severity];
@@ -174,10 +174,10 @@ export function AlertsPanel({
                 <button
                   key={alert.id}
                   onClick={() => handleAlertClick(alert, 'sla')}
-                  className={`w-full text-left p-2 rounded-lg border ${style.bg} ${style.border} hover:opacity-80 transition-opacity`}
+                  className={`w-full text-left p-2.5 rounded-lg ${style.bg} ${style.border} hover:shadow-sm transition-all duration-200`}
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm">{style.icon}</span>
+                  <div className="flex items-start gap-2.5">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${style.iconBg}`}>{style.icon}</span>
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-medium ${style.text} truncate`}>
                         {alert.candidateName}
@@ -275,7 +275,7 @@ export function AlertsPanel({
             <p className="text-sm mt-1">All candidates are within SLA thresholds</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 pb-4">
             {/* SLA Breach Alerts */}
             {filteredSlaBreaches.map((alert) => {
               const severity = getSeverity(alert.daysOverdue);
@@ -284,11 +284,11 @@ export function AlertsPanel({
                 <button
                   key={alert.id}
                   onClick={() => handleAlertClick(alert, 'sla')}
-                  className={`w-full text-left p-3 rounded-lg border ${style.bg} ${style.border} hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
+                  className={`w-full text-left p-3.5 rounded-xl ${style.bg} ${style.border} hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
                   aria-label={`SLA breach alert for ${alert.candidateName}, ${alert.daysOverdue} days overdue in ${alert.stageName}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${style.iconBg}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${style.iconBg}`}>
                       {style.icon}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -318,16 +318,16 @@ export function AlertsPanel({
               <button
                 key={alert.id}
                 onClick={() => handleAlertClick(alert, 'feedback')}
-                className="w-full text-left p-3 rounded-lg border bg-purple-50 border-purple-200 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                className="w-full text-left p-3.5 rounded-xl bg-gradient-to-r from-violet-50/60 to-white border-l-4 border-l-violet-400 border-y border-r border-y-gray-100 border-r-gray-100 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
                 aria-label={`Pending feedback alert for ${alert.candidateName}, ${alert.hoursOverdue} hours overdue`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 bg-purple-100">
-                    📝
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-violet-100 text-violet-600">
+                    ✎
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-purple-700 truncate">
+                      <p className="text-sm font-medium text-gray-800 truncate">
                         {alert.candidateName}
                       </p>
                       <Badge

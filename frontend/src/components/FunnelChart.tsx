@@ -1,12 +1,19 @@
 /**
- * FunnelChart Component - Requirements 2.1, 2.3, 2.4, 2.5, 2.6
- * 
- * Features:
- * - Display stages in order with proportional bar widths based on percentage
- * - Show candidate count and percentage for each stage
- * - Use blue gradient colors with green for Hired stage
- * - Support click handler for stage navigation
+ * FunnelChart Component - Using Recharts for Professional Power BI-like design
+ * Requirements 2.1, 2.3, 2.4, 2.5, 2.6
  */
+
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  LabelList
+} from 'recharts';
 
 interface FunnelStage {
   id: string;
@@ -24,32 +31,40 @@ interface FunnelChartProps {
   className?: string;
 }
 
-// Blue gradient colors matching reference design (Requirements 2.5)
-// From lightest to darkest blue, with green for Hired stage
+// Blue gradient colors matching Power BI design
 const defaultFunnelColors = [
-  '#bfdbfe', // blue-200 - Applied
-  '#93c5fd', // blue-300 - Screening
-  '#60a5fa', // blue-400 - Shortlisted
-  '#3b82f6', // blue-500 - Interview
-  '#2563eb', // blue-600 - Offer
-  '#22c55e', // green-500 - Hired (special color)
+  '#6366f1', // indigo-500 - Applied
+  '#8b5cf6', // violet-500 - Screening  
+  '#3b82f6', // blue-500 - Shortlisted
+  '#0ea5e9', // sky-500 - Interview
+  '#14b8a6', // teal-500 - Offer
+  '#22c55e', // green-500 - Hired
 ];
 
-/**
- * Get the appropriate color for a funnel stage
- * Uses blue gradient for most stages, green for Hired (Requirements 2.5)
- */
 function getStageColor(stageName: string, index: number): string {
-  // Use green for Hired stage
   if (stageName.toLowerCase() === 'hired') {
     return '#22c55e';
   }
-  
-  // Calculate color index based on position in funnel
-  // Distribute colors evenly across non-hired stages
-  const colorIndex = Math.min(index, defaultFunnelColors.length - 2);
+  const colorIndex = Math.min(index, defaultFunnelColors.length - 1);
   return defaultFunnelColors[colorIndex];
 }
+
+// Custom tooltip
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white px-3 py-2 shadow-lg rounded-lg border border-gray-100">
+        <p className="text-sm font-semibold text-gray-800">{data.name}</p>
+        <p className="text-sm text-gray-600">
+          {data.count.toLocaleString()} candidates
+        </p>
+        <p className="text-xs text-gray-500">{data.percentage.toFixed(1)}% of total</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export function FunnelChart({
   stages,
@@ -57,7 +72,7 @@ export function FunnelChart({
   showPercentages = true,
   className = '',
 }: FunnelChartProps) {
-  // Empty state (Requirements 10.2)
+  // Empty state
   if (!stages || stages.length === 0) {
     return (
       <div className={`bg-white rounded-xl border border-[#e2e8f0] p-6 ${className}`}>
@@ -72,54 +87,72 @@ export function FunnelChart({
     );
   }
 
-  // Find the first stage count (total applicants) for percentage calculation
   const totalApplicants = stages[0]?.count || 0;
-  
+
+  // Transform data for Recharts
+  const chartData = stages.map((stage, index) => ({
+    ...stage,
+    fill: getStageColor(stage.name, index),
+    displayLabel: showPercentages && index > 0
+      ? `${stage.count.toLocaleString()} (${stage.percentage.toFixed(0)}%)`
+      : stage.count.toLocaleString()
+  }));
+
   return (
     <div className={`bg-white rounded-xl border border-[#e2e8f0] p-6 ${className}`}>
-      <div className="space-y-3">
-        {stages.map((stage, index) => {
-          // Calculate width based on percentage of total applicants (Requirements 2.4)
-          const widthPercentage = totalApplicants > 0 
-            ? Math.max((stage.count / totalApplicants) * 100, stage.count > 0 ? 6 : 0) 
-            : 0;
-          
-          // Get appropriate color for this stage (Requirements 2.5)
-          const color = getStageColor(stage.name, index);
-          const isClickable = !!onStageClick;
-          
-          return (
-            <div key={stage.id} className="funnel-stage">
-              {/* Stage Label Row - matching reference design */}
-              <div className="flex items-center justify-between text-[10px] text-[#64748b] mb-1">
-                <span className="font-medium">{stage.name}</span>
-                <span>
-                  {stage.count.toLocaleString()} {stage.count === 1 ? 'candidate' : 'candidates'}
-                  {showPercentages && index > 0 && (
-                    <span className="ml-1">· {stage.percentage.toFixed(1)}%</span>
-                  )}
-                </span>
-              </div>
-              
-              {/* Funnel Bar - matching reference design style */}
-              <div 
-                className={`
-                  h-3 rounded-full transition-all duration-300
-                  ${isClickable ? 'cursor-pointer hover:opacity-80' : ''}
-                `}
-                style={{
-                  width: `${widthPercentage}%`,
-                  backgroundColor: color,
-                  minWidth: stage.count > 0 ? '24px' : '0px',
-                }}
-                onClick={() => isClickable && onStageClick?.(stage)}
-                title={`${stage.name}: ${stage.count.toLocaleString()} (${stage.percentage.toFixed(1)}%)`}
+      <div className="w-full" style={{ height: Math.max(stages.length * 48, 250) }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            layout="vertical"
+            data={chartData}
+            margin={{ top: 5, right: 80, left: 10, bottom: 5 }}
+            barCategoryGap="15%"
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+            <XAxis
+              type="number"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: '#94a3b8' }}
+              domain={[0, 'dataMax']}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#374151', fontWeight: 500 }}
+              width={100}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+            <Bar
+              dataKey="count"
+              radius={[0, 6, 6, 0]}
+              maxBarSize={28}
+              animationDuration={1000}
+              animationEasing="ease-out"
+              onClick={(data) => onStageClick?.(data as unknown as FunnelStage)}
+              style={{ cursor: onStageClick ? 'pointer' : 'default' }}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.fill}
+                  style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
+                />
+              ))}
+              <LabelList
+                dataKey="displayLabel"
+                position="right"
+                fill="#374151"
+                fontSize={11}
+                fontWeight={500}
               />
-            </div>
-          );
-        })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
-      
+
       {/* Summary Footer */}
       {stages.length > 0 && totalApplicants > 0 && (
         <div className="mt-4 pt-3 border-t border-[#e2e8f0]">
@@ -132,7 +165,7 @@ export function FunnelChart({
             {stages.length > 1 && (
               <span>
                 Overall conversion: <span className="font-medium text-[#111827]">
-                  {totalApplicants > 0 
+                  {totalApplicants > 0
                     ? ((stages[stages.length - 1]?.count / totalApplicants) * 100).toFixed(1)
                     : 0}%
                 </span>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { FloatingTaskWidget, useFloatingTaskEnabled } from './FloatingTaskWidget';
 import type { User } from '../types';
 
 /**
@@ -56,7 +57,8 @@ export function Layout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const windowWidth = useWindowWidth();
-  
+  const { enabled: floatingTaskEnabled } = useFloatingTaskEnabled();
+
   // Responsive breakpoints - Requirement 22.1
   const isMobile = windowWidth < 900;
 
@@ -152,6 +154,9 @@ export function Layout({
           rightText={footerRightText}
         />
       </div>
+
+      {/* Floating Task Widget - Shown when toggle is enabled */}
+      {user && <FloatingTaskWidget enabled={floatingTaskEnabled} />}
     </div>
   );
 }

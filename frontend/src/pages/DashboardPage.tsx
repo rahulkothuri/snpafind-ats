@@ -1,4 +1,4 @@
-import { Layout, KPICard, Table, LoadingSpinner, SLAConfigSection, AlertsPanel } from '../components';
+import { Layout, KPICard, Table, LoadingSpinner, SLAConfigSection, AlertsPanel, useFloatingTaskEnabled } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboard } from '../hooks/useDashboard';
 import { useTasks } from '../hooks/useTasks';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
   MdAdd, MdSettings, MdClose, MdCheckCircle, MdRadioButtonUnchecked, MdDeleteOutline,
-  MdWork, MdPeople, MdEvent, MdAssignment, MdAccessTime
+  MdWork, MdPeople, MdEvent, MdAssignment, MdAccessTime, MdOpenInNew
 } from 'react-icons/md';
 // Using types from services where possible, or keeping local compatible interfaces
 import type { Task } from '../services/tasks.service';
@@ -169,6 +169,7 @@ function QuickTasks({ tasks, onAddTask, onToggleTask, onDeleteTask }: {
   const [newTaskText, setNewTaskText] = useState('');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [isAdding, setIsAdding] = useState(false);
+  const { enabled: floatingEnabled, toggleEnabled: setFloatingEnabled } = useFloatingTaskEnabled();
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,10 +185,24 @@ function QuickTasks({ tasks, onAddTask, onToggleTask, onDeleteTask }: {
   return (
     <div className="card p-3 flex flex-col gap-2 h-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-900">Tasks</h3>
-        <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-          {openTasks.length} Pending
-        </span>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-gray-900">Tasks</h3>
+          <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+            {openTasks.length} Pending
+          </span>
+        </div>
+        {/* Floating Toggle */}
+        <button
+          onClick={() => setFloatingEnabled(!floatingEnabled)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${floatingEnabled
+              ? 'bg-blue-100 text-blue-700 border border-blue-200'
+              : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+            }`}
+          title={floatingEnabled ? 'Disable floating widget' : 'Enable floating widget on all pages'}
+        >
+          <MdOpenInNew className="w-3 h-3" />
+          {floatingEnabled ? 'Floating On' : 'Floating Off'}
+        </button>
       </div>
 
       {/* Task List - Fixed Height for ~7 items */}
@@ -360,7 +375,7 @@ export function DashboardPage() {
 
   return (
     <Layout pageTitle="Dashboard" user={user}>
-      <div className="p-4 space-y-4 max-w-[1600px] mx-auto">
+      <div className="pt-2 px-4 pb-4 space-y-4 max-w-[1600px] mx-auto">
 
         {/* Header */}
         <div className="flex justify-between items-center">

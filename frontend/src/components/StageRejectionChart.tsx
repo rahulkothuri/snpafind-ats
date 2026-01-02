@@ -1,3 +1,20 @@
+/**
+ * StageRejectionChart - Using Recharts for Professional Power BI-like design
+ * Displays drop-off percentages by pipeline stage
+ * Requirements: 8.1, 8.3, 8.4, 8.5, 8.6
+ */
+
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    Cell,
+    LabelList
+} from 'recharts';
 import { MdError } from 'react-icons/md';
 
 interface StageDropOff {
@@ -12,13 +29,9 @@ interface StageRejectionChartProps {
     className?: string;
 }
 
-/**
- * Generate a suggestion based on the highest drop-off stage
- * Requirements 8.6: Show suggestion for reducing drop-offs
- */
 function getSuggestionForStage(stageName: string): string {
     const lowerStageName = stageName.toLowerCase();
-    
+
     if (lowerStageName.includes('applied') || lowerStageName.includes('queue')) {
         return 'Use AI-screening + better JD clarity to reduce early drop-offs.';
     } else if (lowerStageName.includes('screening')) {
@@ -30,27 +43,56 @@ function getSuggestionForStage(stageName: string): string {
     } else if (lowerStageName.includes('shortlist')) {
         return 'Ensure shortlisting criteria align with role requirements.';
     }
-    
+
     return 'Review this stage for process improvements and bottleneck reduction.';
 }
 
-/**
- * StageRejectionChart - Displays drop-off percentages by pipeline stage
- * Uses horizontal bar chart with light red bars matching atsreport.html design
- * Requirements: 8.1, 8.3, 8.4, 8.5, 8.6
- */
+// Custom tooltip
+const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+            <div className="bg-white px-3 py-2 shadow-lg rounded-lg border border-gray-100">
+                <p className="text-sm font-semibold text-gray-800">{data.stageName}</p>
+                <p className="text-sm text-gray-600">{data.dropOffCount} candidates dropped</p>
+                <p className="text-sm text-red-500 font-medium">{data.dropOffPercentage}% drop-off rate</p>
+            </div>
+        );
+    }
+    return null;
+};
+
 export function StageRejectionChart({
     data,
     highestDropOffStage,
     className = '',
 }: StageRejectionChartProps) {
-    // Find max percentage for scaling bars
-    const maxPercentage = Math.max(...data.map(d => d.dropOffPercentage), 1);
+    if (!data || data.length === 0) {
+        return (
+            <div className={`bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] h-full flex flex-col ${className}`}>
+                <div className="mb-4">
+                    <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                        <MdError className="text-red-400" />
+                        Rejections – Stage Wise
+                    </h3>
+                </div>
+                <div className="text-center text-gray-500 py-8">
+                    <p className="text-sm">No drop-off data available</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Transform data for Recharts
+    const chartData = data.map(item => ({
+        ...item,
+        name: item.stageName,
+        value: item.dropOffPercentage,
+        isHighest: item.stageName === highestDropOffStage
+    }));
 
     return (
-        <div
-            className={`bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${className}`}
-        >
+        <div className={`bg-white rounded-xl border border-gray-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] h-full flex flex-col ${className}`}>
             {/* Header */}
             <div className="mb-6">
                 <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
@@ -62,40 +104,60 @@ export function StageRejectionChart({
                 </div>
             </div>
 
-            {/* Bar Chart - Requirements 8.3, 8.4 */}
-            <div className="space-y-3">
-                {data.map(item => {
-                    const isHighestDropOff = item.stageName === highestDropOffStage;
-                    return (
-                        <div key={item.stageName} className="flex items-center gap-3">
-                            {/* Label */}
-                            <div 
-                                className={`w-28 text-xs truncate ${isHighestDropOff ? 'text-red-600 font-medium' : 'text-gray-500'}`} 
-                                title={item.stageName}
-                            >
-                                {item.stageName}
-                            </div>
-                            {/* Bar Track */}
-                            <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full transition-all duration-300"
-                                    style={{
-                                        width: `${(item.dropOffPercentage / maxPercentage) * 100}%`,
-                                        // Light red color for bars - Requirements 8.4
-                                        backgroundColor: isHighestDropOff ? '#fca5a5' : '#fecaca', // red-300 for highest, red-200 for others
-                                    }}
+            {/* Chart */}
+            <div className="w-full" style={{ height: Math.max(data.length * 45, 180) }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                        layout="vertical"
+                        data={chartData}
+                        margin={{ top: 5, right: 50, left: 10, bottom: 5 }}
+                        barCategoryGap="20%"
+                    >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+                        <XAxis
+                            type="number"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fill: '#94a3b8' }}
+                            domain={[0, 'auto']}
+                            tickFormatter={(value) => `${value}%`}
+                        />
+                        <YAxis
+                            type="category"
+                            dataKey="name"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fill: '#374151', fontWeight: 500 }}
+                            width={100}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fef2f2' }} />
+                        <Bar
+                            dataKey="value"
+                            radius={[0, 4, 4, 0]}
+                            maxBarSize={22}
+                            animationDuration={800}
+                            animationEasing="ease-out"
+                        >
+                            {chartData.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.isHighest ? '#f87171' : '#fca5a5'}
+                                    style={{ filter: entry.isHighest ? 'drop-shadow(0 1px 3px rgba(239,68,68,0.3))' : 'none' }}
                                 />
-                            </div>
-                            {/* Value */}
-                            <div className={`w-12 text-right text-xs font-medium ${isHighestDropOff ? 'text-red-600' : 'text-gray-600'}`}>
-                                {item.dropOffPercentage}%
-                            </div>
-                        </div>
-                    );
-                })}
+                            ))}
+                            <LabelList
+                                dataKey="dropOffPercentage"
+                                position="right"
+                                fill="#374151"
+                                fontSize={11}
+                                fontWeight={600}
+                            />
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
             </div>
 
-            {/* Footer Insight - Requirements 8.5, 8.6 */}
+            {/* Footer Insight */}
             {highestDropOffStage && (
                 <div className="mt-5 text-[10px] text-gray-500">
                     Most rejections at <strong className="text-red-600">{highestDropOffStage}</strong>.{' '}

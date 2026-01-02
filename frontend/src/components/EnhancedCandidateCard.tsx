@@ -136,12 +136,17 @@ export function EnhancedCandidateCard({
               )}
             </h3>
             <p className="text-xs text-gray-600 truncate font-medium">{candidate.title}</p>
-            {/* Restore Email & Phone - Requirement: Do not remove content */}
-            <p className="text-[10px] text-gray-400 truncate flex items-center gap-1.5 mt-0.5">
-              <span>{candidate.email}</span>
-              <span className="w-0.5 h-0.5 bg-gray-300 rounded-full"></span>
-              <span>{candidate.phone}</span>
-            </p>
+            {/* Email & Phone - Display email on multiple lines if needed */}
+            <div className="text-[10px] text-gray-400 mt-0.5 space-y-0.5">
+              <p
+                className="break-all leading-tight"
+                title={candidate.email}
+                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+              >
+                {candidate.email}
+              </p>
+              <p>{candidate.phone}</p>
+            </div>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
