@@ -118,7 +118,7 @@ function SLAConfigModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 }
 
 // Ultra Compact Interviews - Now "Lengthy" (Wide)
-function UpcomingInterviews({ interviews, showViewAll, onViewAll }: any) {
+function UpcomingInterviews({ interviews, showViewAll, onViewAll, onInterviewClick }: any) {
   return (
     <div className="card p-3 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
@@ -130,14 +130,19 @@ function UpcomingInterviews({ interviews, showViewAll, onViewAll }: any) {
           <p className="text-[11px] text-gray-400 text-center py-2">No interviews today</p>
         ) : (
           interviews.map((interview: any) => (
-            <div key={interview.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group cursor-pointer bg-white" title={showViewAll ? '' : ''}>
+            <div
+              key={interview.id}
+              onClick={() => onInterviewClick && onInterviewClick(interview)}
+              className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group cursor-pointer bg-white"
+              title={showViewAll ? '' : ''}
+            >
               <div className="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 bg-blue-50 rounded-lg text-blue-700 border border-blue-100 shadow-sm">
                 <span className="text-[11px] font-bold text-center px-1 leading-tight">{interview.time}</span>
               </div>
               <div className="min-w-0 flex-1 flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600">
-                    {interview.candidateName || interview.candidate}
+                    {candidateName(interview)}
                   </div>
                   <div className="text-[11px] text-gray-500 truncate">{interview.role}</div>
                 </div>
@@ -157,6 +162,11 @@ function UpcomingInterviews({ interviews, showViewAll, onViewAll }: any) {
       </div>
     </div>
   );
+}
+
+// Helper to safely get candidate name (handles both structure types if necessary)
+function candidateName(interview: any) {
+  return interview.candidateName || interview.candidate || 'Unknown Candidate';
 }
 
 // Compact Tasks Widget with Interactivity - Expanded
@@ -195,8 +205,8 @@ function QuickTasks({ tasks, onAddTask, onToggleTask, onDeleteTask }: {
         <button
           onClick={() => setFloatingEnabled(!floatingEnabled)}
           className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${floatingEnabled
-              ? 'bg-blue-100 text-blue-700 border border-blue-200'
-              : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+            : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
             }`}
           title={floatingEnabled ? 'Disable floating widget' : 'Enable floating widget on all pages'}
         >
@@ -472,6 +482,7 @@ export function DashboardPage() {
                 interviews={interviews}
                 showViewAll={true}
                 onViewAll={() => navigate('/interviews')}
+                onInterviewClick={(interview: any) => navigate(`/interviews?interviewId=${interview.id}`)}
               />
             </div>
 

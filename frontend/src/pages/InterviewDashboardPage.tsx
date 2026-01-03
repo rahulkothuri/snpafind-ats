@@ -13,7 +13,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MdCalendarToday,
   MdAccessTime,
@@ -790,6 +790,7 @@ function DetailPanel({ interview, isOpen, onClose, onJoin, onReschedule, onCance
 export function InterviewDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
@@ -860,6 +861,20 @@ export function InterviewDashboardPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedRecruiterId, selectedMode, selectedJobId]);
+
+  // Handle deep linking to interview
+  useEffect(() => {
+    const interviewId = searchParams.get('interviewId');
+    if (interviewId && interviews.length > 0) {
+      const interview = interviews.find(i => i.id === interviewId);
+      if (interview) {
+        setSelectedInterview(interview);
+        setIsDetailPanelOpen(true);
+        // Optionally switch to the date of the interview if in calendar mode?
+        // setSelectedDate(new Date(interview.scheduledAt).toISOString().split('T')[0]);
+      }
+    }
+  }, [searchParams, interviews]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredInterviews.length / ITEMS_PER_PAGE);
