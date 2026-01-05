@@ -411,7 +411,7 @@ export function DashboardPage() {
         </div>
 
         {/* KPI Grid - Ultra Slim */}
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <KPICard
             label="Active Jobs"
             value={metrics.openRoles}

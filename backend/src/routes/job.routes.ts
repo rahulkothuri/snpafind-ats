@@ -7,11 +7,11 @@ import pipelineAnalyticsService from '../services/pipelineAnalytics.service.js';
 import prisma from '../lib/prisma.js';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
-import { 
-  requireJobAccess, 
-  requireJobCreatePermission, 
-  requireJobUpdatePermission, 
-  requireJobDeletePermission 
+import {
+  requireJobAccess,
+  requireJobCreatePermission,
+  requireJobUpdatePermission,
+  requireJobDeletePermission
 } from '../middleware/jobAccessControl.js';
 
 const router = Router();
@@ -52,35 +52,35 @@ const autoRejectionRulesSchema = z.object({
 const createJobSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   department: z.string().optional(), // Made optional - jobDomain is used instead
-  
+
   // Experience range (Requirements 1.2)
   experienceMin: z.number().min(0).optional(),
   experienceMax: z.number().min(0).optional(),
-  
+
   // Salary range (Requirements 1.3)
   salaryMin: z.number().min(0).optional(),
   salaryMax: z.number().min(0).optional(),
   variables: z.string().optional(),
-  
+
   // Requirements (Requirements 1.1)
   educationQualification: z.string().optional(),
   ageUpTo: z.number().int().min(18).max(100).optional(),
   skills: z.array(z.string()).optional(),
   preferredIndustry: z.string().optional(),
-  
+
   // Work details (Requirements 1.4, 1.5, 1.6)
   workMode: z.enum(['Onsite', 'WFH', 'Hybrid', 'C2C', 'C2H']).optional(),
   locations: z.array(z.string()).optional(),
   priority: z.enum(['Low', 'Medium', 'High']).optional(),
   jobDomain: z.string().optional(),
-  
+
   // Assignment (Requirements 1.1)
   assignedRecruiterId: z.string().optional(),
-  
+
   // Content
   description: z.string().optional(),
   openings: z.number().int().positive().optional(),
-  
+
   // Mandatory criteria - editable screening criteria
   mandatoryCriteria: z.object({
     title: z.string(),
@@ -88,7 +88,7 @@ const createJobSchema = z.object({
     criteria: z.array(z.string()),
     note: z.string(),
   }).optional(),
-  
+
   // Screening questions - questions candidates must answer before applying
   screeningQuestions: z.array(z.object({
     id: z.string().optional(),
@@ -98,13 +98,13 @@ const createJobSchema = z.object({
     options: z.array(z.string()).optional(),
     idealAnswer: z.union([z.string(), z.array(z.string())]).optional(),
   })).optional(),
-  
+
   // Auto-rejection rules (Requirements 9.1)
   autoRejectionRules: autoRejectionRulesSchema,
-  
+
   // Pipeline stages (Requirements 4.1)
   pipelineStages: z.array(pipelineStageSchema).optional(),
-  
+
   // Legacy fields (kept for compatibility)
   location: z.string().optional(),
   employmentType: z.string().optional(),
@@ -114,36 +114,36 @@ const createJobSchema = z.object({
 const updateJobSchema = z.object({
   title: z.string().min(1, 'Title is required').optional(),
   department: z.string().nullable().optional(), // Made optional - jobDomain is used instead
-  
+
   // Experience range
   experienceMin: z.number().min(0).nullable().optional(),
   experienceMax: z.number().min(0).nullable().optional(),
-  
+
   // Salary range
   salaryMin: z.number().min(0).nullable().optional(),
   salaryMax: z.number().min(0).nullable().optional(),
   variables: z.string().nullable().optional(),
-  
+
   // Requirements
   educationQualification: z.string().nullable().optional(),
   ageUpTo: z.number().int().min(18).max(100).nullable().optional(),
   skills: z.array(z.string()).optional(),
   preferredIndustry: z.string().nullable().optional(),
-  
+
   // Work details
   workMode: z.enum(['Onsite', 'WFH', 'Hybrid', 'C2C', 'C2H']).nullable().optional(),
   locations: z.array(z.string()).optional(),
   priority: z.enum(['Low', 'Medium', 'High']).nullable().optional(),
   jobDomain: z.string().nullable().optional(),
-  
+
   // Assignment
   assignedRecruiterId: z.string().nullable().optional(),
-  
+
   // Content
   description: z.string().nullable().optional(),
   status: z.enum(['active', 'paused', 'closed']).optional(),
   openings: z.number().int().positive().optional(),
-  
+
   // Mandatory criteria - editable screening criteria
   mandatoryCriteria: z.object({
     title: z.string(),
@@ -151,7 +151,7 @@ const updateJobSchema = z.object({
     criteria: z.array(z.string()),
     note: z.string(),
   }).nullable().optional().or(z.undefined()),
-  
+
   // Screening questions - questions candidates must answer before applying
   screeningQuestions: z.array(z.object({
     id: z.string().optional(),
@@ -161,7 +161,7 @@ const updateJobSchema = z.object({
     options: z.array(z.string()).optional(),
     idealAnswer: z.union([z.string(), z.array(z.string())]).optional(),
   })).nullable().optional().or(z.undefined()),
-  
+
   // Auto-rejection rules (Requirements 9.1)
   autoRejectionRules: z.object({
     enabled: z.boolean(),
@@ -172,10 +172,10 @@ const updateJobSchema = z.object({
       requiredEducation: z.array(z.string()).optional(),
     }),
   }).nullable().optional().or(z.undefined()),
-  
+
   // Pipeline stages
   pipelineStages: z.array(pipelineStageSchema).optional(),
-  
+
   // Legacy fields
   location: z.string().nullable().optional(),
   employmentType: z.string().nullable().optional(),
@@ -214,7 +214,7 @@ router.get(
       if (status && typeof status === 'string') {
         filters.status = status;
       }
-      
+
       // Use role-based filtering
       const jobs = await jobService.getAll(filters, req.user!.userId, req.user!.role);
       res.json(jobs);
@@ -255,7 +255,7 @@ router.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const jobId = req.params.id;
-      
+
       // Get all job candidates with their candidate details and current stage
       const jobCandidates = await prisma.jobCandidate.findMany({
         where: { jobId },
@@ -414,6 +414,42 @@ router.delete(
   }
 );
 
+/**
+ * POST /api/jobs/:id/toggle-status
+ * Toggle job status between active and closed
+ */
+router.post(
+  '/:id/toggle-status',
+  authenticate,
+  requireJobUpdatePermission(),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const job = await jobService.toggleStatus(req.params.id, req.user!.userId, req.user!.role);
+      res.json(job);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/jobs/:id/duplicate
+ * Duplicate a job (copies all job data but not candidates)
+ */
+router.post(
+  '/:id/duplicate',
+  authenticate,
+  requireJobCreatePermission(),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const job = await jobService.duplicate(req.params.id, req.user!.userId, req.user!.role);
+      res.status(201).json(job);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // Pipeline Stage Routes
 
 // Validation schemas for pipeline stages
@@ -530,14 +566,14 @@ router.post(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { sourceJobId } = req.body;
-      
+
       if (!sourceJobId) {
         throw new ValidationError({ sourceJobId: ['Source job ID is required'] });
       }
 
       // Import stages using the stage template service
       const { stageTemplateService } = await import('../services/stageTemplate.service.js');
-      
+
       // Get stages from source job
       const sourceJob = await jobService.getById(sourceJobId, req.user!.userId, req.user!.role);
       if (!sourceJob.stages || sourceJob.stages.length === 0) {
@@ -557,7 +593,7 @@ router.post(
 
       // Update the target job with imported stages
       const updatedJob = await jobService.update(
-        req.params.id, 
+        req.params.id,
         { pipelineStages: stagesToImport },
         req.user!.userId,
         req.user!.role

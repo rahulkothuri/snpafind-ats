@@ -53,28 +53,6 @@ interface Role {
   status: 'active' | 'paused' | 'closed';
 }
 
-// Sample data for demo when no API data
-const sampleRoles: Role[] = [
-  { id: '1', title: 'Senior Backend Engineer', department: 'Engineering', location: 'Bangalore', openings: 2, applicants: 45, interviews: 12, sla: 'On track', priority: 'High', recruiter: 'Aarti', status: 'active' },
-  { id: '2', title: 'Product Manager', department: 'Product', location: 'Hyderabad', openings: 1, applicants: 32, interviews: 8, sla: 'At risk', priority: 'High', recruiter: 'Rahul', status: 'active' },
-  { id: '3', title: 'Sales Lead (North)', department: 'Sales', location: 'Gurgaon', openings: 1, applicants: 28, interviews: 6, sla: 'Breached', priority: 'Medium', recruiter: 'Vikram', status: 'paused' },
-  { id: '4', title: 'UX Designer', department: 'Design', location: 'Remote', openings: 2, applicants: 52, interviews: 15, sla: 'On track', priority: 'Medium', recruiter: 'Sana', status: 'active' },
-  { id: '5', title: 'Data Analyst', department: 'Analytics', location: 'Chennai', openings: 1, applicants: 38, interviews: 10, sla: 'On track', priority: 'Low', recruiter: 'Aarti', status: 'closed' },
-  { id: '6', title: 'Backend Engineer (L2)', department: 'Engineering', location: 'Pune', openings: 3, applicants: 41, interviews: 9, sla: 'At risk', priority: 'High', recruiter: 'Aarti', status: 'active' },
-];
-
-
-const sampleCandidates: PipelineCandidate[] = [
-  { id: '1', name: 'Priya Sharma', title: 'Senior Software Engineer', stage: 'Interview', score: 85, experience: 6, location: 'Bangalore', source: 'LinkedIn', updatedAt: '2 hours ago', skills: ['Java', 'Spring Boot', 'Microservices', 'PostgreSQL'], email: 'priya.sharma@email.com', phone: '+91 98765 43210', currentCompany: 'FinEdge Systems', currentCtc: '₹28 LPA', expectedCtc: '₹38 LPA', noticePeriod: '30 days' },
-  { id: '2', name: 'Rahul Verma', title: 'Backend Developer', stage: 'Screening', score: 72, experience: 4, location: 'Hyderabad', source: 'Referral', updatedAt: '1 day ago', skills: ['Node.js', 'React', 'MongoDB', 'AWS'], email: 'rahul.verma@email.com', phone: '+91 98765 43211', currentCompany: 'CloudNova', currentCtc: '₹18 LPA', expectedCtc: '₹25 LPA', noticePeriod: '60 days' },
-  { id: '3', name: 'Ankit Patel', title: 'Tech Lead', stage: 'Offer', score: 92, experience: 8, location: 'Gurgaon', source: 'Job Board', updatedAt: '3 hours ago', skills: ['Java', 'Kafka', 'Kubernetes', 'System Design'], email: 'ankit.patel@email.com', phone: '+91 98765 43212', currentCompany: 'NeoPay', currentCtc: '₹42 LPA', expectedCtc: '₹55 LPA', noticePeriod: '90 days' },
-  { id: '4', name: 'Sneha Reddy', title: 'Software Engineer', stage: 'Applied', score: 65, experience: 3, location: 'Chennai', source: 'Career Page', updatedAt: '5 hours ago', skills: ['Python', 'Django', 'PostgreSQL'], email: 'sneha.reddy@email.com', phone: '+91 98765 43213', currentCompany: 'CodeNest', currentCtc: '₹12 LPA', expectedCtc: '₹18 LPA', noticePeriod: '30 days' },
-  { id: '5', name: 'Vikram Singh', title: 'Senior Developer', stage: 'Shortlisted', score: 78, experience: 5, location: 'Pune', source: 'LinkedIn', updatedAt: '1 day ago', skills: ['Java', 'Spring Boot', 'React', 'Docker'], email: 'vikram.singh@email.com', phone: '+91 98765 43214', currentCompany: 'FinEdge Systems', currentCtc: '₹22 LPA', expectedCtc: '₹30 LPA', noticePeriod: '45 days' },
-  { id: '6', name: 'Meera Nair', title: 'Backend Engineer', stage: 'Queue', score: 58, experience: 2, location: 'Remote', source: 'Agency', updatedAt: '2 days ago', skills: ['Go', 'gRPC', 'Redis'], email: 'meera.nair@email.com', phone: '+91 98765 43215', currentCompany: 'CloudNova', currentCtc: '₹10 LPA', expectedCtc: '₹15 LPA', noticePeriod: '15 days' },
-  { id: '7', name: 'Arjun Kumar', title: 'Full Stack Developer', stage: 'Interview', score: 81, experience: 4, location: 'Bangalore', source: 'Referral', updatedAt: '6 hours ago', skills: ['Node.js', 'React', 'TypeScript', 'PostgreSQL'], email: 'arjun.kumar@email.com', phone: '+91 98765 43216', currentCompany: 'NeoPay', currentCtc: '₹20 LPA', expectedCtc: '₹28 LPA', noticePeriod: '30 days' },
-  { id: '8', name: 'Divya Menon', title: 'Software Engineer', stage: 'Hired', score: 88, experience: 5, location: 'Hyderabad', source: 'LinkedIn', updatedAt: '1 week ago', skills: ['Java', 'Spring Boot', 'Microservices', 'Kafka'], email: 'divya.menon@email.com', phone: '+91 98765 43217', currentCompany: 'CodeNest', currentCtc: '₹24 LPA', expectedCtc: '₹32 LPA', noticePeriod: '30 days' },
-];
-
 // Candidate Detail Panel Content
 function CandidateDetailContent({
   candidate,
@@ -265,6 +243,31 @@ export function RolesPage() {
     navigate(`/candidates/${candidateId}`);
   };
 
+  // Handler to toggle job status (open/close)
+  const handleToggleStatus = useCallback(async () => {
+    if (!selectedRole) return;
+    try {
+      await jobsService.toggleStatus(selectedRole.id);
+      // Refresh jobs list to get updated status
+      refetchJobs();
+    } catch (error) {
+      console.error('Failed to toggle job status:', error);
+    }
+  }, [selectedRole, refetchJobs]);
+
+  // Handler to duplicate job
+  const handleDuplicateJob = useCallback(async () => {
+    if (!selectedRole) return;
+    try {
+      const duplicatedJob = await jobsService.duplicate(selectedRole.id);
+      // Refresh jobs list and navigate to the new job
+      await refetchJobs();
+      navigate(`/roles?jobId=${duplicatedJob.id}`);
+    } catch (error) {
+      console.error('Failed to duplicate job:', error);
+    }
+  }, [selectedRole, refetchJobs, navigate]);
+
   // Map API jobs to local format - Requirements 4.1, 4.3, 4.4
   const rolesFromApi: Role[] = useMemo(() => {
     if (!apiJobs) return [];
@@ -288,8 +291,8 @@ export function RolesPage() {
     }) as Role[];
   }, [apiJobs]);
 
-  // Use API data if available, otherwise fall back to sample data
-  const allRoles = rolesFromApi.length > 0 ? rolesFromApi : sampleRoles;
+  // Use API data only
+  const allRoles = rolesFromApi;
 
   // Apply filters to roles - Requirements 1.2, 2.2, 2.3
   const filteredRoles = useMemo(() => {
@@ -315,7 +318,7 @@ export function RolesPage() {
         return;
       }
     }
-    
+
     // Default behavior: select first role if none selected
     if (filteredRoles.length > 0 && (!selectedRole || !filteredRoles.find(r => r.id === selectedRole.id))) {
       setSelectedRole(filteredRoles[0]);
@@ -327,15 +330,9 @@ export function RolesPage() {
   // Fetch candidates for the selected job
   useEffect(() => {
     async function fetchJobCandidates() {
+      // Don't fetch if no role selected
       if (!selectedRole) {
         setJobCandidates([]);
-        setPipelineStages([]);
-        return;
-      }
-
-      // If using sample data, use sample candidates for demo
-      if (rolesFromApi.length === 0) {
-        setJobCandidates(sampleCandidates);
         setPipelineStages([]);
         return;
       }
@@ -500,6 +497,8 @@ export function RolesPage() {
               onEditJobDescription={handleEditJobDescription}
               pipelineStages={pipelineStages}
               onCandidatesMoved={handleCandidatesMoved}
+              onToggleStatus={handleToggleStatus}
+              onDuplicateJob={handleDuplicateJob}
             />
           </div>
         </div>

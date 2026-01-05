@@ -9,6 +9,7 @@ import { useUsers } from '../hooks/useUsers';
 import api from '../services/api';
 import type { Job, WorkMode, JobPriority, PipelineStageConfig, MandatoryCriteria, ScreeningQuestion } from '../types';
 import { EDUCATION_QUALIFICATIONS, SKILLS, INDUSTRIES, WORK_MODES, CITIES, JOB_PRIORITIES, JOB_DOMAINS } from '../constants/jobFormOptions';
+import { COUNTRIES } from '../constants/countries';
 
 /**
  * Job Creation/Edit Page - Requirements 20.1-20.6, 1.1-1.7
@@ -37,6 +38,7 @@ interface JobFormData {
   preferredIndustry: string;
   workMode: WorkMode | '';
   locations: string[];
+  country: string;
   priority: JobPriority | '';
   jobDomain: string;
   assignedRecruiterId: string;
@@ -61,6 +63,7 @@ const initialFormData: JobFormData = {
   preferredIndustry: '',
   workMode: '',
   locations: [],
+  country: '',
   priority: '',
   jobDomain: '',
   assignedRecruiterId: '',
@@ -160,6 +163,7 @@ export function JobCreationPage() {
             preferredIndustry: job.preferredIndustry || '',
             workMode: job.workMode || '',
             locations: job.locations || [],
+            country: (job as any).country || '',
             priority: job.priority || '',
             jobDomain: job.jobDomain || '',
             assignedRecruiterId: job.assignedRecruiterId || '',
@@ -582,6 +586,23 @@ export function JobCreationPage() {
                     error={!!errors.locations}
                   />
                 </div>
+              </div>
+
+              <div className="col-span-1">
+                <label htmlFor="country" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Country
+                </label>
+                <select
+                  id="country"
+                  value={formData.country}
+                  onChange={(e) => handleChange('country', e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white h-[34px]"
+                >
+                  <option value="">Select country</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country.value} value={country.value}>{country.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="col-span-1">

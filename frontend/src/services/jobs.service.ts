@@ -88,6 +88,22 @@ export const jobsService = {
     const response = await api.get(`/jobs/${jobId}/pipeline/analytics`);
     return response.data;
   },
+
+  /**
+   * Toggle job status between active and closed
+   */
+  async toggleStatus(id: string): Promise<Job> {
+    const response = await api.post(`/jobs/${id}/toggle-status`);
+    return response.data;
+  },
+
+  /**
+   * Duplicate a job (copies all job data but not candidates)
+   */
+  async duplicate(id: string): Promise<Job> {
+    const response = await api.post(`/jobs/${id}/duplicate`);
+    return response.data;
+  },
 };
 
 export default jobsService;

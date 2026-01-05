@@ -36,16 +36,16 @@ export const jobAccessControlService: JobAccessControlService = {
       case 'hiring_manager':
         // Admins and hiring managers can see all jobs
         return jobs;
-      
+
       case 'recruiter':
         // Recruiters can only see jobs assigned to them
         return jobs.filter(job => job.assignedRecruiterId === userId);
-      
+
       case 'vendor':
         // Vendors can only see jobs assigned to them via VendorJobAssignment
         // Note: This sync filter won't work for vendors - use async getAccessibleJobs instead
         return jobs;
-      
+
       default:
         return [];
     }
@@ -86,16 +86,16 @@ export const jobAccessControlService: JobAccessControlService = {
         case 'hiring_manager':
           // Admins and hiring managers have access to all jobs in their company
           return true;
-        
+
         case 'recruiter':
           // Recruiters only have access to jobs assigned to them
           return job.assignedRecruiterId === userId;
-        
+
         case 'vendor':
           // Vendors only have access to jobs assigned to them via VendorJobAssignment
           const vendorJobIds = await getVendorJobIds(userId);
           return vendorJobIds.includes(jobId);
-        
+
         default:
           return false;
       }
@@ -133,7 +133,7 @@ export const jobAccessControlService: JobAccessControlService = {
         // Get all jobs in the company
         jobs = await prisma.job.findMany(baseQuery);
         break;
-      
+
       case 'recruiter':
         // Get only jobs assigned to this recruiter
         jobs = await prisma.job.findMany({
@@ -144,7 +144,7 @@ export const jobAccessControlService: JobAccessControlService = {
           },
         });
         break;
-      
+
       case 'vendor':
         // Get only jobs assigned to this vendor via VendorJobAssignment
         const vendorJobIds = await getVendorJobIds(userId);
@@ -156,7 +156,7 @@ export const jobAccessControlService: JobAccessControlService = {
           },
         });
         break;
-      
+
       default:
         jobs = [];
     }
@@ -164,13 +164,13 @@ export const jobAccessControlService: JobAccessControlService = {
     // Map to Job type with counts
     return jobs.map((j: any) => {
       const candidateCount = j._count?.jobCandidates ?? 0;
-      
+
       // Count candidates in interview stages
       const interviewStages = ['Interview', 'Selected'];
       const interviewCount = j.jobCandidates?.filter(
         (jc: any) => jc.currentStage && interviewStages.includes(jc.currentStage.name)
       ).length ?? 0;
-      
+
       // Count candidates in offer stage
       const offerCount = j.jobCandidates?.filter(
         (jc: any) => jc.currentStage && jc.currentStage.name === 'Offer'
@@ -181,43 +181,43 @@ export const jobAccessControlService: JobAccessControlService = {
         companyId: j.companyId,
         title: j.title,
         department: j.department,
-        
+
         // Experience range
         experienceMin: j.experienceMin ?? undefined,
         experienceMax: j.experienceMax ?? undefined,
-        
+
         // Salary range
         salaryMin: j.salaryMin ?? undefined,
         salaryMax: j.salaryMax ?? undefined,
         variables: j.variables ?? undefined,
-        
+
         // Requirements
         educationQualification: j.educationQualification ?? undefined,
         ageUpTo: j.ageUpTo ?? undefined,
         skills: Array.isArray(j.skills) ? j.skills as string[] : [],
         preferredIndustry: j.preferredIndustry ?? undefined,
-        
+
         // Work details
         workMode: j.workMode as any ?? undefined,
         locations: Array.isArray(j.locations) ? j.locations as string[] : [],
         priority: j.priority as any ?? undefined,
         jobDomain: j.jobDomain ?? undefined,
-        
+
         // Assignment
         assignedRecruiterId: j.assignedRecruiterId ?? undefined,
-        
+
         // Content
         description: j.description ?? '',
         status: j.status as 'active' | 'paused' | 'closed',
         openings: j.openings,
         createdAt: j.createdAt,
         updatedAt: j.updatedAt,
-        
+
         // Legacy fields
         location: j.location ?? undefined,
         employmentType: j.employmentType ?? undefined,
         salaryRange: j.salaryRange ?? undefined,
-        
+
         // Counts - these were missing!
         candidateCount,
         interviewCount,

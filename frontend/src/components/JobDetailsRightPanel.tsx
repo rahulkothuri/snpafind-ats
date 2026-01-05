@@ -91,6 +91,10 @@ export interface JobDetailsRightPanelProps {
   onCandidatesMoved?: () => void;
   /** Enable enhanced pipeline view with stage cards - Requirements 4.1, 4.5 */
   showEnhancedPipeline?: boolean;
+  /** Callback when job status is toggled (open/close) */
+  onToggleStatus?: () => void;
+  /** Callback when job is duplicated */
+  onDuplicateJob?: () => void;
 }
 
 
@@ -649,6 +653,8 @@ export function JobDetailsRightPanel({
   pipelineStages = [],
   onCandidatesMoved,
   showEnhancedPipeline = true,
+  onToggleStatus,
+  onDuplicateJob,
 }: JobDetailsRightPanelProps) {
   // URL search params for stage filter - Requirements 4.2
   const [searchParams, setSearchParams] = useSearchParams();
@@ -899,8 +905,11 @@ export function JobDetailsRightPanel({
             <JobActionsDropdown
               jobId={role.id}
               jobTitle={role.title}
+              jobStatus={role.status}
               onShareJob={handleShareJob}
               onBulkImport={handleBulkImport}
+              onToggleStatus={onToggleStatus}
+              onDuplicateJob={onDuplicateJob}
             />
           </div>
         </div>

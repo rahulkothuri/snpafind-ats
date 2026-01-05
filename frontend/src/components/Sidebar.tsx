@@ -23,6 +23,7 @@ interface SidebarProps {
   onToggle: () => void;
   user: User | null;
   onLogout?: () => void;
+  isMobile?: boolean;
 }
 
 interface NavItem {
@@ -65,7 +66,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, user, onLogout, isMobile = false }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,7 +81,7 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
   }, [collapsed]);
 
   const handleMouseEnter = () => {
-    if (collapsed) {
+    if (collapsed && !isMobile) {
       hoverTimer.current = setTimeout(() => {
         onToggle();
       }, 300);
@@ -121,12 +122,11 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={`
-        fixed left-0 top-0 h-full z-50
+        ${isMobile ? 'h-full w-[240px]' : `fixed left-0 top-0 h-full z-50 ${collapsed ? 'w-[64px]' : 'w-[240px]'}`}
         bg-[#0f172a] text-[#94a3b8]
         border-r border-[#1e293b]
         transition-all duration-300 ease-in-out
         flex flex-col shadow-xl
-        ${collapsed ? 'w-[64px]' : 'w-[240px]'}
       `}
     >
       <div className="flex items-center justify-between p-3 h-14 border-b border-[#1e293b]">

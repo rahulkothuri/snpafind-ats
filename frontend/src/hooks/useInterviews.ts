@@ -9,9 +9,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { interviewsService } from '../services';
-import type { 
-  CreateInterviewInput, 
-  UpdateInterviewInput, 
+import type {
+  CreateInterviewInput,
+  UpdateInterviewInput,
   InterviewFilters,
   FeedbackRating,
   InterviewRecommendation
@@ -202,5 +202,16 @@ export function useSubmitFeedback() {
       queryClient.invalidateQueries({ queryKey: interviewKeys.pendingFeedback() });
       queryClient.invalidateQueries({ queryKey: interviewKeys.dashboard() });
     },
+  });
+}
+/**
+ * Hook to fetch interview round options for a job
+ * Requirements: 6.2, 6.3, 6.4
+ */
+export function useInterviewRoundOptions(jobId: string | null) {
+  return useQuery({
+    queryKey: [...interviewKeys.all, 'roundOptions', jobId] as const,
+    queryFn: () => jobId ? interviewsService.getInterviewRoundOptions(jobId) : Promise.resolve([]),
+    enabled: !!jobId,
   });
 }

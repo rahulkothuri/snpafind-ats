@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Footer } from './Footer';
@@ -58,6 +59,7 @@ export function Layout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const windowWidth = useWindowWidth();
   const { enabled: floatingTaskEnabled } = useFloatingTaskEnabled();
+  const location = useLocation();
 
   // Responsive breakpoints - Requirement 22.1
   const isMobile = windowWidth < 900;
@@ -69,6 +71,13 @@ export function Layout({
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  }, [location.pathname, isMobile]);
 
   // Close mobile menu when resizing to desktop
   useEffect(() => {
@@ -101,6 +110,7 @@ export function Layout({
             onToggle={toggleSidebar}
             user={user}
             onLogout={onLogout}
+            isMobile={false}
           />
         </div>
       )}
@@ -119,6 +129,7 @@ export function Layout({
               onToggle={toggleMobileMenu}
               user={user}
               onLogout={onLogout}
+              isMobile={true}
             />
           </div>
         </>

@@ -25,7 +25,6 @@ import {
   MdSchedule,
   MdChevronLeft,
   MdChevronRight,
-  MdFilterList,
   MdViewModule,
   MdViewList,
   MdBusiness,
@@ -34,7 +33,8 @@ import {
   MdLaptopMac,
   MdInfo,
   MdWork,
-  MdSearch
+  MdSearch,
+  MdOpenInNew
 } from 'react-icons/md';
 import {
   Layout,
@@ -47,7 +47,7 @@ import {
   Button
 } from '../components';
 import { useAuth } from '../hooks/useAuth';
-import { useInterviews } from '../hooks/useInterviews';
+import { useInterviews, useInterviewRoundOptions } from '../hooks/useInterviews';
 import { useUsers } from '../hooks/useUsers';
 import type { Interview, InterviewMode } from '../services/interviews.service';
 
@@ -401,9 +401,17 @@ function DayInterviewItem({ interview, onClick }: DayInterviewItemProps) {
   const panelMembers = interview.panelMembers?.map(pm => pm.user?.name).filter(Boolean).join(', ') || 'No panel';
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="w-full text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:shadow-md transition-all duration-200 group"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="w-full text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:shadow-md transition-all duration-200 group cursor-pointer"
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
@@ -449,7 +457,7 @@ function DayInterviewItem({ interview, onClick }: DayInterviewItemProps) {
           </button>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -708,12 +716,23 @@ function DetailPanel({ interview, isOpen, onClose, onJoin, onReschedule, onCance
                   <span className="text-xs text-gray-500 block">Current Company</span>
                   <span className="text-sm font-semibold text-gray-900 truncate" title={candidateCompany}>{candidateCompany}</span>
                 </div>
-                <div className="col-span-2">
-                  <span className="text-xs text-gray-500 block">Location</span>
-                  <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
-                    <MdLocationOn className="w-3.5 h-3.5 text-gray-400" />
-                    {candidateLocation}
+                <div className="col-span-2 flex justify-between items-start">
+                  <div>
+                    <span className="text-xs text-gray-500 block">Location</span>
+                    <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
+                      <MdLocationOn className="w-3.5 h-3.5 text-gray-400" />
+                      {candidateLocation}
+                    </div>
                   </div>
+                  {interview.jobCandidate?.candidate?.resumeUrl && (
+                    <button
+                      onClick={() => window.open(interview.jobCandidate?.candidate?.resumeUrl, '_blank')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+                    >
+                      <MdOpenInNew className="w-3.5 h-3.5" />
+                      View CV
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -808,6 +827,15 @@ export function InterviewDashboardPage() {
   const [selectedRecruiterId, setSelectedRecruiterId] = useState<string>('');
   const [selectedMode, setSelectedMode] = useState<string>('');
   const [selectedJobId, setSelectedJobId] = useState<string>('');
+  const [selectedRoundType, setSelectedRoundType] = useState<string>('');
+
+  // Fetch round options for selected job
+  const { data: roundOptions = [] } = useInterviewRoundOptions(selectedJobId || null);
+
+  // Reset round type filter when job changes
+  useEffect(() => {
+    setSelectedRoundType('');
+  }, [selectedJobId]);
 
   // Pagination
   const ITEMS_PER_PAGE = 10;
@@ -853,14 +881,15 @@ export function InterviewDashboardPage() {
       if (selectedRecruiterId && interview.scheduledBy !== selectedRecruiterId) return false;
       if (selectedMode && interview.mode !== selectedMode) return false;
       if (selectedJobId && interview.jobCandidate?.job?.id !== selectedJobId) return false;
+      if (selectedRoundType && interview.roundType !== selectedRoundType) return false;
       return true;
     });
-  }, [interviews, selectedRecruiterId, selectedMode, selectedJobId]);
+  }, [interviews, selectedRecruiterId, selectedMode, selectedJobId, selectedRoundType]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedRecruiterId, selectedMode, selectedJobId]);
+  }, [selectedRecruiterId, selectedMode, selectedJobId, selectedRoundType]);
 
   // Handle deep linking to interview
   useEffect(() => {
@@ -913,6 +942,10 @@ export function InterviewDashboardPage() {
       ? Math.round((noShows.length / recentInterviews.length) * 100)
       : 0;
 
+    // Total Unique Candidates
+    const uniqueCandidateIds = new Set(filteredInterviews.map(i => i.jobCandidate?.candidate?.id).filter(Boolean));
+    const totalCandidates = uniqueCandidateIds.size;
+
     return {
       todayCount: todayInterviews.length,
       todaySubtext: `${todayInterviews.filter(i => i.mode === 'google_meet').length} virtual · ${todayInterviews.filter(i => i.mode === 'in_person').length} in-person`,
@@ -925,6 +958,8 @@ export function InterviewDashboardPage() {
       }).length} overdue (24+ hrs)`,
       noShowRate: `${noShowRate}%`,
       noShowSubtext: `${noShows.length} of ${recentInterviews.length} interviews`,
+      totalCandidates,
+      totalCandidatesSubtext: 'Unique candidates',
     };
   }, [filteredInterviews]);
 
@@ -986,6 +1021,7 @@ export function InterviewDashboardPage() {
   const handleClearFilters = useCallback(() => {
     setSelectedRecruiterId('');
     setSelectedMode('');
+    setSelectedRoundType('');
   }, []);
 
   const handleInterviewClick = useCallback((interview: Interview) => {
@@ -1045,7 +1081,7 @@ export function InterviewDashboardPage() {
     });
   };
 
-  const hasFilters = selectedRecruiterId || selectedMode;
+  const hasFilters = selectedRecruiterId || selectedMode || selectedRoundType;
 
   return (
     <Layout
@@ -1074,14 +1110,7 @@ export function InterviewDashboardPage() {
         <div className="space-y-6">
           {/* Filters & View Toggle */}
           <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="flex items-center gap-2 text-sm font-semibold text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
-                <MdFilterList className="w-4 h-4 text-gray-500" />
-                Filters
-              </span>
-
-              <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
-
+            <div className="flex flex-wrap items-center gap-2">
               <select
                 value={`${selectedMonth.year}-${selectedMonth.month}`}
                 onChange={(e) => {
@@ -1126,11 +1155,23 @@ export function InterviewDashboardPage() {
               <select
                 value={selectedJobId}
                 onChange={(e) => setSelectedJobId(e.target.value)}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-white transition-colors cursor-pointer outline-none max-w-[180px]"
+                className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-white transition-colors cursor-pointer outline-none max-w-[150px]"
               >
                 <option value="">All Job Roles</option>
                 {uniqueJobs.map(job => (
                   <option key={job.id} value={job.id}>{job.title}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedRoundType}
+                onChange={(e) => setSelectedRoundType(e.target.value)}
+                disabled={!selectedJobId}
+                className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:bg-white transition-colors cursor-pointer outline-none disabled:opacity-50 disabled:cursor-not-allowed max-w-[150px]"
+              >
+                <option value="">All Rounds</option>
+                {roundOptions.map((option: any) => (
+                  <option key={option.id} value={option.name}>{option.name}</option>
                 ))}
               </select>
 
@@ -1139,8 +1180,9 @@ export function InterviewDashboardPage() {
                   onClick={() => {
                     handleClearFilters();
                     setSelectedJobId('');
+                    setSelectedRoundType('');
                   }}
-                  className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 font-medium"
+                  className="px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 font-medium"
                 >
                   <MdClose className="w-4 h-4" />
                   Clear
@@ -1176,7 +1218,7 @@ export function InterviewDashboardPage() {
           </div>
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <KPICard
               label="Interviews Today"
               value={kpiStats.todayCount}
@@ -1197,6 +1239,11 @@ export function InterviewDashboardPage() {
               label="No-show Rate (30d)"
               value={kpiStats.noShowRate}
               subtext={kpiStats.noShowSubtext}
+            />
+            <KPICard
+              label="Total Candidates"
+              value={kpiStats.totalCandidates}
+              subtext={kpiStats.totalCandidatesSubtext}
             />
           </div>
 
