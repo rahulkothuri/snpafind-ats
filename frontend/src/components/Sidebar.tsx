@@ -159,78 +159,91 @@ export function Sidebar({ collapsed, onToggle, user, onLogout, isMobile = false 
 
       {/* Main Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar">
-        {navSections.map((section) => (
-          <div key={section.title} className="mb-6 last:mb-0">
-            {!collapsed && (
-              <div className="px-3 mb-2 text-[10px] font-bold text-[#475569] uppercase tracking-wider">
-                {section.title}
-              </div>
-            )}
+        {navSections.map((section) => {
+          // Filter items based on role
+          const visibleItems = section.items.filter(item => {
+            if (item.label === 'Settings') {
+              // Hide Settings for vendors, show for others (Calendar access needed)
+              return ['admin', 'hiring_manager', 'recruiter'].includes(user?.role || '');
+            }
+            return true;
+          });
 
-            <ul className="space-y-1">
-              {section.items.map((item) => {
-                const IconComponent = item.icon;
-                const active = isParentActive(item);
-                const hasChildren = item.children && item.children.length > 0;
-                // Auto-expand if active or if user clicks header (though header navigates too)
+          if (visibleItems.length === 0) return null;
 
-                return (
-                  <li key={item.path}>
-                    <NavLink
-                      to={item.path}
-                      end={hasChildren} // Only fuzzy match if children exist
-                      className={({ isActive: linkActive }) => `
+          return (
+            <div key={section.title} className="mb-6 last:mb-0">
+              {!collapsed && (
+                <div className="px-3 mb-2 text-[10px] font-bold text-[#475569] uppercase tracking-wider">
+                  {section.title}
+                </div>
+              )}
+
+              <ul className="space-y-1">
+                {visibleItems.map((item) => {
+                  const IconComponent = item.icon;
+                  const active = isParentActive(item);
+                  const hasChildren = item.children && item.children.length > 0;
+                  // Auto-expand if active or if user clicks header (though header navigates too)
+
+                  return (
+                    <li key={item.path}>
+                      <NavLink
+                        to={item.path}
+                        end={hasChildren} // Only fuzzy match if children exist
+                        className={({ isActive: linkActive }) => `
                         flex items-center gap-3 px-3 py-2 rounded-lg
                         transition-all duration-200 group relative
                         ${collapsed ? 'justify-center px-0 py-2.5' : ''}
                         ${active || linkActive
-                          ? 'bg-[#1e293b] text-white font-medium'
-                          : 'text-[#94a3b8] hover:text-white hover:bg-[#1e293b]/50'
-                        }
+                            ? 'bg-[#1e293b] text-white font-medium'
+                            : 'text-[#94a3b8] hover:text-white hover:bg-[#1e293b]/50'
+                          }
                       `}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      {active && !collapsed && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-500 rounded-r-full" />
-                      )}
+                        title={collapsed ? item.label : undefined}
+                      >
+                        {active && !collapsed && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-500 rounded-r-full" />
+                        )}
 
-                      <IconComponent className={`w-5 h-5 flex-shrink-0 transition-colors ${active ? 'text-blue-400' : 'group-hover:text-slate-200'}`} />
+                        <IconComponent className={`w-5 h-5 flex-shrink-0 transition-colors ${active ? 'text-blue-400' : 'group-hover:text-slate-200'}`} />
 
-                      {!collapsed && (
-                        <span className="text-[13px] flex-1">{item.label}</span>
-                      )}
-                    </NavLink>
+                        {!collapsed && (
+                          <span className="text-[13px] flex-1">{item.label}</span>
+                        )}
+                      </NavLink>
 
-                    {/* Nested Items */}
-                    {!collapsed && hasChildren && active && (
-                      <ul className="mt-1 ml-4 border-l border-[#334155] pl-2 space-y-0.5">
-                        {item.children!.map((child) => {
-                          const childActive = isActive(child.path);
-                          return (
-                            <li key={child.path}>
-                              <NavLink
-                                to={child.path}
-                                className={`
+                      {/* Nested Items */}
+                      {!collapsed && hasChildren && active && (
+                        <ul className="mt-1 ml-4 border-l border-[#334155] pl-2 space-y-0.5">
+                          {item.children!.map((child) => {
+                            const childActive = isActive(child.path);
+                            return (
+                              <li key={child.path}>
+                                <NavLink
+                                  to={child.path}
+                                  className={`
                                   block px-3 py-1.5 rounded-md text-[12px] transition-colors
                                   ${childActive
-                                    ? 'text-blue-400 font-medium bg-[#1e293b]/30'
-                                    : 'text-[#64748b] hover:text-[#94a3b8] hover:bg-[#1e293b]/20'
-                                  }
+                                      ? 'text-blue-400 font-medium bg-[#1e293b]/30'
+                                      : 'text-[#64748b] hover:text-[#94a3b8] hover:bg-[#1e293b]/20'
+                                    }
                                 `}
-                              >
-                                {child.label}
-                              </NavLink>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+                                >
+                                  {child.label}
+                                </NavLink>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
       </nav>
 
       {/* User Profile - Bottom Fixed */}

@@ -9,6 +9,11 @@ export interface User {
   email: string;
   role: UserRole;
   isActive: boolean;
+  companyRoleId?: string | null;
+  companyRole?: {
+    id: string;
+    name: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,11 +23,13 @@ export interface CreateUserData {
   email: string;
   password: string;
   role: UserRole;
+  companyRoleId?: string;
 }
 
 export interface UpdateUserData {
   name?: string;
   role?: UserRole;
+  companyRoleId?: string;
   isActive?: boolean;
 }
 

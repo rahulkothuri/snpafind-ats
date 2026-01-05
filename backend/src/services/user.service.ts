@@ -16,6 +16,11 @@ interface PrismaUserResult {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  companyRoleId: string | null;
+  companyRole: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface CreateUserData {
@@ -24,6 +29,7 @@ export interface CreateUserData {
   email: string;
   password: string;
   role: UserRole;
+  companyRoleId?: string;
 }
 
 export interface UpdateUserData {
@@ -32,6 +38,7 @@ export interface UpdateUserData {
   role?: UserRole;
   isActive?: boolean;
   password?: string;
+  companyRoleId?: string | null;
 }
 
 function mapPrismaUserToUser(user: PrismaUserResult): User {
@@ -42,6 +49,8 @@ function mapPrismaUserToUser(user: PrismaUserResult): User {
     email: user.email,
     role: user.role as UserRole,
     isActive: user.isActive,
+    companyRoleId: user.companyRoleId,
+    companyRole: user.companyRole,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -54,7 +63,7 @@ export const userService = {
    */
   async create(data: CreateUserData): Promise<User> {
     const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
-    
+
     const user = await prisma.user.create({
       data: {
         companyId: data.companyId,
@@ -62,7 +71,13 @@ export const userService = {
         email: data.email,
         passwordHash,
         role: data.role,
+        companyRoleId: data.companyRoleId,
       },
+      include: {
+        companyRole: {
+          select: { id: true, name: true }
+        }
+      }
     });
 
     return mapPrismaUserToUser(user as PrismaUserResult);
@@ -74,6 +89,11 @@ export const userService = {
   async getById(id: string): Promise<User> {
     const user = await prisma.user.findUnique({
       where: { id },
+      include: {
+        companyRole: {
+          select: { id: true, name: true }
+        }
+      }
     });
 
     if (!user) {
@@ -89,6 +109,11 @@ export const userService = {
   async getByEmail(email: string): Promise<User | null> {
     const user = await prisma.user.findUnique({
       where: { email },
+      include: {
+        companyRole: {
+          select: { id: true, name: true }
+        }
+      }
     });
 
     if (!user) {
@@ -119,6 +144,7 @@ export const userService = {
       role?: UserRole;
       isActive?: boolean;
       passwordHash?: string;
+      companyRoleId?: string | null;
     } = {};
 
     if (data.name !== undefined) updateData.name = data.name;
@@ -128,10 +154,19 @@ export const userService = {
     if (data.password !== undefined) {
       updateData.passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
     }
+    if (data.companyRoleId !== undefined) {
+      // @ts-ignore
+      updateData.companyRoleId = data.companyRoleId;
+    }
 
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
+      include: {
+        companyRole: {
+          select: { id: true, name: true }
+        }
+      }
     });
 
     return mapPrismaUserToUser(user as PrismaUserResult);
@@ -154,6 +189,11 @@ export const userService = {
     const user = await prisma.user.update({
       where: { id },
       data: { isActive: false },
+      include: {
+        companyRole: {
+          select: { id: true, name: true }
+        }
+      }
     });
 
     return mapPrismaUserToUser(user as PrismaUserResult);
@@ -185,6 +225,11 @@ export const userService = {
     const users = await prisma.user.findMany({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        companyRole: {
+          select: { id: true, name: true }
+        }
+      }
     });
 
     return users.map((u: PrismaUserResult) => mapPrismaUserToUser(u));

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Layout, Button, Badge, Table, LoadingSpinner, ErrorMessage, SLAConfigSection, CalendarConnectionSettings, VendorManagementSection } from '../components';
+import { Layout, Button, Badge, Table, LoadingSpinner, ErrorMessage, SLAConfigSection, CalendarConnectionSettings, VendorManagementSection, RoleManagementModal } from '../components';
 import type { Column, VendorFormData, JobOption } from '../components';
 import type { Vendor as VendorType } from '../components/VendorManagementSection';
 import { useAuth } from '../hooks/useAuth';
@@ -91,6 +91,11 @@ interface UserData {
   email: string;
   role: 'admin' | 'hiring_manager' | 'recruiter';
   isActive: boolean;
+  companyRoleId?: string | null;
+  companyRole?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 
@@ -674,10 +679,40 @@ function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'recruiter' as UserData['role'],
+    role: '' as string, // Changed to string to hold companyRole ID or enum
     password: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [availableRoles, setAvailableRoles] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch available roles
+      // We'll use the existing API client
+      import('../services').then(({ api }) => {
+        api.get('/roles').then((res) => {
+          // Normalize roles (ensure defaults exist visually if not in DB)
+          const fetchedRoles = res.data;
+          const defaultRoles = [
+            { id: 'admin', name: 'Admin' },
+            { id: 'hiring_manager', name: 'Hiring Manager' },
+            { id: 'recruiter', name: 'Recruiter' }
+          ];
+
+          // Filter out defaults if they already exist in fetched (by name)
+          const uniqueFetched = fetchedRoles.filter((r: any) =>
+            !['admin', 'hiring_manager', 'recruiter'].includes(r.name.toLowerCase().replace(' ', '_'))
+          );
+
+          setAvailableRoles([...defaultRoles, ...uniqueFetched]);
+
+          if (!formData.role) {
+            setFormData(prev => ({ ...prev, role: 'recruiter' }));
+          }
+        }).catch(console.error);
+      });
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -704,13 +739,31 @@ function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      // Determine UserRole and companyRoleId
+      const selectedRole = availableRoles.find(r => r.id === formData.role);
+      let systemRole: UserData['role'] = 'recruiter';
+      let companyRoleId: string | undefined = formData.role;
+
+      // Check if it is a static role (based on ID matching known values)
+      if (['admin', 'hiring_manager', 'recruiter'].includes(formData.role)) {
+        systemRole = formData.role as UserData['role'];
+        companyRoleId = undefined;
+      } else if (selectedRole) {
+        // It's a custom role, try to map name if possible, otherwise keep as recruiter base
+        const roleName = selectedRole.name.toLowerCase().replace(' ', '_');
+        if (['admin', 'hiring_manager', 'recruiter'].includes(roleName)) {
+          systemRole = roleName as UserData['role'];
+        }
+      }
+
       onSave({
         name: formData.name,
         email: formData.email,
-        role: formData.role,
+        role: systemRole,
+        companyRoleId: companyRoleId,
         isActive: true,
-      });
-      setFormData({ name: '', email: '', role: 'recruiter', password: '' });
+      } as any); // Cast to any because UserData definition is strict about role but we handle it
+      setFormData({ name: '', email: '', role: '', password: '' });
       onClose();
     }
   };
@@ -778,9 +831,12 @@ function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
               onChange={(e) => handleChange('role', e.target.value)}
               className="form-select"
             >
-              <option value="admin">Admin</option>
-              <option value="hiring_manager">Hiring Manager</option>
-              <option value="recruiter">Recruiter</option>
+              <option value="">Select a role</option>
+              {availableRoles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -822,6 +878,7 @@ function UserManagementTab() {
   const createUser = useCreateUser();
   const toggleStatus = useToggleUserStatus();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   // Map API users to local format, fall back to sample data
   const users: UserData[] = apiUsers?.map((u: User) => ({
@@ -830,6 +887,8 @@ function UserManagementTab() {
     email: u.email,
     role: u.role,
     isActive: u.isActive,
+    companyRoleId: u.companyRoleId,
+    companyRole: u.companyRole,
   })) || sampleUsers;
 
   const handleAddUser = async (newUser: Omit<UserData, 'id'>) => {
@@ -839,6 +898,7 @@ function UserManagementTab() {
         email: newUser.email,
         password: 'tempPassword123', // In real app, this would come from the form
         role: newUser.role,
+        companyRoleId: newUser.companyRoleId || undefined,
       });
     } catch (err) {
       console.error('Failed to create user:', err);
@@ -913,7 +973,10 @@ function UserManagementTab() {
       key: 'role',
       header: 'Role',
       render: (row) => (
-        <Badge text={getRoleDisplayName(row.role)} variant={getRoleBadgeVariant(row.role) as 'blue' | 'green' | 'gray'} />
+        <Badge
+          text={row.companyRole ? row.companyRole.name : getRoleDisplayName(row.role)}
+          variant={getRoleBadgeVariant(row.role) as 'blue' | 'green' | 'gray'}
+        />
       ),
     },
     {
@@ -956,14 +1019,25 @@ function UserManagementTab() {
           <h3 className="text-lg font-semibold text-[#111827]">User Management</h3>
           <p className="text-sm text-[#64748b] mt-1">Manage team members and their access levels</p>
         </div>
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add User
-          </span>
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setIsRoleModalOpen(true)}>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Manage Roles
+            </span>
+          </Button>
+          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add User
+            </span>
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
@@ -978,6 +1052,11 @@ function UserManagementTab() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleAddUser}
+      />
+
+      <RoleManagementModal
+        isOpen={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
       />
     </div>
   );
@@ -1097,8 +1176,9 @@ export function SettingsPage() {
   const { user, logout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Get active tab from URL or default to 'company'
-  const activeTab = (searchParams.get('tab') as TabId) || 'company';
+  // Get active tab from URL or default based on role
+  const defaultTab: TabId = (user?.role === 'hiring_manager' || user?.role === 'recruiter') ? 'calendar' : 'company';
+  const activeTab = (searchParams.get('tab') as TabId) || defaultTab;
 
   const handleTabChange = (tabId: TabId) => {
     setSearchParams({ tab: tabId });
@@ -1136,21 +1216,31 @@ export function SettingsPage() {
         {/* Tab Navigation - Requirement 8.1 */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm sticky top-0 z-10 w-full mb-6">
           <div className="flex border-b border-gray-200 overflow-x-auto custom-scrollbar">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex-shrink-0 px-8 py-4 text-sm font-medium transition-all duration-200 relative whitespace-nowrap ${activeTab === tab.id
-                  ? 'text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
-                )}
-              </button>
-            ))}
+            {tabs
+              .filter(tab => {
+                // Hiring Managers & Recruiters only see Calendar (Requirements: Calendar Integration)
+                // "Except that don't render anything for them"
+                if (user?.role === 'hiring_manager' || user?.role === 'recruiter') {
+                  return tab.id === 'calendar';
+                }
+                // Admin sees all
+                return true;
+              })
+              .map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex-shrink-0 px-8 py-4 text-sm font-medium transition-all duration-200 relative whitespace-nowrap ${activeTab === tab.id
+                    ? 'text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
+                  )}
+                </button>
+              ))}
           </div>
         </div>
 

@@ -49,8 +49,27 @@ model Company {
   emailTemplates     EmailTemplate[]
   scorecardTemplates ScorecardTemplate[]
   companySettings    CompanySettings?
+  companyRoles       CompanyRole[]
 
   @@map("companies")
+}
+
+// Custom company roles for user management
+model CompanyRole {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  name        String
+  description String?
+  permissions Json     @default("[]")
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  users   User[]
+
+  @@unique([companyId, name])
+  @@map("company_roles")
 }
 
 enum UserRole {
@@ -79,6 +98,10 @@ model User {
 
   // Vendor job assignments (for vendor role)
   vendorJobAssignments VendorJobAssignment[] @relation("VendorAssignments")
+  
+  // Custom Role (Requirements 19.1)
+  companyRoleId String?      @map("company_role_id")
+  companyRole   CompanyRole? @relation(fields: [companyRoleId], references: [id])
 
   // Phase 2 relations
   stageHistoryMoves    StageHistory[]        @relation("StageHistoryMovedBy")

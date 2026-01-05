@@ -170,11 +170,11 @@ export function calculateOverallScore(
   const scores = [domainScore, industryScore, keyResponsibilitiesScore].filter(
     (score): score is number => score !== null && score !== undefined
   );
-  
+
   if (scores.length === 0) {
     return null;
   }
-  
+
   const sum = scores.reduce((acc, score) => acc + score, 0);
   return Math.round(sum / scores.length);
 }
@@ -335,16 +335,16 @@ export const candidateService = {
     // Determine the final sub-scores (use new values if provided, otherwise keep existing)
     const finalDomainScore = data.domainScore !== undefined ? data.domainScore : existing.domainScore;
     const finalIndustryScore = data.industryScore !== undefined ? data.industryScore : existing.industryScore;
-    const finalKeyResponsibilitiesScore = data.keyResponsibilitiesScore !== undefined 
-      ? data.keyResponsibilitiesScore 
+    const finalKeyResponsibilitiesScore = data.keyResponsibilitiesScore !== undefined
+      ? data.keyResponsibilitiesScore
       : existing.keyResponsibilitiesScore;
 
     // Recalculate overall score if any sub-score is being updated and score is not explicitly provided
     // Requirements: 8.3
     let finalScore = data.score;
     if (finalScore === undefined && (
-      data.domainScore !== undefined || 
-      data.industryScore !== undefined || 
+      data.domainScore !== undefined ||
+      data.industryScore !== undefined ||
       data.keyResponsibilitiesScore !== undefined
     )) {
       finalScore = calculateOverallScore(
@@ -534,19 +534,19 @@ export const candidateService = {
     );
 
     if (!newStage) {
-      throw new ValidationError({ 
-        newStageId: ['Stage not found in this job pipeline'] 
+      throw new ValidationError({
+        newStageId: ['Stage not found in this job pipeline']
       });
     }
 
     // Check if moving to Rejected stage requires a reason (Requirements 24.4)
-    const isRejectionStage = newStage.name.toLowerCase().includes('reject') || 
-                             newStage.name.toLowerCase().includes('declined') ||
-                             newStage.name.toLowerCase().includes('not selected');
-    
+    const isRejectionStage = newStage.name.toLowerCase().includes('reject') ||
+      newStage.name.toLowerCase().includes('declined') ||
+      newStage.name.toLowerCase().includes('not selected');
+
     if (isRejectionStage && !data.rejectionReason && !data.comment) {
-      throw new ValidationError({ 
-        rejectionReason: ['Rejection reason is required when moving to Rejected stage'] 
+      throw new ValidationError({
+        rejectionReason: ['Rejection reason is required when moving to Rejected stage']
       });
     }
 
@@ -731,7 +731,7 @@ export const candidateService = {
    * Requirements: 8.3, 8.4, 8.5
    */
   async updateScoreBreakdown(
-    candidateId: string, 
+    candidateId: string,
     scoreBreakdown: {
       domainScore?: number;
       industryScore?: number;
@@ -763,14 +763,14 @@ export const candidateService = {
     }
 
     // Determine final sub-scores (use new values if provided, otherwise keep existing)
-    const finalDomainScore = scoreBreakdown.domainScore !== undefined 
-      ? scoreBreakdown.domainScore 
+    const finalDomainScore = scoreBreakdown.domainScore !== undefined
+      ? scoreBreakdown.domainScore
       : existing.domainScore;
-    const finalIndustryScore = scoreBreakdown.industryScore !== undefined 
-      ? scoreBreakdown.industryScore 
+    const finalIndustryScore = scoreBreakdown.industryScore !== undefined
+      ? scoreBreakdown.industryScore
       : existing.industryScore;
-    const finalKeyResponsibilitiesScore = scoreBreakdown.keyResponsibilitiesScore !== undefined 
-      ? scoreBreakdown.keyResponsibilitiesScore 
+    const finalKeyResponsibilitiesScore = scoreBreakdown.keyResponsibilitiesScore !== undefined
+      ? scoreBreakdown.keyResponsibilitiesScore
       : existing.keyResponsibilitiesScore;
 
     // Calculate new overall score (Requirements 8.3)
@@ -1046,6 +1046,125 @@ export const candidateService = {
     }
 
     return Array.from(allTags).sort();
+  },
+
+  /**
+   * Create a new candidate and assign them to a job
+   * Used by the AddCandidateModal
+   */
+  async createAndAssignToJob(data: {
+    companyId: string;
+    jobId: string;
+    name: string;
+    email: string;
+    phone: string;
+    experienceYears?: number;
+    currentCompany?: string;
+    currentCtc?: string;
+    expectedCtc?: string;
+    location: string;
+    noticePeriod?: string;
+    skills?: string[];
+    source: string;
+    resumeUrl?: string;
+  }): Promise<Candidate> {
+    // Check if candidate with this email already exists
+    const existingCandidate = await prisma.candidate.findUnique({
+      where: { email: data.email.toLowerCase() },
+    });
+
+    // Use transaction to create candidate and job assignment
+    const result = await prisma.$transaction(async (tx: TransactionClient) => {
+      let candidate;
+
+      if (existingCandidate) {
+        // Use existing candidate
+        candidate = existingCandidate;
+      } else {
+        // Create new candidate
+        candidate = await tx.candidate.create({
+          data: {
+            companyId: data.companyId,
+            name: data.name.trim(),
+            email: data.email.trim().toLowerCase(),
+            phone: data.phone?.trim(),
+            experienceYears: data.experienceYears || 0,
+            currentCompany: data.currentCompany?.trim(),
+            location: data.location.trim(),
+            currentCtc: data.currentCtc?.trim(),
+            expectedCtc: data.expectedCtc?.trim(),
+            noticePeriod: data.noticePeriod?.trim(),
+            source: data.source.trim(),
+            skills: data.skills || [],
+            resumeUrl: data.resumeUrl,
+            score: 0,
+          },
+        });
+      }
+
+      // Find the job and its first pipeline stage
+      const job = await tx.job.findUnique({
+        where: { id: data.jobId },
+        include: {
+          pipelineStages: {
+            where: { parentId: null },
+            orderBy: { position: 'asc' },
+            take: 1,
+          },
+        },
+      });
+
+      if (!job) {
+        throw new NotFoundError('Job');
+      }
+
+      if (job.pipelineStages.length === 0) {
+        throw new ValidationError({ jobId: ['Job has no pipeline stages configured'] });
+      }
+
+      const firstStage = job.pipelineStages[0];
+
+      // Check if candidate is already assigned to this job
+      const existingAssignment = await tx.jobCandidate.findFirst({
+        where: {
+          jobId: data.jobId,
+          candidateId: candidate.id,
+        },
+      });
+
+      if (existingAssignment) {
+        throw new ConflictError('Candidate is already assigned to this job', {
+          existingId: existingAssignment.id,
+        });
+      }
+
+      // Create job candidate assignment
+      await tx.jobCandidate.create({
+        data: {
+          jobId: data.jobId,
+          candidateId: candidate.id,
+          currentStageId: firstStage.id,
+        },
+      });
+
+      // Create activity entry
+      await tx.candidateActivity.create({
+        data: {
+          candidateId: candidate.id,
+          activityType: 'stage_change',
+          description: `Added to job: ${job.title}`,
+          metadata: {
+            jobId: data.jobId,
+            jobTitle: job.title,
+            source: data.source,
+          },
+        },
+      });
+
+      return candidate;
+    });
+
+    return mapPrismaCandidateToCandidate(result as PrismaCandidateResult);
   },
 };
 

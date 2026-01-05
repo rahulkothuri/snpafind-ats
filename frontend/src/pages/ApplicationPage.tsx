@@ -46,6 +46,8 @@ interface ApplicationFormData {
   portfolioUrl: string;
   resumeFile: File | null;
   coverLetter: string;
+  currentSalary: string;
+  expectedSalary: string;
   desiredSalary: string;
   workAuthorization: 'yes' | 'no' | null;
   agreedToTerms: boolean;
@@ -71,6 +73,8 @@ const initialFormData: ApplicationFormData = {
   portfolioUrl: '',
   resumeFile: null,
   coverLetter: '',
+  currentSalary: '',
+  expectedSalary: '',
   desiredSalary: '',
   workAuthorization: null,
   agreedToTerms: false,
@@ -150,6 +154,10 @@ export function ApplicationPage() {
 
       // Resume validation
       if (!formData.resumeFile) newErrors.resumeFile = 'Resume is required';
+
+      // Salary validation
+      if (!formData.currentSalary.trim()) newErrors.currentSalary = 'Current salary is required';
+      if (!formData.expectedSalary.trim()) newErrors.expectedSalary = 'Expected salary is required';
     }
 
     if (step === 2) {
@@ -265,6 +273,8 @@ export function ApplicationPage() {
       if (formData.linkedinProfile) submitData.append('linkedinProfile', formData.linkedinProfile);
       if (formData.portfolioUrl) submitData.append('portfolioUrl', formData.portfolioUrl);
       if (formData.coverLetter) submitData.append('coverLetter', formData.coverLetter);
+      if (formData.currentSalary) submitData.append('currentCtc', formData.currentSalary);
+      if (formData.expectedSalary) submitData.append('expectedCtc', formData.expectedSalary);
       if (formData.desiredSalary) submitData.append('desiredSalary', formData.desiredSalary);
       if (formData.resumeFile) submitData.append('resume', formData.resumeFile);
 
@@ -700,6 +710,32 @@ export function ApplicationPage() {
             className="form-input min-h-[120px] sm:min-h-[150px]"
             placeholder="Tell us why you're interested in this position..."
           />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="currentSalary" className="form-label">Current Salary (CTC) *</label>
+          <input
+            id="currentSalary"
+            type="text"
+            value={formData.currentSalary}
+            onChange={(e) => updateFormData('currentSalary', e.target.value)}
+            className={`form-input min-h-[44px] ${errors.currentSalary ? 'border-red-500' : ''}`}
+            placeholder="e.g., ₹8,00,000 / $50,000"
+          />
+          {errors.currentSalary && <p className="mt-1 text-red-600 text-sm">{errors.currentSalary}</p>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="expectedSalary" className="form-label">Expected Salary (CTC) *</label>
+          <input
+            id="expectedSalary"
+            type="text"
+            value={formData.expectedSalary}
+            onChange={(e) => updateFormData('expectedSalary', e.target.value)}
+            className={`form-input min-h-[44px] ${errors.expectedSalary ? 'border-red-500' : ''}`}
+            placeholder="e.g., ₹12,00,000 / $70,000"
+          />
+          {errors.expectedSalary && <p className="mt-1 text-red-600 text-sm">{errors.expectedSalary}</p>}
         </div>
 
         <div className="form-group">

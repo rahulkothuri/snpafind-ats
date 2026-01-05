@@ -16,7 +16,13 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, InterviewScheduleModal, JobActionsDropdown, ShareJobModal, calculateAverageScore } from './index';
+import {
+  KPICard, Badge, Button, Table, SearchInput, LoadingSpinner, BulkActionsToolbar, InterviewScheduleModal, JobActionsDropdown, ShareJobModal,
+  AddCandidateModal,
+  AddNoteModal,
+  MoveCandidateModal,
+  calculateAverageScore
+} from './index';
 import { LegacyAdvancedFilters } from './AdvancedFilters';
 import type { Column } from './Table';
 import type { AdvancedFiltersState } from './AdvancedFilters';
@@ -177,12 +183,18 @@ function CandidateTableView({
   selectedCandidates,
   onSelectionChange,
   onScheduleInterview,
+  onAddNote,
+  onMoveCandidate,
+  onViewCV,
 }: {
   candidates: PipelineCandidate[];
   onCandidateClick: (candidate: PipelineCandidate) => void;
   selectedCandidates: string[];
   onSelectionChange: (candidateIds: string[]) => void;
   onScheduleInterview: (candidate: PipelineCandidate) => void;
+  onAddNote: (candidate: PipelineCandidate) => void;
+  onMoveCandidate: (candidate: PipelineCandidate) => void;
+  onViewCV: (candidate: PipelineCandidate) => void;
 }) {
   const allSelected = candidates.length > 0 && candidates.every(c => selectedCandidates.includes(c.jobCandidateId || c.id));
   const someSelected = candidates.some(c => selectedCandidates.includes(c.jobCandidateId || c.id)) && !allSelected;
@@ -327,10 +339,10 @@ function CandidateTableView({
         };
         return (
           <div className="grid grid-cols-2 gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button variant="mini" miniColor="note" onClick={() => { }}>Note</Button>
-            <Button variant="mini" miniColor="move" onClick={() => { }}>Move</Button>
+            <Button variant="mini" miniColor="note" onClick={() => onAddNote(row)}>Note</Button>
+            <Button variant="mini" miniColor="move" onClick={() => onMoveCandidate(row)}>Move</Button>
             <Button variant="mini" miniColor="schedule" onClick={handleScheduleClick}>Sched</Button>
-            <Button variant="mini" miniColor="cv" onClick={() => { }}>CV</Button>
+            <Button variant="mini" miniColor="cv" onClick={() => onViewCV(row)} disabled={!row.resumeUrl}>CV</Button>
           </div>
         );
       },
@@ -360,6 +372,9 @@ function KanbanCard({
   onDragStart,
   onDragEnd,
   onScheduleInterview,
+  onViewCV,
+  onMoveCandidate,
+  onAddNote,
 }: {
   candidate: PipelineCandidate;
   onClick: () => void;
@@ -369,6 +384,9 @@ function KanbanCard({
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
   onScheduleInterview: () => void;
+  onViewCV?: () => void;
+  onMoveCandidate?: () => void;
+  onAddNote: () => void;
 }) {
   // Calculate average from sub-scores if available, otherwise use existing score - Requirements 2.4
   const calculatedScore = calculateAverageScore(
@@ -450,10 +468,17 @@ function KanbanCard({
       </div>
 
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-        <Button variant="mini" miniColor="note">Note</Button>
-        <Button variant="mini" miniColor="move">Move</Button>
+        <Button variant="mini" miniColor="note" onClick={onAddNote}>Note</Button>
+        <Button variant="mini" miniColor="move" onClick={onMoveCandidate}>Move</Button>
         <Button variant="mini" miniColor="schedule" onClick={onScheduleInterview}>Sched</Button>
-        <Button variant="mini" miniColor="cv">CV</Button>
+        <Button
+          variant="mini"
+          miniColor="cv"
+          onClick={onViewCV}
+          disabled={!candidate.resumeUrl}
+        >
+          CV
+        </Button>
       </div>
     </div>
   );
@@ -482,6 +507,9 @@ function KanbanBoardView({
   onCandidateDrop,
   isMoving,
   onScheduleInterview,
+  onAddNote,
+  onMoveCandidate,
+  onViewCV,
 }: {
   candidates: PipelineCandidate[];
   stages: string[];
@@ -492,6 +520,9 @@ function KanbanBoardView({
   onCandidateDrop: (candidateId: string, targetStageId: string, targetStageName: string) => void;
   isMoving: boolean;
   onScheduleInterview: (candidate: PipelineCandidate) => void;
+  onAddNote: (candidate: PipelineCandidate) => void;
+  onMoveCandidate: (candidate: PipelineCandidate) => void;
+  onViewCV: (candidate: PipelineCandidate) => void;
 }) {
   const [draggingCandidateId, setDraggingCandidateId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
@@ -616,6 +647,9 @@ function KanbanBoardView({
                   onDragStart={(e) => handleDragStart(e, candidate)}
                   onDragEnd={handleDragEnd}
                   onScheduleInterview={() => onScheduleInterview(candidate)}
+                  onAddNote={() => onAddNote(candidate)}
+                  onMoveCandidate={() => onMoveCandidate(candidate)}
+                  onViewCV={() => onViewCV(candidate)}
                 />
               ))}
               {stageCandidates.length === 0 && (
@@ -675,6 +709,17 @@ export function JobDetailsRightPanel({
 
   // Share job modal state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Add Candidate modal state
+  const [isAddCandidateModalOpen, setIsAddCandidateModalOpen] = useState(false);
+
+  // Note modal state
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [selectedCandidateForNote, setSelectedCandidateForNote] = useState<{ id: string; name: string } | null>(null);
+
+  // Move Candidate Modal State
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [selectedCandidateForMove, setSelectedCandidateForMove] = useState<PipelineCandidate | null>(null);
 
   // Advanced filters state - Requirements 4.3
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersState>({
@@ -807,10 +852,47 @@ export function JobDetailsRightPanel({
     setIsScheduleModalOpen(true);
   }, []);
 
+  const handleAddNoteClick = useCallback((candidate: PipelineCandidate) => {
+    setSelectedCandidateForNote({ id: candidate.id, name: candidate.name });
+    setIsNoteModalOpen(true);
+  }, []);
+
+  // Handle move candidate - Button click
+  const handleMoveCandidate = useCallback((candidate: PipelineCandidate) => {
+    setSelectedCandidateForMove(candidate);
+    setIsMoveModalOpen(true);
+  }, []);
+
+  // Handle confirm move
+  const handleConfirmMove = useCallback(async (targetStageId: string) => {
+    if (!role || !selectedCandidateForMove) return;
+
+    await pipelineService.bulkMove({
+      candidateIds: [selectedCandidateForMove.jobCandidateId || selectedCandidateForMove.id],
+      targetStageId,
+      jobId: role.id,
+    });
+
+    if (onCandidatesMoved) {
+      onCandidatesMoved();
+    }
+  }, [role, selectedCandidateForMove, onCandidatesMoved]);
+
+  // Handle View CV
+  const handleViewCV = useCallback((candidate: PipelineCandidate) => {
+    if (candidate.resumeUrl) {
+      window.open(candidate.resumeUrl, '_blank');
+    } else {
+      // Optional: Show toast or alert
+      console.warn('No resume available for this candidate');
+    }
+  }, []);
+
   // Handle share job modal
   const handleShareJob = useCallback(() => {
     setIsShareModalOpen(true);
   }, []);
+
 
   // Handle bulk import (placeholder)
   const handleBulkImport = useCallback(() => {
@@ -901,7 +983,7 @@ export function JobDetailsRightPanel({
                 Edit JD
               </Button>
             )}
-            <Button variant="primary" size="sm">+ Add candidate</Button>
+            <Button variant="primary" size="sm" onClick={() => setIsAddCandidateModalOpen(true)}>+ Add candidate</Button>
             <JobActionsDropdown
               jobId={role.id}
               jobTitle={role.title}
@@ -1031,6 +1113,9 @@ export function JobDetailsRightPanel({
           selectedCandidates={selectedCandidates}
           onSelectionChange={setSelectedCandidates}
           onScheduleInterview={handleScheduleInterview}
+          onAddNote={handleAddNoteClick}
+          onMoveCandidate={handleMoveCandidate}
+          onViewCV={handleViewCV}
         />
       ) : (
         <KanbanBoardView
@@ -1043,6 +1128,9 @@ export function JobDetailsRightPanel({
           onCandidateDrop={handleCandidateDrop}
           isMoving={isDragMoving}
           onScheduleInterview={handleScheduleInterview}
+          onAddNote={handleAddNoteClick}
+          onMoveCandidate={handleMoveCandidate}
+          onViewCV={handleViewCV}
         />
       )}
 
@@ -1071,6 +1159,47 @@ export function JobDetailsRightPanel({
           jobId={role.id}
         />
       )}
+
+      {/* Add Candidate Modal */}
+      {role && (
+        <AddCandidateModal
+          isOpen={isAddCandidateModalOpen}
+          onClose={() => setIsAddCandidateModalOpen(false)}
+          jobId={role.id}
+          jobTitle={role.title}
+          onSuccess={onCandidatesMoved}
+        />
+      )}
+
+      {selectedCandidateForNote && (
+        <AddNoteModal
+          isOpen={isNoteModalOpen}
+          onClose={() => {
+            setIsNoteModalOpen(false);
+            setSelectedCandidateForNote(null);
+          }}
+          candidateId={selectedCandidateForNote.id}
+          candidateName={selectedCandidateForNote.name}
+          onSuccess={() => {
+            // Optional: refresh if needed, usually notes don't change list view immediately
+          }}
+        />
+      )}
+
+      {role && selectedCandidateForMove && (
+        <MoveCandidateModal
+          isOpen={isMoveModalOpen}
+          onClose={() => {
+            setIsMoveModalOpen(false);
+            setSelectedCandidateForMove(null);
+          }}
+          candidateName={selectedCandidateForMove.name}
+          currentStageId={pipelineStages.find(s => s.name === selectedCandidateForMove.stage)?.id || selectedCandidateForMove.stage}
+          stages={bulkMoveStages}
+          onMove={handleConfirmMove}
+        />
+      )}
+
     </div>
   );
 }

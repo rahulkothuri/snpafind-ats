@@ -8,6 +8,11 @@ export interface User {
   email: string;
   role: UserRole;
   isActive: boolean;
+  companyRoleId?: string | null;
+  companyRole?: {
+    id: string;
+    name: string;
+  } | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -115,49 +120,49 @@ export interface Job {
   companyId: string;
   title: string;
   department: string;
-  
+
   // Experience range (Requirements 1.1, 1.2)
   experienceMin?: number;
   experienceMax?: number;
-  
+
   // Salary range (Requirements 1.1, 1.3)
   salaryMin?: number;
   salaryMax?: number;
   variables?: string;
-  
+
   // Requirements (Requirements 1.1)
   educationQualification?: string;
   ageUpTo?: number;
   skills: string[];
   preferredIndustry?: string;
-  
+
   // Work details (Requirements 1.1, 1.4, 1.5, 1.6)
   workMode?: WorkMode;
   locations: string[];
   priority?: JobPriority;
   jobDomain?: string;
-  
+
   // Assignment (Requirements 1.1)
   assignedRecruiterId?: string;
-  
+
   // Content
   description: string;
-  
+
   // Mandatory criteria - editable screening criteria
   mandatoryCriteria?: MandatoryCriteria;
-  
+
   // Screening questions - questions candidates must answer before applying
   screeningQuestions?: ScreeningQuestion[];
-  
+
   // Auto-rejection rules (Requirements 9.1)
   autoRejectionRules?: AutoRejectionRules;
-  
+
   // Existing fields
   status: JobStatus;
   openings: number;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Legacy fields (kept for compatibility)
   location?: string;
   employmentType?: string;
@@ -241,11 +246,11 @@ export interface JobCandidate {
 }
 
 // Activity types
-export type ActivityType = 
-  | 'stage_change' 
-  | 'note_added' 
-  | 'resume_uploaded' 
-  | 'interview_scheduled' 
+export type ActivityType =
+  | 'stage_change'
+  | 'note_added'
+  | 'resume_uploaded'
+  | 'interview_scheduled'
   | 'interview_rescheduled'
   | 'interview_cancelled'
   | 'interview_feedback'

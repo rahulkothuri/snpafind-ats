@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout, Button, MultiSelect, MandatoryCriteriaSection, ScreeningQuestionsSection, PipelineStageConfigurator, JobShareModal, StageImportModal, AutoRejectionRulesSection, DEFAULT_AUTO_REJECTION_RULES } from '../components';
+import { Layout, Button, MultiSelect, MandatoryCriteriaSection, ScreeningQuestionsSection, PipelineStageConfigurator, JobShareModal, StageImportModal, AutoRejectionRulesSection, DEFAULT_AUTO_REJECTION_RULES, RichTextEditor } from '../components';
 import type { AutoRejectionRules } from '../components';
 import { DEFAULT_MANDATORY_CRITERIA } from '../components/MandatoryCriteriaSection';
 import { DEFAULT_PIPELINE_STAGES, type EnhancedPipelineStageConfig } from '../components/PipelineStageConfigurator';
@@ -712,74 +712,14 @@ export function JobCreationPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-3">Job Description</h3>
 
-              {/* Rich Text Editor Toolbar */}
-              <div className="border border-[#e2e8f0] rounded-t-lg bg-[#f9fafb] px-3 py-1 flex items-center gap-1">
-                <button
-                  type="button"
-                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
-                  title="Bold"
-                  onClick={() => {
-                    const textarea = document.getElementById('description') as HTMLTextAreaElement;
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
-                    const text = formData.description;
-                    const newText = text.substring(0, start) + `**${text.substring(start, end)}**` + text.substring(end);
-                    handleChange('description', newText);
-                  }}
-                >
-                  <b className="font-serif">B</b>
-                </button>
-                <button
-                  type="button"
-                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
-                  title="Italic"
-                  onClick={() => {
-                    const textarea = document.getElementById('description') as HTMLTextAreaElement;
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
-                    const text = formData.description;
-                    const newText = text.substring(0, start) + `_${text.substring(start, end)}_` + text.substring(end);
-                    handleChange('description', newText);
-                  }}
-                >
-                  <i className="font-serif">I</i>
-                </button>
-                <div className="w-px h-4 bg-[#e2e8f0] mx-1" />
-                <button
-                  type="button"
-                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
-                  title="Bullet List"
-                  onClick={() => {
-                    const text = formData.description;
-                    const newText = text + (text.endsWith('\n') || text === '' ? '' : '\n') + '• ';
-                    handleChange('description', newText);
-                  }}
-                >
-                  • Liste
-                </button>
-                <button
-                  type="button"
-                  className="p-1 rounded hover:bg-gray-200 text-[#64748b]"
-                  title="Heading"
-                  onClick={() => {
-                    const text = formData.description;
-                    const newText = text + (text.endsWith('\n') || text === '' ? '' : '\n') + '## ';
-                    handleChange('description', newText);
-                  }}
-                >
-                  H2
-                </button>
-              </div>
-
-              {/* Description Textarea */}
-              <textarea
-                id="description"
+              {/* Rich Text Editor */}
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                rows={12}
-                className="w-full px-4 py-3 border border-t-0 border-[#e2e8f0] rounded-b-lg text-sm text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#0b6cf0] resize-none font-mono leading-relaxed"
-                placeholder="Describe the role..."
+                onChange={(value) => handleChange('description', value)}
+                placeholder="Describe the role, responsibilities, qualifications, and benefits..."
+                error={!!errors.description}
               />
+              {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
 
             {/* Mandatory Criteria - Requirements 3.1, 3.2, 3.3 - Moved after Job Description */}

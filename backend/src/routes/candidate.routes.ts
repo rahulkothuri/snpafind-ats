@@ -45,17 +45,17 @@ const storage = multer.diskStorage({
 
 const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  
+
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     cb(new Error(`Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`));
     return;
   }
-  
+
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     cb(new Error(`Invalid file type. Allowed: PDF, DOC, DOCX`));
     return;
   }
-  
+
   cb(null, true);
 };
 
@@ -88,17 +88,17 @@ const attachmentStorage = multer.diskStorage({
 
 const attachmentFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  
+
   if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(ext)) {
     cb(new Error(`Invalid file extension. Allowed: ${ALLOWED_ATTACHMENT_EXTENSIONS.join(', ')}`));
     return;
   }
-  
+
   if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.mimetype)) {
     cb(new Error('Invalid file type. Allowed: PDF, DOC, DOCX, PNG, JPG, JPEG'));
     return;
   }
-  
+
   cb(null, true);
 };
 
@@ -486,26 +486,26 @@ router.post('/:id/resume', authenticate, (req: AuthenticatedRequest, res: Respon
           message: err.message,
         });
       }
-      
+
       if (err) {
         return res.status(400).json({
           code: 'INVALID_FILE',
           message: err.message,
         });
       }
-      
+
       if (!req.file) {
         return res.status(400).json({
           code: 'NO_FILE',
           message: 'No resume file provided',
         });
       }
-      
+
       const candidateId = req.params.id;
       const resumeUrl = `/${UPLOAD_DIR}/${req.file.filename}`;
-      
+
       const candidate = await candidateService.updateResumeUrl(candidateId, resumeUrl);
-      
+
       return res.json({
         message: 'Resume uploaded successfully',
         candidate,
@@ -529,19 +529,19 @@ router.post('/:id/resume', authenticate, (req: AuthenticatedRequest, res: Respon
  */
 export const validateResumeFile = (file: { mimetype: string; size: number; originalname: string }): { valid: boolean; error?: string } => {
   const ext = path.extname(file.originalname).toLowerCase();
-  
+
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     return { valid: false, error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` };
   }
-  
+
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     return { valid: false, error: 'Invalid file type. Allowed: PDF, DOC, DOCX' };
   }
-  
+
   if (file.size > MAX_FILE_SIZE) {
     return { valid: false, error: 'File size exceeds maximum limit of 10MB' };
   }
-  
+
   return { valid: true };
 };
 
@@ -580,14 +580,14 @@ router.post('/:id/attachments', authenticate, (req: AuthenticatedRequest, res: R
           message: err.message,
         });
       }
-      
+
       if (err) {
         return res.status(400).json({
           code: 'INVALID_FILE',
           message: err.message,
         });
       }
-      
+
       if (!req.file) {
         return res.status(400).json({
           code: 'NO_FILE',
@@ -599,10 +599,10 @@ router.post('/:id/attachments', authenticate, (req: AuthenticatedRequest, res: R
       if (!userId) {
         return res.status(401).json({ code: 'UNAUTHORIZED', message: 'User ID not found' });
       }
-      
+
       const candidateId = req.params.id;
       const fileUrl = `/${ATTACHMENTS_UPLOAD_DIR}/${req.file.filename}`;
-      
+
       const attachment = await attachmentsService.uploadAttachment({
         candidateId,
         fileName: req.file.originalname,
@@ -611,7 +611,7 @@ router.post('/:id/attachments', authenticate, (req: AuthenticatedRequest, res: R
         fileSize: req.file.size,
         uploadedBy: userId,
       });
-      
+
       return res.status(201).json(attachment);
     } catch (error) {
       next(error);
@@ -688,5 +688,94 @@ router.get('/tags/all', authenticate, async (req: AuthenticatedRequest, res: Res
 });
 
 export { ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES, MAX_FILE_SIZE };
+
+/**
+ * POST /api/candidates/add-to-job
+ * Create a new candidate and add them to a specific job
+ * Used by the AddCandidateModal in the Roles page
+ */
+router.post('/add-to-job', authenticate, (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  upload.single('resume')(req, res, async (err) => {
+    try {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            code: 'FILE_TOO_LARGE',
+            message: 'File size exceeds maximum limit of 10MB',
+          });
+        }
+        return res.status(400).json({
+          code: 'UPLOAD_ERROR',
+          message: err.message,
+        });
+      }
+
+      if (err) {
+        return res.status(400).json({
+          code: 'INVALID_FILE',
+          message: err.message,
+        });
+      }
+
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Company ID not found' });
+      }
+
+      const { jobId, name, email, phone, experienceYears, currentCompany, currentCtc, expectedCtc, location, noticePeriod, skills, source } = req.body;
+
+      if (!jobId) {
+        return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Job ID is required' });
+      }
+      if (!name) {
+        return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Name is required' });
+      }
+      if (!email) {
+        return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Email is required' });
+      }
+      if (!phone) {
+        return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Phone is required' });
+      }
+
+      // Parse skills if provided as JSON string
+      let parsedSkills: string[] = [];
+      if (skills) {
+        try {
+          parsedSkills = typeof skills === 'string' ? JSON.parse(skills) : skills;
+        } catch {
+          parsedSkills = [];
+        }
+      }
+
+      // Prepare resume URL if file was uploaded
+      const resumeUrl = req.file ? `/${UPLOAD_DIR}/${req.file.filename}` : undefined;
+
+      // Create candidate with job assignment
+      const candidate = await candidateService.createAndAssignToJob({
+        companyId,
+        jobId,
+        name,
+        email,
+        phone,
+        experienceYears: experienceYears ? parseInt(experienceYears, 10) : undefined,
+        currentCompany,
+        currentCtc,
+        expectedCtc,
+        location: location || 'Not specified',
+        noticePeriod,
+        skills: parsedSkills,
+        source: source || 'Manual',
+        resumeUrl,
+      });
+
+      return res.status(201).json({
+        message: 'Candidate created and added to job successfully',
+        candidate,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+});
 
 export default router;
