@@ -13,7 +13,6 @@
  */
 
 import ReactMarkdown from 'react-markdown';
-import { DEFAULT_MANDATORY_CRITERIA } from './MandatoryCriteriaSection';
 import type { MandatoryCriteria } from '../types';
 
 export interface JobDetailsPanelProps {
@@ -78,26 +77,23 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
-  // Use job's mandatory criteria or fall back to default
-  const mandatoryCriteria = job.mandatoryCriteria || DEFAULT_MANDATORY_CRITERIA;
-
   // Format experience range
   const experienceRange = job.experienceMin !== undefined && job.experienceMax !== undefined
     ? `${job.experienceMin} - ${job.experienceMax} years`
     : job.experienceMin !== undefined
-    ? `${job.experienceMin}+ years`
-    : job.experienceMax !== undefined
-    ? `Up to ${job.experienceMax} years`
-    : null;
+      ? `${job.experienceMin}+ years`
+      : job.experienceMax !== undefined
+        ? `Up to ${job.experienceMax} years`
+        : null;
 
   // Format salary range
   const salaryRange = job.salaryMin !== undefined && job.salaryMax !== undefined
     ? `${formatCurrency(job.salaryMin)} - ${formatCurrency(job.salaryMax)}`
     : job.salaryMin !== undefined
-    ? `${formatCurrency(job.salaryMin)}+`
-    : job.salaryMax !== undefined
-    ? `Up to ${formatCurrency(job.salaryMax)}`
-    : null;
+      ? `${formatCurrency(job.salaryMin)}+`
+      : job.salaryMax !== undefined
+        ? `Up to ${formatCurrency(job.salaryMax)}`
+        : null;
 
   // Format locations
   const locationsDisplay = job.locations && job.locations.length > 0
@@ -110,14 +106,14 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
     : null;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0]">
       {/* Company Header */}
-      <div className="p-6 border-b border-[#e2e8f0] bg-gradient-to-r from-[#f8fafc] to-white">
+      <div className="p-4 border-b border-[#e2e8f0] bg-gradient-to-r from-[#f8fafc] to-white">
         <div className="flex items-center gap-4">
           {company.logoUrl ? (
-            <img 
-              src={company.logoUrl} 
-              alt={company.name} 
+            <img
+              src={company.logoUrl}
+              alt={company.name}
               className="w-16 h-16 rounded-xl object-cover border border-[#e2e8f0]"
             />
           ) : (
@@ -135,7 +131,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
       </div>
 
       {/* Job Title Section */}
-      <div className="p-6 border-b border-[#e2e8f0]">
+      <div className="p-4 border-b border-[#e2e8f0]">
         <h1 className="text-xl font-bold text-[#111827] mb-2">{job.title}</h1>
         {job.department && (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#e0f2fe] text-[#0369a1]">
@@ -145,7 +141,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
       </div>
 
       {/* Job Details Section */}
-      <div className="p-6 border-b border-[#e2e8f0]">
+      <div className="p-4 border-b border-[#e2e8f0]">
         <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
           Job Details
         </h3>
@@ -168,7 +164,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
 
       {/* Skills Section */}
       {skillsDisplay && skillsDisplay.length > 0 && (
-        <div className="p-6 border-b border-[#e2e8f0]">
+        <div className="p-4 border-b border-[#e2e8f0]">
           <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
             Required Skills
           </h3>
@@ -185,21 +181,87 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
         </div>
       )}
 
+      {/* Mandatory Criteria Section - Only show if job has mandatory criteria */}
+      {/* Positioned prominently before Job Description for visibility */}
+      {job.mandatoryCriteria && job.mandatoryCriteria.criteria && job.mandatoryCriteria.criteria.length > 0 && (
+        <div className="p-4 border-b border-[#e2e8f0] bg-gradient-to-br from-[#fffbeb] to-[#fef3c7]">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#f59e0b] flex items-center justify-center shadow-md">
+              <svg
+                className="w-6 h-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#92400e]">
+                {job.mandatoryCriteria.title}
+              </h3>
+              <p className="text-xs text-[#b45309]">Please review before applying</p>
+            </div>
+          </div>
+
+          {job.mandatoryCriteria.intro && (
+            <div className="bg-white/50 rounded-lg p-4 mb-4 border border-[#fcd34d]">
+              <p className="text-sm text-[#78350f] font-semibold">
+                {job.mandatoryCriteria.intro}
+              </p>
+            </div>
+          )}
+
+          <ol className="space-y-3 mb-4">
+            {job.mandatoryCriteria.criteria.map((criterion, index) => (
+              <li
+                key={index}
+                className="flex gap-3 text-sm text-[#78350f] bg-white/30 rounded-lg p-3 border border-[#fde68a]"
+              >
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f59e0b] text-white text-xs font-bold flex items-center justify-center shadow-sm">
+                  {index + 1}
+                </span>
+                <span className="pt-0.5 font-medium">{criterion}</span>
+              </li>
+            ))}
+          </ol>
+
+          {job.mandatoryCriteria.note && (
+            <div className="pt-4 border-t border-[#fcd34d]">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#dc2626]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm font-bold text-[#92400e] uppercase tracking-wide">
+                  {job.mandatoryCriteria.note}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Job Description Section - Requirement 1.1, 1.2 */}
       {job.description && (
-        <div className="p-6 border-b border-[#e2e8f0]">
+        <div className="p-4 border-b border-[#e2e8f0]">
           <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
             Job Description
           </h3>
-          <div className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal">
-            <ReactMarkdown>{job.description}</ReactMarkdown>
-          </div>
+          <div
+            className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal"
+            dangerouslySetInnerHTML={{ __html: job.description }}
+          />
         </div>
       )}
 
       {/* Responsibilities Section - Requirement 1.3 */}
       {job.responsibilities && (
-        <div className="p-6 border-b border-[#e2e8f0]">
+        <div className="p-4 border-b border-[#e2e8f0]">
           <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
             <span className="flex items-center gap-2">
               <svg className="w-4 h-4 text-[#0b6cf0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +278,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
 
       {/* Requirements Section - Requirement 1.3 */}
       {job.requirements && (
-        <div className="p-6 border-b border-[#e2e8f0]">
+        <div className="p-4 border-b border-[#e2e8f0]">
           <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
             <span className="flex items-center gap-2">
               <svg className="w-4 h-4 text-[#0b6cf0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,7 +295,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
 
       {/* Benefits Section - Requirement 1.3 */}
       {job.benefits && (
-        <div className="p-6 border-b border-[#e2e8f0]">
+        <div className="p-4 border-b border-[#e2e8f0]">
           <h3 className="text-sm font-semibold text-[#374151] uppercase tracking-wide mb-4">
             <span className="flex items-center gap-2">
               <svg className="w-4 h-4 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,65 +309,6 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
           </div>
         </div>
       )}
-
-      {/* Mandatory Criteria Section - Requirements 2.1, 2.2, 2.3 */}
-      {/* Positioned prominently before Apply button with distinct visual styling */}
-      <div className="p-6 bg-gradient-to-br from-[#fffbeb] to-[#fef3c7] border-t-4 border-[#f59e0b]">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#f59e0b] flex items-center justify-center shadow-md">
-            <svg 
-              className="w-6 h-6 text-white" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-[#92400e]">
-              {mandatoryCriteria.title}
-            </h3>
-            <p className="text-xs text-[#b45309]">Please review before applying</p>
-          </div>
-        </div>
-
-        <div className="bg-white/50 rounded-lg p-4 mb-4 border border-[#fcd34d]">
-          <p className="text-sm text-[#78350f] font-semibold">
-            {mandatoryCriteria.intro}
-          </p>
-        </div>
-
-        <ol className="space-y-3 mb-4">
-          {mandatoryCriteria.criteria.map((criterion, index) => (
-            <li 
-              key={index} 
-              className="flex gap-3 text-sm text-[#78350f] bg-white/30 rounded-lg p-3 border border-[#fde68a]"
-            >
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f59e0b] text-white text-xs font-bold flex items-center justify-center shadow-sm">
-                {index + 1}
-              </span>
-              <span className="pt-0.5 font-medium">{criterion}</span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="pt-4 border-t border-[#fcd34d]">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#dc2626]" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            <p className="text-sm font-bold text-[#92400e] uppercase tracking-wide">
-              {mandatoryCriteria.note}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

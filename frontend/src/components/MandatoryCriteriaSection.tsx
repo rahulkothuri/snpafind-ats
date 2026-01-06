@@ -16,19 +16,10 @@ import type { MandatoryCriteria } from '../types';
 
 // Default mandatory criteria content
 export const DEFAULT_MANDATORY_CRITERIA: MandatoryCriteria = {
-  title: "Mandatory Criteria (Can't be neglected during screening)",
-  intro: "Preferred candidates from good startups only.",
-  criteria: [
-    "CA Candidates are not applicable for this role.",
-    "Need candidate from Tier 1 and Tier 2 colleges only.",
-    "2–3 years of hands-on experience in Financial Analysis / FP&A.",
-    "Strong proficiency in Financial Modelling, forecasting, budgeting, and variance analysis.",
-    "Experience preparing financial reports, presentations, and management dashboards with Advance Excel skills.",
-    "Strong attention to detail with high accuracy in analysis and reporting.",
-    "Strong problem-solving skills and ability to recommend practical solutions on different Scenarios.",
-    "Candidate should be good in Cost Management.",
-  ],
-  note: "NOTE - Looking for highly Intentful and Enthusiatic candidates",
+  title: "Mandatory Criteria",
+  intro: "",
+  criteria: [],
+  note: "",
 };
 
 // Legacy export for backward compatibility

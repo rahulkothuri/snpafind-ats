@@ -10,8 +10,9 @@
  * - Candidate management (if permitted)
  */
 
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Layout, Button, Badge, LoadingSpinner, ErrorMessage } from '../components';
+import { Layout, Button, Badge, LoadingSpinner, ErrorMessage, AddCandidateModal, BulkImportModal } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useJob } from '../hooks/useJobs';
 
@@ -19,15 +20,24 @@ export function JobDetailsPage() {
   const { user, logout } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const { data: job, isLoading, error, refetch } = useJob(id!);
 
+  // Modal state
+  const [isAddCandidateOpen, setIsAddCandidateOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
   // Determine user permissions for this job
-  const canEdit = user?.role === 'admin' || 
-                  user?.role === 'hiring_manager' || 
-                  (user?.role === 'recruiter' && (job as any)?.assignedRecruiterId === user.id);
+  const canEdit = user?.role === 'admin' ||
+    user?.role === 'hiring_manager' ||
+    (user?.role === 'recruiter' && (job as any)?.assignedRecruiterId === user.id);
 
   const canManageCandidates = canEdit;
+
+  // Navigation handlers
+  const handleViewCandidates = () => {
+    navigate(`/roles?jobId=${id}`);
+  };
 
   if (isLoading) {
     return (
@@ -69,8 +79,8 @@ export function JobDetailsPage() {
       </Button>
       {canEdit && (
         <>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => navigate(`/jobs/${job.id}/edit`)}
           >
@@ -109,14 +119,14 @@ export function JobDetailsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge 
-                text={job.status} 
-                variant={job.status === 'active' ? 'green' : job.status === 'paused' ? 'orange' : 'gray'} 
+              <Badge
+                text={job.status}
+                variant={job.status === 'active' ? 'green' : job.status === 'paused' ? 'orange' : 'gray'}
               />
               {(job as any).priority && (
-                <Badge 
-                  text={(job as any).priority} 
-                  variant={(job as any).priority === 'High' ? 'priority' : 'gray'} 
+                <Badge
+                  text={(job as any).priority}
+                  variant={(job as any).priority === 'High' ? 'priority' : 'gray'}
                 />
               )}
             </div>
@@ -200,9 +210,10 @@ export function JobDetailsPage() {
         {job.description && (
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-[#111827] mb-4">Job Description</h3>
-            <div className="prose prose-sm max-w-none text-[#64748b]">
-              <pre className="whitespace-pre-wrap font-sans">{job.description}</pre>
-            </div>
+            <div
+              className="prose prose-sm max-w-none text-[#64748b]"
+              dangerouslySetInnerHTML={{ __html: job.description }}
+            />
           </div>
         )}
 
@@ -233,9 +244,6 @@ export function JobDetailsPage() {
                       {stage.isMandatory && (
                         <Badge text="Required" variant="red" />
                       )}
-                      <span className="text-sm text-[#64748b]">
-                        {stage.candidateCount || 0} candidates
-                      </span>
                     </div>
                   </div>
                 ))}
@@ -248,19 +256,46 @@ export function JobDetailsPage() {
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-[#111827] mb-4">Candidate Management</h3>
             <div className="flex items-center gap-3">
-              <Button variant="primary">
-                View Candidates ({job.candidateCount || 0})
+              <Button variant="primary" onClick={handleViewCandidates}>
+                View Candidates
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => setIsAddCandidateOpen(true)}>
                 Add Candidate
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
                 Bulk Import
               </Button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Add Candidate Modal */}
+      {job && (
+        <AddCandidateModal
+          isOpen={isAddCandidateOpen}
+          onClose={() => setIsAddCandidateOpen(false)}
+          jobId={job.id}
+          jobTitle={job.title}
+          onSuccess={() => {
+            setIsAddCandidateOpen(false);
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Bulk Import Modal */}
+      {job && (
+        <BulkImportModal
+          isOpen={isBulkImportOpen}
+          onClose={() => setIsBulkImportOpen(false)}
+          jobId={job.id}
+          onSuccess={() => {
+            setIsBulkImportOpen(false);
+            refetch();
+          }}
+        />
+      )}
     </Layout>
   );
 }

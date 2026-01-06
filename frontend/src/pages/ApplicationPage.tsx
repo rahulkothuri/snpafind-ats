@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, type FormEvent, type DragEvent, type Chang
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { JobDetailsPanel } from '../components/JobDetailsPanel';
-import type { ScreeningQuestion } from '../types';
+import type { ScreeningQuestion, MandatoryCriteria } from '../types';
 
 // Types for the application form - enhanced with all new job fields
 interface JobDetails {
@@ -35,6 +35,8 @@ interface JobDetails {
   benefits?: string;
   // Screening questions
   screeningQuestions?: ScreeningQuestion[];
+  // Mandatory criteria
+  mandatoryCriteria?: MandatoryCriteria;
 }
 
 interface ApplicationFormData {
@@ -417,7 +419,7 @@ export function ApplicationPage() {
     }
 
     return (
-      <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
+      <div className="space-y-6 pr-1 sm:pr-2">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -544,7 +546,7 @@ export function ApplicationPage() {
   // Step 2: Personal Information, Resume, and Additional Information (Combined)
   // Responsive: Full-width fields on mobile, two-column grid on tablet/desktop
   const renderStep1 = () => (
-    <div className="space-y-6 sm:space-y-8 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
+    <div className="space-y-6 sm:space-y-8 pr-1 sm:pr-2">
       {/* Personal Information Section */}
       <div className="space-y-4">
         <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4">Personal Information</h2>
@@ -805,7 +807,7 @@ export function ApplicationPage() {
     const screeningQuestions = job?.screeningQuestions || [];
 
     return (
-      <div className="space-y-4 sm:space-y-6 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
+      <div className="space-y-4 sm:space-y-6 pr-1 sm:pr-2">
         <h2 className="text-base sm:text-lg font-semibold text-[#111827] mb-3 sm:mb-4">Review Your Application</h2>
 
         <div className="bg-[#f8fafc] rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
@@ -879,11 +881,11 @@ export function ApplicationPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Header />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
 
-          {/* LEFT COLUMN: Job Details (Scrollable) */}
-          <div className="lg:col-span-7 space-y-6 mb-8 lg:mb-0">
+          {/* LEFT COLUMN: Job Details */}
+          <div className="lg:col-span-7 space-y-4 mb-6 lg:mb-0">
             {/* Mobile Apply Button (Visible only on small screens) */}
             <div className="lg:hidden mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm sticky top-20 z-20">
               <button
@@ -904,10 +906,10 @@ export function ApplicationPage() {
 
           </div>
 
-          {/* RIGHT COLUMN: Application Form (Sticky) */}
-          <div className="lg:col-span-5 relative">
-            <div id="application-form" className="lg:sticky lg:top-24 transition-all duration-300">
-              <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
+          {/* RIGHT COLUMN: Application Form */}
+          <div className="lg:col-span-5">
+            <div id="application-form" className="transition-all duration-300">
+              <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200">
                 {/* Form Header */}
                 <div className="px-6 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                   <h3 className="text-lg font-bold">Apply Now</h3>

@@ -190,6 +190,9 @@ router.get('/jobs/:id', async (req: Request, res: Response, next: NextFunction) 
       // Screening questions for application form
       screeningQuestions: job.screeningQuestions || [],
 
+      // Mandatory criteria (Requirements 3.1)
+      mandatoryCriteria: job.mandatoryCriteria,
+
       // Legacy fields (kept for compatibility)
       location: job.location,
       employmentType: job.employmentType,
