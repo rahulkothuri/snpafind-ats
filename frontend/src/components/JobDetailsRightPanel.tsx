@@ -21,14 +21,13 @@ import {
   AddCandidateModal,
   AddNoteModal,
   MoveCandidateModal,
-  StageImportModal,
   BulkImportModal,
   calculateAverageScore
 } from './index';
 import { LegacyAdvancedFilters } from './AdvancedFilters';
 import type { Column } from './Table';
 import type { AdvancedFiltersState } from './AdvancedFilters';
-import { pipelineService, jobsService } from '../services';
+import { pipelineService, jobsService, getResumeUrl } from '../services';
 import type { BulkMoveResult, PipelineAnalytics } from '../services';
 import { extractUniqueSkills, extractUniqueSources, applyAdvancedFilters } from '../utils/filters';
 import { DEFAULT_PIPELINE_STAGES, STAGE_COLORS, getStageColors, getStageIndicatorColor } from '../constants';
@@ -886,7 +885,8 @@ export function JobDetailsRightPanel({
   // Handle View CV
   const handleViewCV = useCallback((candidate: PipelineCandidate) => {
     if (candidate.resumeUrl) {
-      window.open(candidate.resumeUrl, '_blank');
+      const fullUrl = getResumeUrl(candidate.resumeUrl);
+      window.open(fullUrl, '_blank');
     } else {
       // Optional: Show toast or alert
       console.warn('No resume available for this candidate');

@@ -640,30 +640,11 @@ router.post(
 );
 
 // Configure multer for bulk import file uploads
-const BULK_IMPORT_UPLOAD_DIR = 'uploads/bulk-imports';
 const MAX_BULK_IMPORT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_BULK_IMPORT_EXTENSIONS = ['.csv', '.xlsx', '.xls'];
-const ALLOWED_BULK_IMPORT_MIME_TYPES = [
-  'text/csv',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-];
 
-// Ensure bulk import upload directory exists
-if (!fs.existsSync(BULK_IMPORT_UPLOAD_DIR)) {
-  fs.mkdirSync(BULK_IMPORT_UPLOAD_DIR, { recursive: true });
-}
-
-const bulkImportStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, BULK_IMPORT_UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `bulk-import-${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer for memory storage (for bulk import)
+const bulkImportStorage = multer.memoryStorage();
 
 const bulkImportFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -735,23 +716,15 @@ router.post(
         let candidates;
 
         if (ext === '.csv') {
-          const content = fs.readFileSync(req.file.path, 'utf-8');
+          const content = req.file.buffer.toString('utf-8');
           candidates = parseCSV(content);
         } else if (ext === '.xlsx' || ext === '.xls') {
-          const buffer = fs.readFileSync(req.file.path);
-          candidates = await parseExcel(buffer);
+          candidates = await parseExcel(req.file.buffer);
         } else {
           return res.status(400).json({
             code: 'INVALID_FILE_TYPE',
             message: 'Unsupported file type. Please upload a CSV or Excel file.',
           });
-        }
-
-        // Clean up uploaded file
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch {
-          // Ignore cleanup errors
         }
 
         // Import candidates

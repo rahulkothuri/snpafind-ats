@@ -1,0 +1,25 @@
+# Files to ignore when building Docker image
+node_modules
+npm-debug.log
+dist
+.git
+.gitignore
+.env
+.env.*
+*.md
+.DS_Store
+
+# Development files
+.vscode
+.idea
+*.log
+coverage
+.nyc_output
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+__tests__
+
+# Uploads (will use S3 in production)
+uploads

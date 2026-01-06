@@ -1,0 +1,61 @@
+[
+    {
+        "OutputKey": "DatabaseURL",
+        "OutputValue": "See Secrets Manager: arn:aws:secretsmanager:ap-south-1:714441905024:secret:snpafind-ats/app-secrets-a4jb2E",
+        "Description": "Database connection string (retrieve from Secrets Manager)"
+    },
+    {
+        "OutputKey": "SecretsArn",
+        "OutputValue": "arn:aws:secretsmanager:ap-south-1:714441905024:secret:snpafind-ats/app-secrets-a4jb2E",
+        "Description": "Secrets Manager ARN",
+        "ExportName": "snpafind-ats-SecretsArn"
+    },
+    {
+        "OutputKey": "RDSEndpoint",
+        "OutputValue": "snpafind-ats-postgres.cfkmaa2w4m9g.ap-south-1.rds.amazonaws.com",
+        "Description": "RDS PostgreSQL Endpoint",
+        "ExportName": "snpafind-ats-RDSEndpoint"
+    },
+    {
+        "OutputKey": "RDSPort",
+        "OutputValue": "5432",
+        "Description": "RDS PostgreSQL Port",
+        "ExportName": "snpafind-ats-RDSPort"
+    },
+    {
+        "OutputKey": "VPCId",
+        "OutputValue": "vpc-027636a4e55654fd1",
+        "Description": "VPC ID",
+        "ExportName": "snpafind-ats-VPCId"
+    },
+    {
+        "OutputKey": "AppRunnerInstanceRoleArn",
+        "OutputValue": "arn:aws:iam::714441905024:role/snpafind-ats-apprunner-instance-role",
+        "Description": "App Runner Instance Role ARN",
+        "ExportName": "snpafind-ats-AppRunnerInstanceRoleArn"
+    },
+    {
+        "OutputKey": "VPCConnectorArn",
+        "OutputValue": "arn:aws:apprunner:ap-south-1:714441905024:vpcconnector/snpafind-ats-vpc-connector/1/89735dc7938f47c6bdb5a5269bf6df59",
+        "Description": "App Runner VPC Connector ARN",
+        "ExportName": "snpafind-ats-VPCConnectorArn"
+    },
+    {
+        "OutputKey": "S3BucketName",
+        "OutputValue": "snpafind-ats-uploads-714441905024",
+        "Description": "S3 Bucket Name for uploads",
+        "ExportName": "snpafind-ats-S3BucketName"
+    },
+    {
+        "OutputKey": "ECRRepositoryUri",
+        "OutputValue": "714441905024.dkr.ecr.ap-south-1.amazonaws.com/snpafind-ats-backend",
+        "Description": "ECR Repository URI",
+        "ExportName": "snpafind-ats-ECRRepositoryUri"
+    },
+    {
+        "OutputKey": "AppRunnerAccessRoleArn",
+        "OutputValue": "arn:aws:iam::714441905024:role/snpafind-ats-apprunner-access-role",
+        "Description": "App Runner Access Role ARN",
+        "ExportName": "snpafind-ats-AppRunnerAccessRoleArn"
+    }
+]

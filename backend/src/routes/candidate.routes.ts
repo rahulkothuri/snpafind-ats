@@ -14,6 +14,7 @@ import attachmentsService, {
 } from '../services/attachments.service.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth.js';
+import { uploadToS3, generateS3Key, getDownloadPresignedUrl, isS3Configured } from '../lib/s3.js';
 
 const router = Router();
 
@@ -32,16 +33,8 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `resume-${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer for memory storage (for S3 uploads)
+const storage = multer.memoryStorage();
 
 const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -75,16 +68,7 @@ if (!fs.existsSync(ATTACHMENTS_UPLOAD_DIR)) {
   fs.mkdirSync(ATTACHMENTS_UPLOAD_DIR, { recursive: true });
 }
 
-const attachmentStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, ATTACHMENTS_UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `attachment-${uniqueSuffix}${ext}`);
-  },
-});
+const attachmentStorage = multer.memoryStorage();
 
 const attachmentFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -226,6 +210,16 @@ router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response, n
     }
 
     const candidates = await candidateService.getAllByCompany(companyId);
+
+    // Enrich with presigned URLs if using S3
+    if (isS3Configured()) {
+      await Promise.all(candidates.map(async (candidate) => {
+        if (candidate.resumeUrl && !candidate.resumeUrl.startsWith('/uploads') && !candidate.resumeUrl.startsWith('http')) {
+          candidate.resumeUrl = await getDownloadPresignedUrl({ key: candidate.resumeUrl });
+        }
+      }));
+    }
+
     return res.json(candidates);
   } catch (error) {
     next(error);
@@ -247,6 +241,16 @@ router.get('/search', authenticate, async (req: AuthenticatedRequest, res: Respo
     const filters = validateBody(searchQuerySchema, req.query);
     // Use searchWithScoring to support score filtering and sorting (Requirements 25.3, 25.4)
     const candidates = await candidateService.searchWithScoring(companyId, filters);
+
+    // Enrich with presigned URLs if using S3
+    if (isS3Configured()) {
+      await Promise.all(candidates.map(async (candidate) => {
+        if (candidate.resumeUrl && !candidate.resumeUrl.startsWith('/uploads') && !candidate.resumeUrl.startsWith('http')) {
+          candidate.resumeUrl = await getDownloadPresignedUrl({ key: candidate.resumeUrl });
+        }
+      }));
+    }
+
     return res.json(candidates);
   } catch (error) {
     next(error);
@@ -260,6 +264,13 @@ router.get('/search', authenticate, async (req: AuthenticatedRequest, res: Respo
 router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const candidate = await candidateService.getById(req.params.id);
+
+    if (candidate && isS3Configured()) {
+      if (candidate.resumeUrl && !candidate.resumeUrl.startsWith('/uploads') && !candidate.resumeUrl.startsWith('http')) {
+        candidate.resumeUrl = await getDownloadPresignedUrl({ key: candidate.resumeUrl });
+      }
+    }
+
     return res.json(candidate);
   } catch (error) {
     next(error);
@@ -502,19 +513,52 @@ router.post('/:id/resume', authenticate, (req: AuthenticatedRequest, res: Respon
       }
 
       const candidateId = req.params.id;
-      const resumeUrl = `/${UPLOAD_DIR}/${req.file.filename}`;
+      const companyId = req.user?.companyId;
+
+      let resumeUrl: string;
+
+      if (isS3Configured()) {
+        const key = generateS3Key({
+          folder: 'resumes',
+          filename: req.file.originalname,
+          companyId: companyId
+        });
+
+        await uploadToS3({
+          key,
+          body: req.file.buffer,
+          contentType: req.file.mimetype,
+        });
+
+        resumeUrl = key; // Store the key, not the full URL
+      } else {
+        // Fallback to local storage (manual write since we used memoryStorage)
+        if (!fs.existsSync(UPLOAD_DIR)) {
+          fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        }
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(req.file.originalname).toLowerCase();
+        const filename = `resume-${uniqueSuffix}${ext}`;
+        fs.writeFileSync(path.join(UPLOAD_DIR, filename), req.file.buffer);
+        resumeUrl = `/${UPLOAD_DIR}/${filename}`;
+      }
 
       const candidate = await candidateService.updateResumeUrl(candidateId, resumeUrl);
+
+      // If we returned an S3 URL (key), convert it to presigned URL for response
+      if (isS3Configured()) {
+        candidate.resumeUrl = await getDownloadPresignedUrl({ key: resumeUrl });
+      }
 
       return res.json({
         message: 'Resume uploaded successfully',
         candidate,
         file: {
-          filename: req.file.filename,
+          filename: req.file.originalname, // We don't have a generated filename for S3 easily available here w/o parsing key
           originalName: req.file.originalname,
           size: req.file.size,
           mimetype: req.file.mimetype,
-          url: resumeUrl,
+          url: candidate.resumeUrl,
         },
       });
     } catch (error) {
@@ -554,6 +598,16 @@ router.get('/:id/attachments', authenticate, async (req: AuthenticatedRequest, r
   try {
     const candidateId = req.params.id;
     const attachments = await attachmentsService.getAttachments(candidateId);
+
+    // Enrich with presigned URLs if using S3
+    if (isS3Configured()) {
+      await Promise.all(attachments.map(async (attachment) => {
+        if (attachment.fileUrl && !attachment.fileUrl.startsWith('/uploads') && !attachment.fileUrl.startsWith('http')) {
+          attachment.fileUrl = await getDownloadPresignedUrl({ key: attachment.fileUrl });
+        }
+      }));
+    }
+
     return res.json(attachments);
   } catch (error) {
     next(error);
@@ -601,7 +655,35 @@ router.post('/:id/attachments', authenticate, (req: AuthenticatedRequest, res: R
       }
 
       const candidateId = req.params.id;
-      const fileUrl = `/${ATTACHMENTS_UPLOAD_DIR}/${req.file.filename}`;
+      const companyId = req.user?.companyId;
+
+      let fileUrl: string;
+
+      if (isS3Configured()) {
+        const key = generateS3Key({
+          folder: 'attachments',
+          filename: req.file.originalname,
+          companyId: companyId
+        });
+
+        await uploadToS3({
+          key,
+          body: req.file.buffer,
+          contentType: req.file.mimetype,
+        });
+
+        fileUrl = key;
+      } else {
+        // Fallback to local
+        if (!fs.existsSync(ATTACHMENTS_UPLOAD_DIR)) {
+          fs.mkdirSync(ATTACHMENTS_UPLOAD_DIR, { recursive: true });
+        }
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(req.file.originalname).toLowerCase();
+        const filename = `attachment-${uniqueSuffix}${ext}`;
+        fs.writeFileSync(path.join(ATTACHMENTS_UPLOAD_DIR, filename), req.file.buffer);
+        fileUrl = `/${ATTACHMENTS_UPLOAD_DIR}/${filename}`;
+      }
 
       const attachment = await attachmentsService.uploadAttachment({
         candidateId,
@@ -611,6 +693,10 @@ router.post('/:id/attachments', authenticate, (req: AuthenticatedRequest, res: R
         fileSize: req.file.size,
         uploadedBy: userId,
       });
+
+      if (isS3Configured()) {
+        attachment.fileUrl = await getDownloadPresignedUrl({ key: fileUrl });
+      }
 
       return res.status(201).json(attachment);
     } catch (error) {

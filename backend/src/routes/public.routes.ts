@@ -6,6 +6,7 @@ import fs from 'fs';
 import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError } from '../middleware/errorHandler.js';
 import { processAutoRejection } from '../services/autoRejection.service.js';
+import { uploadToS3, generateS3Key, isS3Configured } from '../lib/s3.js';
 
 const router = Router();
 
@@ -24,16 +25,8 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `resume-${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
 
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -304,7 +297,34 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
       }
 
       // Build resume URL if file was uploaded
-      const resumeUrl = req.file ? `/${UPLOAD_DIR}/${req.file.filename}` : null;
+      let resumeUrl: string | null = null;
+
+      if (req.file) {
+        if (isS3Configured()) {
+          const key = generateS3Key({
+            folder: 'resumes',
+            filename: req.file.originalname,
+            companyId: job.companyId
+          });
+
+          await uploadToS3({
+            key,
+            body: req.file.buffer,
+            contentType: req.file.mimetype,
+          });
+          resumeUrl = key;
+        } else {
+          // Fallback
+          if (!fs.existsSync(UPLOAD_DIR)) {
+            fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+          }
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const ext = path.extname(req.file.originalname).toLowerCase();
+          const filename = `resume-${uniqueSuffix}${ext}`;
+          fs.writeFileSync(path.join(UPLOAD_DIR, filename), req.file.buffer);
+          resumeUrl = `/${UPLOAD_DIR}/${filename}`;
+        }
+      }
 
       // Check if candidate with email already exists (Requirements 5.12)
       const existingCandidate = await prisma.candidate.findUnique({
