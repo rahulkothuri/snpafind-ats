@@ -39,7 +39,8 @@ export type EmailTemplateKey =
   | 'interview_cancellation_panel'
   | 'interview_reminder_candidate'
   | 'interview_reminder_panel'
-  | 'feedback_reminder';
+  | 'feedback_reminder'
+  | 'application_form_invitation';
 
 
 /**
@@ -63,6 +64,7 @@ export interface EmailTemplateContext {
   new_interview_datetime?: string;
   cancel_reason?: string;
   feedback_link?: string;
+  application_link?: string;
 }
 
 /**
@@ -508,6 +510,50 @@ const DEFAULT_TEMPLATES: Record<EmailTemplateKey, { subject: string; htmlContent
 </html>
     `.trim(),
   },
+
+  application_form_invitation: {
+    subject: 'You are invited to apply for {{job_title}}',
+    htmlContent: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #0b6cf0; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9f9f9; }
+    .details { background: white; padding: 15px; margin: 15px 0; border-radius: 5px; }
+    .button { display: inline-block; background: #0b6cf0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>You're Invited to Apply!</h1>
+    </div>
+    <div class="content">
+      <p>Dear {{candidate_name}},</p>
+      <p>We are excited to invite you to apply for the <strong>{{job_title}}</strong> position at <strong>{{company_name}}</strong>.</p>
+      <p>We believe your profile could be a great fit for this role and would love to learn more about you.</p>
+      <div class="details">
+        <p style="text-align: center;">
+          <a href="{{application_link}}" class="button">Complete Your Application</a>
+        </p>
+      </div>
+      <p>Please click the button above to fill out our application form. This will help us better understand your qualifications and experience.</p>
+      <p>If you have any questions, please don't hesitate to reach out.</p>
+      <p>Best regards,<br>{{company_name}}</p>
+    </div>
+    <div class="footer">
+      <p>This is an automated message from {{company_name}}</p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim(),
+  },
 };
 
 
@@ -526,16 +572,16 @@ export const emailService = {
    */
   renderTemplate(template: string, context: EmailTemplateContext): string {
     let rendered = template;
-    
+
     // Replace all {{variable}} patterns with context values
     for (const [key, value] of Object.entries(context)) {
       const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
       rendered = rendered.replace(regex, value || '');
     }
-    
+
     // Remove any remaining unreplaced variables
     rendered = rendered.replace(/\{\{[^}]+\}\}/g, '');
-    
+
     return rendered;
   },
 
@@ -562,7 +608,7 @@ export const emailService = {
           },
         },
       });
-      
+
       if (companyTemplate) {
         return {
           subject: companyTemplate.subject,
@@ -570,13 +616,13 @@ export const emailService = {
         };
       }
     }
-    
+
     // Fall back to default template
     const defaultTemplate = DEFAULT_TEMPLATES[templateKey];
     if (!defaultTemplate) {
       throw new Error(`Template not found: ${templateKey}`);
     }
-    
+
     return defaultTemplate;
   },
 
@@ -615,7 +661,7 @@ export const emailService = {
         htmlContent,
       },
     });
-    
+
     return {
       id: template.id,
       companyId: template.companyId,
@@ -644,14 +690,14 @@ export const emailService = {
     const companyTemplates = await prisma.emailTemplate.findMany({
       where: { companyId },
     });
-    
+
     const companyTemplateMap = new Map(
       companyTemplates.map(t => [t.templateKey, t])
     );
-    
+
     // Merge with defaults
     const allTemplateKeys = Object.keys(DEFAULT_TEMPLATES) as EmailTemplateKey[];
-    
+
     return allTemplateKeys.map(key => {
       const companyTemplate = companyTemplateMap.get(key);
       if (companyTemplate) {
@@ -682,7 +728,7 @@ export const emailService = {
   async sendEmail(options: SendEmailOptions): Promise<EmailSendResult> {
     try {
       const from = options.from || `${DEFAULT_FROM_NAME} <${DEFAULT_FROM_EMAIL}>`;
-      
+
       const result = await getResendClient().emails.send({
         from,
         to: Array.isArray(options.to) ? options.to : [options.to],
@@ -690,7 +736,7 @@ export const emailService = {
         html: options.html,
         replyTo: options.replyTo,
       });
-      
+
       if (result.error) {
         console.error('Resend error:', result.error);
         return {
@@ -698,7 +744,7 @@ export const emailService = {
           error: result.error.message,
         };
       }
-      
+
       return {
         success: true,
         messageId: result.data?.id,
@@ -728,7 +774,7 @@ export const emailService = {
     const candidate = interview.jobCandidate?.candidate;
     const job = interview.jobCandidate?.job;
     const panelMembers = interview.panelMembers || [];
-    
+
     // Get meeting link or location based on mode
     let meetingInfo = '';
     if (interview.mode === 'in_person') {
@@ -736,7 +782,7 @@ export const emailService = {
     } else {
       meetingInfo = interview.meetingLink || 'Meeting link will be provided';
     }
-    
+
     return {
       candidate_name: candidate?.name || 'Candidate',
       job_title: job?.title || 'Position',
@@ -765,14 +811,14 @@ export const emailService = {
     if (!candidate?.email) {
       return { success: false, error: 'Candidate email not found' };
     }
-    
+
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_confirmation_candidate', companyId);
     const context = this.buildInterviewContext(interview);
-    
+
     const subject = this.renderTemplate(template.subject, context);
     const html = this.renderTemplate(template.htmlContent, context);
-    
+
     return this.sendEmail({
       to: candidate.email,
       subject,
@@ -791,28 +837,28 @@ export const emailService = {
     const panelMembers = interview.panelMembers || [];
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_confirmation_panel', companyId);
-    
+
     const results: EmailSendResult[] = [];
-    
+
     for (const panelMember of panelMembers) {
       const user = panelMember.user;
       if (!user?.email) continue;
-      
+
       const context = this.buildInterviewContext(interview);
       context.interviewer_name = user.name;
-      
+
       const subject = this.renderTemplate(template.subject, context);
       const html = this.renderTemplate(template.htmlContent, context);
-      
+
       const result = await this.sendEmail({
         to: user.email,
         subject,
         html,
       });
-      
+
       results.push(result);
     }
-    
+
     return results;
   },
 
@@ -831,7 +877,7 @@ export const emailService = {
       this.sendInterviewConfirmationToCandidate(interview),
       this.sendInterviewInvitationToPanel(interview),
     ]);
-    
+
     return { candidateResult, panelResults };
   },
 
@@ -852,16 +898,16 @@ export const emailService = {
     if (!candidate?.email) {
       return { success: false, error: 'Candidate email not found' };
     }
-    
+
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_reschedule_candidate', companyId);
     const context = this.buildInterviewContext(interview);
     context.old_interview_datetime = formatForEmail(oldScheduledAt, interview.timezone);
     context.new_interview_datetime = context.interview_datetime;
-    
+
     const subject = this.renderTemplate(template.subject, context);
     const html = this.renderTemplate(template.htmlContent, context);
-    
+
     return this.sendEmail({
       to: candidate.email,
       subject,
@@ -884,30 +930,30 @@ export const emailService = {
     const panelMembers = interview.panelMembers || [];
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_reschedule_panel', companyId);
-    
+
     const results: EmailSendResult[] = [];
-    
+
     for (const panelMember of panelMembers) {
       const user = panelMember.user;
       if (!user?.email) continue;
-      
+
       const context = this.buildInterviewContext(interview);
       context.interviewer_name = user.name;
       context.old_interview_datetime = formatForEmail(oldScheduledAt, interview.timezone);
       context.new_interview_datetime = context.interview_datetime;
-      
+
       const subject = this.renderTemplate(template.subject, context);
       const html = this.renderTemplate(template.htmlContent, context);
-      
+
       const result = await this.sendEmail({
         to: user.email,
         subject,
         html,
       });
-      
+
       results.push(result);
     }
-    
+
     return results;
   },
 
@@ -930,7 +976,7 @@ export const emailService = {
       this.sendRescheduleToCandidate(interview, oldScheduledAt),
       this.sendRescheduleToPanel(interview, oldScheduledAt),
     ]);
-    
+
     return { candidateResult, panelResults };
   },
 
@@ -947,15 +993,15 @@ export const emailService = {
     if (!candidate?.email) {
       return { success: false, error: 'Candidate email not found' };
     }
-    
+
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_cancellation_candidate', companyId);
     const context = this.buildInterviewContext(interview);
     context.cancel_reason = interview.cancelReason || 'No reason provided';
-    
+
     const subject = this.renderTemplate(template.subject, context);
     const html = this.renderTemplate(template.htmlContent, context);
-    
+
     return this.sendEmail({
       to: candidate.email,
       subject,
@@ -974,29 +1020,29 @@ export const emailService = {
     const panelMembers = interview.panelMembers || [];
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_cancellation_panel', companyId);
-    
+
     const results: EmailSendResult[] = [];
-    
+
     for (const panelMember of panelMembers) {
       const user = panelMember.user;
       if (!user?.email) continue;
-      
+
       const context = this.buildInterviewContext(interview);
       context.interviewer_name = user.name;
       context.cancel_reason = interview.cancelReason || 'No reason provided';
-      
+
       const subject = this.renderTemplate(template.subject, context);
       const html = this.renderTemplate(template.htmlContent, context);
-      
+
       const result = await this.sendEmail({
         to: user.email,
         subject,
         html,
       });
-      
+
       results.push(result);
     }
-    
+
     return results;
   },
 
@@ -1015,7 +1061,7 @@ export const emailService = {
       this.sendCancellationToCandidate(interview),
       this.sendCancellationToPanel(interview),
     ]);
-    
+
     return { candidateResult, panelResults };
   },
 
@@ -1032,14 +1078,14 @@ export const emailService = {
     if (!candidate?.email) {
       return { success: false, error: 'Candidate email not found' };
     }
-    
+
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_reminder_candidate', companyId);
     const context = this.buildInterviewContext(interview);
-    
+
     const subject = this.renderTemplate(template.subject, context);
     const html = this.renderTemplate(template.htmlContent, context);
-    
+
     return this.sendEmail({
       to: candidate.email,
       subject,
@@ -1062,15 +1108,15 @@ export const emailService = {
     if (!panelMember.email) {
       return { success: false, error: 'Panel member email not found' };
     }
-    
+
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('interview_reminder_panel', companyId);
     const context = this.buildInterviewContext(interview);
     context.interviewer_name = panelMember.name;
-    
+
     const subject = this.renderTemplate(template.subject, context);
     const html = this.renderTemplate(template.htmlContent, context);
-    
+
     return this.sendEmail({
       to: panelMember.email,
       subject,
@@ -1088,14 +1134,14 @@ export const emailService = {
   async sendReminderToPanel(interview: Interview): Promise<EmailSendResult[]> {
     const panelMembers = interview.panelMembers || [];
     const results: EmailSendResult[] = [];
-    
+
     for (const pm of panelMembers) {
       if (pm.user) {
         const result = await this.sendReminderToPanelMember(interview, pm.user);
         results.push(result);
       }
     }
-    
+
     return results;
   },
 
@@ -1115,15 +1161,15 @@ export const emailService = {
     if (!panelMember.email) {
       return { success: false, error: 'Panel member email not found' };
     }
-    
+
     const companyId = interview.jobCandidate?.job?.companyId;
     const template = await this.getTemplate('feedback_reminder', companyId);
     const context = this.buildInterviewContext(interview);
     context.interviewer_name = panelMember.name;
-    
+
     const subject = this.renderTemplate(template.subject, context);
     const html = this.renderTemplate(template.htmlContent, context);
-    
+
     return this.sendEmail({
       to: panelMember.email,
       subject,
@@ -1141,7 +1187,7 @@ export const emailService = {
     const now = new Date();
     const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const in23Hours = new Date(now.getTime() + 23 * 60 * 60 * 1000);
-    
+
     const interviews = await prisma.interview.findMany({
       where: {
         status: 'scheduled',
@@ -1170,7 +1216,7 @@ export const emailService = {
         },
       },
     });
-    
+
     // Map to Interview type
     return interviews.map(i => ({
       id: i.id,
@@ -1253,7 +1299,7 @@ export const emailService = {
     const now = new Date();
     const in1Hour = new Date(now.getTime() + 60 * 60 * 1000);
     const in50Minutes = new Date(now.getTime() + 50 * 60 * 1000);
-    
+
     const interviews = await prisma.interview.findMany({
       where: {
         status: 'scheduled',
@@ -1282,7 +1328,7 @@ export const emailService = {
         },
       },
     });
-    
+
     // Map to Interview type (simplified for brevity)
     return interviews.map(i => ({
       id: i.id,
@@ -1365,22 +1411,62 @@ export const emailService = {
   }> {
     let candidateReminders = 0;
     let panelReminders = 0;
-    
+
     // Send candidate reminders (24 hours before)
     const candidateInterviews = await this.getInterviewsNeedingCandidateReminder();
     for (const interview of candidateInterviews) {
       const result = await this.sendReminderToCandidate(interview);
       if (result.success) candidateReminders++;
     }
-    
+
     // Send panel reminders (1 hour before)
     const panelInterviews = await this.getInterviewsNeedingPanelReminder();
     for (const interview of panelInterviews) {
       const results = await this.sendReminderToPanel(interview);
       panelReminders += results.filter(r => r.success).length;
     }
-    
+
     return { candidateReminders, panelReminders };
+  },
+
+  /**
+   * Send application form invitation email to a candidate
+   * Used for bulk import workflow when candidates need to complete application form
+   * 
+   * @param options - Candidate and job details for the invitation
+   * @returns Send result with success status
+   */
+  async sendApplicationFormInvitation(options: {
+    candidateEmail: string;
+    candidateName: string;
+    jobId: string;
+    jobTitle: string;
+    companyName: string;
+    companyId?: string;
+  }): Promise<EmailSendResult> {
+    const { candidateEmail, candidateName, jobId, jobTitle, companyName, companyId } = options;
+
+    // Build application link - uses the public application page with pre-filled email
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const applicationLink = `${baseUrl}/apply/${jobId}?email=${encodeURIComponent(candidateEmail)}`;
+
+    const template = await this.getTemplate('application_form_invitation', companyId);
+
+    const context: EmailTemplateContext = {
+      candidate_name: candidateName,
+      job_title: jobTitle,
+      company_name: companyName,
+      application_link: applicationLink,
+    };
+
+    const subject = this.renderTemplate(template.subject, context);
+    const html = this.renderTemplate(template.htmlContent, context);
+
+    return this.sendEmail({
+      to: candidateEmail,
+      subject,
+      html,
+    });
   },
 };
 

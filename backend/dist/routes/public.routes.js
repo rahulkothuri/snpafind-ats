@@ -296,21 +296,60 @@ router.post('/applications', (req, res, next) => {
                         candidateId: candidate.id,
                     },
                 },
-            });
-            if (existingApplication) {
-                return res.status(409).json({
-                    code: 'ALREADY_APPLIED',
-                    message: 'You have already applied to this job',
-                });
-            }
-            // Create JobCandidate association with "Applied" stage (Requirements 6.2)
-            const jobCandidate = await prisma.jobCandidate.create({
-                data: {
-                    jobId: data.jobId,
-                    candidateId: candidate.id,
-                    currentStageId: appliedStage.id,
+                include: {
+                    currentStage: true,
                 },
             });
+            let jobCandidate;
+            let movedFromQueue = false;
+            if (existingApplication) {
+                // Check if candidate is in Queue stage (from bulk import)
+                if (existingApplication.currentStage.name === 'Queue') {
+                    // Move candidate from Queue to Applied stage
+                    jobCandidate = await prisma.jobCandidate.update({
+                        where: { id: existingApplication.id },
+                        data: {
+                            currentStageId: appliedStage.id,
+                        },
+                    });
+                    movedFromQueue = true;
+                    // Create stage history entry for the move
+                    await prisma.stageHistory.updateMany({
+                        where: {
+                            jobCandidateId: existingApplication.id,
+                            exitedAt: null,
+                        },
+                        data: {
+                            exitedAt: new Date(),
+                        },
+                    });
+                    await prisma.stageHistory.create({
+                        data: {
+                            jobCandidateId: existingApplication.id,
+                            stageId: appliedStage.id,
+                            stageName: appliedStage.name,
+                            comment: 'Completed application form',
+                        },
+                    });
+                }
+                else {
+                    // Already applied (not in Queue stage)
+                    return res.status(409).json({
+                        code: 'ALREADY_APPLIED',
+                        message: 'You have already applied to this job',
+                    });
+                }
+            }
+            else {
+                // Create JobCandidate association with "Applied" stage (Requirements 6.2)
+                jobCandidate = await prisma.jobCandidate.create({
+                    data: {
+                        jobId: data.jobId,
+                        candidateId: candidate.id,
+                        currentStageId: appliedStage.id,
+                    },
+                });
+            }
             // Create activity record for the application
             // Parse screening answers if provided
             let screeningAnswers = null;
@@ -327,7 +366,9 @@ router.post('/applications', (req, res, next) => {
                     candidateId: candidate.id,
                     jobCandidateId: jobCandidate.id,
                     activityType: 'stage_change',
-                    description: 'Applied via public application form',
+                    description: movedFromQueue
+                        ? 'Completed application form (moved from Queue to Applied)'
+                        : 'Applied via public application form',
                     metadata: {
                         linkedinProfile: data.linkedinProfile,
                         portfolioUrl: data.portfolioUrl,
@@ -338,11 +379,17 @@ router.post('/applications', (req, res, next) => {
                     },
                 },
             });
-            // Process auto-rejection rules (Requirements 4.3, 9.2, 9.3, 9.4)
-            // This is non-retroactive - only applies to new applications (Requirements 4.8)
+            // Process auto-rejection rules (Requirements 4.6, 9.2, 9.3, 9.5, 9.6)
+            // This is non-retroactive - only applies to new applications (Requirements 4.11)
             let wasAutoRejected = false;
             try {
-                wasAutoRejected = await processAutoRejection(jobCandidate.id, candidate.id, candidate.experienceYears, data.jobId);
+                wasAutoRejected = await processAutoRejection(jobCandidate.id, candidate.id, {
+                    experience: candidate.experienceYears,
+                    location: candidate.location,
+                    skills: candidate.skills || [],
+                    education: undefined, // Not available in application data
+                    salaryExpectation: data.desiredSalary ? parseFloat(data.desiredSalary) : undefined,
+                }, data.jobId);
             }
             catch (autoRejectionError) {
                 // Log but don't fail the application if auto-rejection fails
@@ -353,6 +400,7 @@ router.post('/applications', (req, res, next) => {
                 applicationId: jobCandidate.id,
                 candidateId: candidate.id,
                 isNewCandidate,
+                movedFromQueue,
                 wasAutoRejected,
                 message: wasAutoRejected
                     ? 'Application submitted but did not meet minimum requirements'

@@ -11,7 +11,7 @@ import type { Interview, User } from '../types/index.js';
  * Email template types
  * Requirements: 16.1
  */
-export type EmailTemplateKey = 'interview_confirmation_candidate' | 'interview_confirmation_panel' | 'interview_reschedule_candidate' | 'interview_reschedule_panel' | 'interview_cancellation_candidate' | 'interview_cancellation_panel' | 'interview_reminder_candidate' | 'interview_reminder_panel' | 'feedback_reminder';
+export type EmailTemplateKey = 'interview_confirmation_candidate' | 'interview_confirmation_panel' | 'interview_reschedule_candidate' | 'interview_reschedule_panel' | 'interview_cancellation_candidate' | 'interview_cancellation_panel' | 'interview_reminder_candidate' | 'interview_reminder_panel' | 'feedback_reminder' | 'application_form_invitation';
 /**
  * Template variable context for email rendering
  * Requirements: 16.2
@@ -33,6 +33,7 @@ export interface EmailTemplateContext {
     new_interview_datetime?: string;
     cancel_reason?: string;
     feedback_link?: string;
+    application_link?: string;
 }
 /**
  * Email template data structure
@@ -273,6 +274,21 @@ export declare const emailService: {
         candidateReminders: number;
         panelReminders: number;
     }>;
+    /**
+     * Send application form invitation email to a candidate
+     * Used for bulk import workflow when candidates need to complete application form
+     *
+     * @param options - Candidate and job details for the invitation
+     * @returns Send result with success status
+     */
+    sendApplicationFormInvitation(options: {
+        candidateEmail: string;
+        candidateName: string;
+        jobId: string;
+        jobTitle: string;
+        companyName: string;
+        companyId?: string;
+    }): Promise<EmailSendResult>;
 };
 export default emailService;
 //# sourceMappingURL=email.service.d.ts.map

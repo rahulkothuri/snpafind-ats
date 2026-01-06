@@ -4,6 +4,8 @@ import { AnalyticsService } from '../services/analytics.service.js';
 import { authenticate } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import prisma from '../lib/prisma.js';
+import PdfPrinter from 'pdfmake';
+import ExcelJS from 'exceljs';
 const router = Router();
 const analyticsService = new AnalyticsService();
 // Validation schemas
@@ -380,8 +382,8 @@ router.get('/export', authenticate, async (req, res, next) => {
             }
         };
         if (format === 'pdf') {
-            // Generate PDF report
-            const pdfBuffer = await generatePDFReport(exportData);
+            // Generate PDF report using pdfmake
+            const pdfBuffer = await generatePDFReportNew(exportData);
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `attachment; filename="analytics-report-${new Date().toISOString().split('T')[0]}.pdf"`);
             res.send(pdfBuffer);
@@ -508,15 +510,207 @@ Breached:               ${exportData.data.sla.summary?.breached || 0}
 `;
     return Buffer.from(reportContent, 'utf-8');
 }
+// PDF fonts configuration for pdfmake
+const fonts = {
+    Roboto: {
+        normal: 'Helvetica',
+        bold: 'Helvetica-Bold',
+        italics: 'Helvetica-Oblique',
+        bolditalics: 'Helvetica-BoldOblique'
+    }
+};
 /**
- * Generate Excel report from analytics data
+ * Generate PDF report from analytics data using pdfmake
+ * Requirements: 11.1 - PDF export includes all visible data
+ */
+async function generatePDFReportNew(exportData) {
+    const printer = new PdfPrinter(fonts);
+    const docDefinition = {
+        pageSize: 'A4',
+        pageMargins: [40, 60, 40, 60],
+        content: [
+            // Header
+            { text: 'ANALYTICS REPORT', style: 'header' },
+            { text: `Generated: ${new Date(exportData.metadata.generatedAt).toLocaleString()}`, style: 'subheader' },
+            { text: '', margin: [0, 10] },
+            // KPI Metrics Section
+            { text: 'KEY PERFORMANCE INDICATORS', style: 'sectionHeader' },
+            {
+                table: {
+                    widths: ['*', 'auto'],
+                    body: [
+                        ['Active Roles', String(exportData.data.kpis.activeRoles)],
+                        ['Active Candidates', String(exportData.data.kpis.activeCandidates)],
+                        ['Avg Time to Fill', `${exportData.data.kpis.avgTimeToFill} days`],
+                        ['Offer Acceptance Rate', `${exportData.data.kpis.offerAcceptanceRate}%`],
+                        ['Total Hires', String(exportData.data.kpis.totalHires)],
+                        ['Total Offers', String(exportData.data.kpis.totalOffers || 0)],
+                    ]
+                },
+                layout: 'lightHorizontalLines',
+                margin: [0, 5, 0, 15]
+            },
+            // Funnel Analytics Section
+            { text: 'HIRING FUNNEL', style: 'sectionHeader' },
+            {
+                table: {
+                    widths: ['*', 'auto', 'auto'],
+                    body: [
+                        [{ text: 'Stage', bold: true }, { text: 'Candidates', bold: true }, { text: 'Percentage', bold: true }],
+                        ...(exportData.data.funnel.stages?.map((stage) => [
+                            stage.name,
+                            String(stage.count),
+                            `${stage.percentage}%`
+                        ]) || [])
+                    ]
+                },
+                layout: 'lightHorizontalLines',
+                margin: [0, 5, 0, 15]
+            },
+            { text: `Overall Conversion: ${exportData.data.funnel.overallConversionRate}%`, style: 'note' },
+            // Time Analytics Section
+            { text: 'TIME ANALYTICS', style: 'sectionHeader', pageBreak: 'before' },
+            { text: 'Time in Stage:', style: 'subsectionHeader' },
+            {
+                table: {
+                    widths: ['*', 'auto', 'auto'],
+                    body: [
+                        [{ text: 'Stage', bold: true }, { text: 'Avg Days', bold: true }, { text: 'Status', bold: true }],
+                        ...(exportData.data.timeInStage.stages?.map((stage) => [
+                            stage.stageName,
+                            String(stage.avgDays),
+                            stage.isBottleneck ? 'BOTTLENECK' : 'OK'
+                        ]) || [])
+                    ]
+                },
+                layout: 'lightHorizontalLines',
+                margin: [0, 5, 0, 15]
+            },
+            // Recruiter Productivity
+            { text: 'RECRUITER PRODUCTIVITY', style: 'sectionHeader' },
+            {
+                table: {
+                    widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+                    body: [
+                        [{ text: 'Name', bold: true }, { text: 'Roles', bold: true }, { text: 'Hires', bold: true }, { text: 'Offers', bold: true }, { text: 'TTF', bold: true }],
+                        ...(exportData.data.recruiters?.slice(0, 10).map((r) => [
+                            r.name,
+                            String(r.activeRoles),
+                            String(r.hires),
+                            String(r.offersMade),
+                            `${r.avgTimeToFill}d`
+                        ]) || [])
+                    ]
+                },
+                layout: 'lightHorizontalLines',
+                margin: [0, 5, 0, 15]
+            },
+            // SLA Status
+            { text: 'SLA STATUS SUMMARY', style: 'sectionHeader' },
+            {
+                columns: [
+                    { text: `On Track: ${exportData.data.sla.summary?.onTrack || 0}`, style: 'stat', color: 'green' },
+                    { text: `At Risk: ${exportData.data.sla.summary?.atRisk || 0}`, style: 'stat', color: 'orange' },
+                    { text: `Breached: ${exportData.data.sla.summary?.breached || 0}`, style: 'stat', color: 'red' },
+                ]
+            }
+        ],
+        styles: {
+            header: { fontSize: 18, bold: true, alignment: 'center', margin: [0, 0, 0, 10] },
+            subheader: { fontSize: 10, color: '#666666', alignment: 'center', margin: [0, 0, 0, 20] },
+            sectionHeader: { fontSize: 12, bold: true, color: '#333333', margin: [0, 15, 0, 5] },
+            subsectionHeader: { fontSize: 10, bold: true, color: '#555555', margin: [0, 10, 0, 5] },
+            note: { fontSize: 9, color: '#666666', italics: true, margin: [0, 5, 0, 10] },
+            stat: { fontSize: 11, bold: true, margin: [0, 5] }
+        }
+    };
+    return new Promise((resolve, reject) => {
+        try {
+            const pdfDoc = printer.createPdfKitDocument(docDefinition);
+            const chunks = [];
+            pdfDoc.on('data', (chunk) => chunks.push(chunk));
+            pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+            pdfDoc.on('error', reject);
+            pdfDoc.end();
+        }
+        catch (error) {
+            reject(error);
+        }
+    });
+}
+/**
+ * Generate Excel report from analytics data using ExcelJS
  * Requirements: 11.2 - Excel export includes all visible data
  */
+async function generateExcelReportNew(exportData) {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SnapFind ATS';
+    workbook.created = new Date();
+    // Style definitions
+    const headerStyle = {
+        font: { bold: true, color: { argb: 'FFFFFFFF' } },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } },
+        alignment: { horizontal: 'center' }
+    };
+    // KPI Sheet
+    const kpiSheet = workbook.addWorksheet('KPI Metrics');
+    kpiSheet.columns = [{ width: 25 }, { width: 20 }];
+    kpiSheet.addRow(['Metric', 'Value']).eachCell(c => Object.assign(c, { style: headerStyle }));
+    kpiSheet.addRow(['Active Roles', exportData.data.kpis.activeRoles]);
+    kpiSheet.addRow(['Active Candidates', exportData.data.kpis.activeCandidates]);
+    kpiSheet.addRow(['Avg Time to Fill', `${exportData.data.kpis.avgTimeToFill} days`]);
+    kpiSheet.addRow(['Offer Acceptance Rate', `${exportData.data.kpis.offerAcceptanceRate}%`]);
+    kpiSheet.addRow(['Total Hires', exportData.data.kpis.totalHires]);
+    kpiSheet.addRow(['Total Offers', exportData.data.kpis.totalOffers || 0]);
+    kpiSheet.addRow(['Interviews Today', exportData.data.kpis.interviewsToday]);
+    kpiSheet.addRow(['Interviews This Week', exportData.data.kpis.interviewsThisWeek]);
+    // Funnel Sheet
+    const funnelSheet = workbook.addWorksheet('Hiring Funnel');
+    funnelSheet.columns = [{ width: 20 }, { width: 15 }, { width: 15 }];
+    funnelSheet.addRow(['Stage', 'Candidates', 'Percentage']).eachCell(c => Object.assign(c, { style: headerStyle }));
+    exportData.data.funnel.stages?.forEach((stage) => {
+        funnelSheet.addRow([stage.name, stage.count, `${stage.percentage}%`]);
+    });
+    funnelSheet.addRow([]);
+    funnelSheet.addRow(['Total Applicants', exportData.data.funnel.totalApplicants]);
+    funnelSheet.addRow(['Total Hired', exportData.data.funnel.totalHired]);
+    funnelSheet.addRow(['Overall Conversion', `${exportData.data.funnel.overallConversionRate}%`]);
+    // Time Analytics Sheet
+    const timeSheet = workbook.addWorksheet('Time Analytics');
+    timeSheet.columns = [{ width: 25 }, { width: 15 }, { width: 15 }];
+    timeSheet.addRow(['Stage', 'Avg Days', 'Status']).eachCell(c => Object.assign(c, { style: headerStyle }));
+    exportData.data.timeInStage.stages?.forEach((stage) => {
+        const row = timeSheet.addRow([stage.stageName, stage.avgDays, stage.isBottleneck ? 'BOTTLENECK' : 'OK']);
+        if (stage.isBottleneck)
+            row.eachCell(c => { c.font = { color: { argb: 'FFDC2626' } }; });
+    });
+    // Recruiter Sheet
+    const recruiterSheet = workbook.addWorksheet('Recruiters');
+    recruiterSheet.columns = [{ width: 25 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }];
+    recruiterSheet.addRow(['Name', 'Roles', 'Hires', 'Offers', 'CVs Added', 'TTF']).eachCell(c => Object.assign(c, { style: headerStyle }));
+    exportData.data.recruiters?.forEach((r) => {
+        recruiterSheet.addRow([r.name, r.activeRoles, r.hires, r.offersMade, r.cvsAdded, `${r.avgTimeToFill}d`]);
+    });
+    // Source Performance Sheet
+    const sourceSheet = workbook.addWorksheet('Sources');
+    sourceSheet.columns = [{ width: 20 }, { width: 15 }, { width: 15 }, { width: 15 }];
+    sourceSheet.addRow(['Source', 'Candidates', 'Percentage', 'Hire Rate']).eachCell(c => Object.assign(c, { style: headerStyle }));
+    exportData.data.sources?.forEach((s) => {
+        sourceSheet.addRow([s.source, s.candidateCount, `${s.percentage}%`, `${s.hireRate}%`]);
+    });
+    // SLA Sheet
+    const slaSheet = workbook.addWorksheet('SLA Status');
+    slaSheet.columns = [{ width: 15 }, { width: 15 }];
+    slaSheet.addRow(['Status', 'Count']).eachCell(c => Object.assign(c, { style: headerStyle }));
+    slaSheet.addRow(['On Track', exportData.data.sla.summary?.onTrack || 0]);
+    slaSheet.addRow(['At Risk', exportData.data.sla.summary?.atRisk || 0]);
+    slaSheet.addRow(['Breached', exportData.data.sla.summary?.breached || 0]);
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+}
+// Old Excel function kept for backward compatibility
 async function generateExcelReport(exportData) {
-    // Generate CSV format that can be opened in Excel
-    // In production, use a library like exceljs
-    const csvContent = await generateCSVReport(exportData);
-    return Buffer.from(csvContent, 'utf-8');
+    return generateExcelReportNew(exportData);
 }
 /**
  * Generate CSV report from analytics data

@@ -221,6 +221,9 @@ describe('Property 11: Application submission round-trip', () => {
                 title: null,
                 department: null,
                 internalMobility: false,
+                domainScore: null,
+                industryScore: null,
+                keyResponsibilitiesScore: null,
                 createdAt: now,
                 updatedAt: now,
             };
@@ -307,6 +310,9 @@ describe('Property 12: Existing email updates candidate', () => {
                 title: null,
                 department: null,
                 internalMobility: false,
+                domainScore: null,
+                industryScore: null,
+                keyResponsibilitiesScore: null,
                 createdAt: now,
                 updatedAt: now,
             };

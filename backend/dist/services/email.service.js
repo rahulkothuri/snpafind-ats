@@ -421,6 +421,49 @@ const DEFAULT_TEMPLATES = {
 </html>
     `.trim(),
     },
+    application_form_invitation: {
+        subject: 'You are invited to apply for {{job_title}}',
+        htmlContent: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #0b6cf0; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9f9f9; }
+    .details { background: white; padding: 15px; margin: 15px 0; border-radius: 5px; }
+    .button { display: inline-block; background: #0b6cf0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>You're Invited to Apply!</h1>
+    </div>
+    <div class="content">
+      <p>Dear {{candidate_name}},</p>
+      <p>We are excited to invite you to apply for the <strong>{{job_title}}</strong> position at <strong>{{company_name}}</strong>.</p>
+      <p>We believe your profile could be a great fit for this role and would love to learn more about you.</p>
+      <div class="details">
+        <p style="text-align: center;">
+          <a href="{{application_link}}" class="button">Complete Your Application</a>
+        </p>
+      </div>
+      <p>Please click the button above to fill out our application form. This will help us better understand your qualifications and experience.</p>
+      <p>If you have any questions, please don't hesitate to reach out.</p>
+      <p>Best regards,<br>{{company_name}}</p>
+    </div>
+    <div class="footer">
+      <p>This is an automated message from {{company_name}}</p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim(),
+    },
 };
 /**
  * Email Service
@@ -1158,6 +1201,33 @@ export const emailService = {
             panelReminders += results.filter(r => r.success).length;
         }
         return { candidateReminders, panelReminders };
+    },
+    /**
+     * Send application form invitation email to a candidate
+     * Used for bulk import workflow when candidates need to complete application form
+     *
+     * @param options - Candidate and job details for the invitation
+     * @returns Send result with success status
+     */
+    async sendApplicationFormInvitation(options) {
+        const { candidateEmail, candidateName, jobId, jobTitle, companyName, companyId } = options;
+        // Build application link - uses the public application page with pre-filled email
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const applicationLink = `${baseUrl}/apply/${jobId}?email=${encodeURIComponent(candidateEmail)}`;
+        const template = await this.getTemplate('application_form_invitation', companyId);
+        const context = {
+            candidate_name: candidateName,
+            job_title: jobTitle,
+            company_name: companyName,
+            application_link: applicationLink,
+        };
+        const subject = this.renderTemplate(template.subject, context);
+        const html = this.renderTemplate(template.htmlContent, context);
+        return this.sendEmail({
+            to: candidateEmail,
+            subject,
+            html,
+        });
     },
 };
 export default emailService;

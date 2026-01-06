@@ -5,6 +5,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  * 
  * A searchable multi-select dropdown with tag display for selected items.
  * Used for skills selection and location multi-select in job forms.
+ * 
+ * Features:
+ * - allowCustom: allows typing custom values and pressing Enter to add them
+ * - Fixed overflow issues with proper z-index and container handling
  */
 
 export interface MultiSelectOption {
@@ -22,6 +26,8 @@ export interface MultiSelectProps {
   disabled?: boolean;
   error?: boolean;
   maxDisplayTags?: number;
+  allowCustom?: boolean; // New prop: allow adding custom values
+  customPlaceholder?: string; // Placeholder when allowCustom is true
 }
 
 export function MultiSelect({
@@ -34,6 +40,8 @@ export function MultiSelect({
   disabled = false,
   error = false,
   maxDisplayTags = 5,
+  allowCustom = false,
+  customPlaceholder = 'Type and press Enter to add...',
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,8 +57,17 @@ export function MultiSelect({
       !value.includes(option.value)
   );
 
-  // Get selected option labels for display
-  const selectedOptions = options.filter((option) => value.includes(option.value));
+  // Get selected option labels for display (handle both predefined and custom values)
+  const getOptionLabel = (val: string) => {
+    const option = options.find((opt) => opt.value === val);
+    return option ? option.label : val; // Show custom value as-is if not in options
+  };
+
+  // Determine if the current search term is a new custom value
+  const canAddCustomValue = allowCustom &&
+    searchTerm.trim() !== '' &&
+    !value.includes(searchTerm.trim()) &&
+    !options.some(opt => opt.value.toLowerCase() === searchTerm.trim().toLowerCase());
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -76,6 +93,17 @@ export function MultiSelect({
     }
   }, [highlightedIndex]);
 
+  // Add custom value
+  const handleAddCustom = () => {
+    const customValue = searchTerm.trim();
+    if (customValue && !value.includes(customValue)) {
+      onChange([...value, customValue]);
+      setSearchTerm('');
+      setHighlightedIndex(-1);
+      inputRef.current?.focus();
+    }
+  };
+
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
@@ -100,6 +128,9 @@ export function MultiSelect({
           event.preventDefault();
           if (isOpen && highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
             handleSelect(filteredOptions[highlightedIndex].value);
+          } else if (canAddCustomValue) {
+            // Add custom value when pressing Enter
+            handleAddCustom();
           } else if (!isOpen) {
             setIsOpen(true);
           }
@@ -117,7 +148,7 @@ export function MultiSelect({
           break;
       }
     },
-    [disabled, isOpen, highlightedIndex, filteredOptions, searchTerm, value, onChange]
+    [disabled, isOpen, highlightedIndex, filteredOptions, searchTerm, value, onChange, canAddCustomValue]
   );
 
   const handleSelect = (optionValue: string) => {
@@ -138,6 +169,14 @@ export function MultiSelect({
     }
   };
 
+  // Determine the placeholder text
+  const getPlaceholder = () => {
+    if (value.length === 0) {
+      return allowCustom ? customPlaceholder : placeholder;
+    }
+    return allowCustom ? 'Add more...' : searchPlaceholder;
+  };
+
   return (
     <div ref={containerRef} className="relative">
       {/* Selected tags and search input container */}
@@ -145,28 +184,28 @@ export function MultiSelect({
         onClick={handleContainerClick}
         className={`
           min-h-[42px] px-3 py-2 border rounded-lg bg-white
-          flex flex-wrap items-center gap-1.5 cursor-text
+          flex flex-wrap items-center gap-1.5 cursor-text overflow-visible
           ${error ? 'border-red-500' : 'border-[#e2e8f0]'}
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'hover:border-[#0b6cf0]'}
           ${isOpen ? 'ring-2 ring-[#0b6cf0] border-transparent' : ''}
         `}
       >
         {/* Selected tags */}
-        {selectedOptions.slice(0, maxDisplayTags).map((option) => (
+        {value.slice(0, maxDisplayTags).map((val) => (
           <span
-            key={option.value}
-            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#e8f4fd] text-[#0b6cf0] text-sm rounded-md"
+            key={val}
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#e8f4fd] text-[#0b6cf0] text-sm rounded-md whitespace-nowrap"
           >
-            {option.label}
+            {getOptionLabel(val)}
             {!disabled && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleRemove(option.value);
+                  handleRemove(val);
                 }}
                 className="hover:text-[#0a5ed4] focus:outline-none"
-                aria-label={`Remove ${option.label}`}
+                aria-label={`Remove ${getOptionLabel(val)}`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -175,11 +214,11 @@ export function MultiSelect({
             )}
           </span>
         ))}
-        
+
         {/* Show count if more items selected than maxDisplayTags */}
-        {selectedOptions.length > maxDisplayTags && (
+        {value.length > maxDisplayTags && (
           <span className="text-sm text-[#64748b]">
-            +{selectedOptions.length - maxDisplayTags} more
+            +{value.length - maxDisplayTags} more
           </span>
         )}
 
@@ -196,7 +235,7 @@ export function MultiSelect({
           }}
           onKeyDown={handleKeyDown}
           onFocus={() => !disabled && setIsOpen(true)}
-          placeholder={value.length === 0 ? placeholder : searchPlaceholder}
+          placeholder={getPlaceholder()}
           disabled={disabled}
           className="flex-1 min-w-[120px] outline-none text-sm text-[#111827] placeholder-[#9ca3af] bg-transparent disabled:cursor-not-allowed"
           autoComplete="off"
@@ -204,7 +243,7 @@ export function MultiSelect({
 
         {/* Dropdown arrow */}
         <svg
-          className={`w-4 h-4 text-[#64748b] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-[#64748b] transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -217,12 +256,26 @@ export function MultiSelect({
       {isOpen && !disabled && (
         <ul
           ref={listRef}
-          className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border border-[#e2e8f0] rounded-lg shadow-lg"
+          className="absolute z-[100] w-full mt-1 max-h-60 overflow-auto bg-white border border-[#e2e8f0] rounded-lg shadow-lg"
           role="listbox"
         >
-          {filteredOptions.length === 0 ? (
+          {/* Custom value option - show at top when user can add */}
+          {canAddCustomValue && (
+            <li
+              onClick={handleAddCustom}
+              className="px-3 py-2 text-sm cursor-pointer bg-green-50 text-green-700 hover:bg-green-100 border-b border-green-100 flex items-center gap-2"
+              role="option"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add "{searchTerm.trim()}"
+            </li>
+          )}
+
+          {filteredOptions.length === 0 && !canAddCustomValue ? (
             <li className="px-3 py-2 text-sm text-[#64748b]">
-              {searchTerm ? 'No matching options' : 'No options available'}
+              {searchTerm ? (allowCustom ? 'Press Enter to add custom value' : 'No matching options') : 'No options available'}
             </li>
           ) : (
             filteredOptions.map((option, index) => (
@@ -248,3 +301,4 @@ export function MultiSelect({
 }
 
 export default MultiSelect;
+

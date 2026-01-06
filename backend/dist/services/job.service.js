@@ -15,7 +15,23 @@ const DEFAULT_STAGES = [
     { name: 'Hired', position: 7, isMandatory: false },
 ];
 /**
- * Validate auto-rejection rules structure
+ * Check if rules are in legacy format
+ */
+function isLegacyRulesFormat(rules) {
+    if (!rules || typeof rules !== 'object')
+        return false;
+    const r = rules;
+    if (!r.rules || typeof r.rules !== 'object')
+        return false;
+    const innerRules = r.rules;
+    // Legacy format has minExperience/maxExperience directly, not an array
+    return !Array.isArray(innerRules) && ('minExperience' in innerRules ||
+        'maxExperience' in innerRules ||
+        'requiredSkills' in innerRules ||
+        'requiredEducation' in innerRules);
+}
+/**
+ * Validate auto-rejection rules structure (supports both legacy and new formats)
  * Requirements: 9.1, 9.5
  */
 function validateAutoRejectionRules(rules) {
@@ -32,45 +48,73 @@ function validateAutoRejectionRules(rules) {
     if (!rules.enabled) {
         return { valid: true, errors };
     }
-    // Validate rules object
-    if (!rules.rules || typeof rules.rules !== 'object') {
-        errors.autoRejectionRules = ['rules must be an object when enabled'];
+    // Validate rules exist
+    if (!rules.rules) {
+        errors.autoRejectionRules = ['rules must be defined when enabled'];
         return { valid: false, errors };
     }
-    // Validate minExperience
-    if (rules.rules.minExperience !== undefined) {
-        if (typeof rules.rules.minExperience !== 'number' || rules.rules.minExperience < 0) {
-            errors['autoRejectionRules.minExperience'] = ['minExperience must be a non-negative number'];
+    // Check if legacy format
+    if (isLegacyRulesFormat(rules)) {
+        const legacyRules = rules;
+        // Validate minExperience
+        if (legacyRules.rules.minExperience !== undefined) {
+            if (typeof legacyRules.rules.minExperience !== 'number' || legacyRules.rules.minExperience < 0) {
+                errors['autoRejectionRules.minExperience'] = ['minExperience must be a non-negative number'];
+            }
+        }
+        // Validate maxExperience
+        if (legacyRules.rules.maxExperience !== undefined) {
+            if (typeof legacyRules.rules.maxExperience !== 'number' || legacyRules.rules.maxExperience < 0) {
+                errors['autoRejectionRules.maxExperience'] = ['maxExperience must be a non-negative number'];
+            }
+        }
+        // Validate experience range
+        if (legacyRules.rules.minExperience !== undefined && legacyRules.rules.maxExperience !== undefined) {
+            if (legacyRules.rules.minExperience > legacyRules.rules.maxExperience) {
+                errors['autoRejectionRules.minExperience'] = ['minExperience cannot be greater than maxExperience'];
+            }
+        }
+        // Validate requiredSkills
+        if (legacyRules.rules.requiredSkills !== undefined) {
+            if (!Array.isArray(legacyRules.rules.requiredSkills)) {
+                errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array'];
+            }
+            else if (!legacyRules.rules.requiredSkills.every(s => typeof s === 'string')) {
+                errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array of strings'];
+            }
+        }
+        // Validate requiredEducation
+        if (legacyRules.rules.requiredEducation !== undefined) {
+            if (!Array.isArray(legacyRules.rules.requiredEducation)) {
+                errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array'];
+            }
+            else if (!legacyRules.rules.requiredEducation.every(s => typeof s === 'string')) {
+                errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array of strings'];
+            }
         }
     }
-    // Validate maxExperience
-    if (rules.rules.maxExperience !== undefined) {
-        if (typeof rules.rules.maxExperience !== 'number' || rules.rules.maxExperience < 0) {
-            errors['autoRejectionRules.maxExperience'] = ['maxExperience must be a non-negative number'];
+    else {
+        // New array format - validate rules array
+        const newRules = rules;
+        if (!Array.isArray(newRules.rules)) {
+            errors.autoRejectionRules = ['rules must be an array of rule objects'];
+            return { valid: false, errors };
         }
-    }
-    // Validate experience range
-    if (rules.rules.minExperience !== undefined && rules.rules.maxExperience !== undefined) {
-        if (rules.rules.minExperience > rules.rules.maxExperience) {
-            errors['autoRejectionRules.minExperience'] = ['minExperience cannot be greater than maxExperience'];
-        }
-    }
-    // Validate requiredSkills
-    if (rules.rules.requiredSkills !== undefined) {
-        if (!Array.isArray(rules.rules.requiredSkills)) {
-            errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array'];
-        }
-        else if (!rules.rules.requiredSkills.every(s => typeof s === 'string')) {
-            errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array of strings'];
-        }
-    }
-    // Validate requiredEducation
-    if (rules.rules.requiredEducation !== undefined) {
-        if (!Array.isArray(rules.rules.requiredEducation)) {
-            errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array'];
-        }
-        else if (!rules.rules.requiredEducation.every(s => typeof s === 'string')) {
-            errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array of strings'];
+        // Validate each rule in the array
+        for (let i = 0; i < newRules.rules.length; i++) {
+            const rule = newRules.rules[i];
+            if (!rule.id || typeof rule.id !== 'string') {
+                errors[`autoRejectionRules.rules[${i}].id`] = ['rule id is required'];
+            }
+            if (!rule.field || !['experience', 'location', 'skills', 'education', 'salary_expectation'].includes(rule.field)) {
+                errors[`autoRejectionRules.rules[${i}].field`] = ['invalid rule field'];
+            }
+            if (!rule.operator) {
+                errors[`autoRejectionRules.rules[${i}].operator`] = ['rule operator is required'];
+            }
+            if (rule.value === undefined) {
+                errors[`autoRejectionRules.rules[${i}].value`] = ['rule value is required'];
+            }
         }
     }
     return { valid: Object.keys(errors).length === 0, errors };
@@ -520,6 +564,161 @@ export const jobService = {
         await prisma.job.delete({
             where: { id },
         });
+    },
+    /**
+     * Toggle job status between active and closed
+     */
+    async toggleStatus(id, userId, userRole) {
+        // Validate access if user info is provided
+        if (userId && userRole) {
+            const hasAccess = await this.validateJobAccess(id, userId, userRole);
+            if (!hasAccess) {
+                throw new AuthorizationError();
+            }
+        }
+        const existing = await prisma.job.findUnique({
+            where: { id },
+        });
+        if (!existing) {
+            throw new NotFoundError('Job');
+        }
+        // Toggle between active and closed
+        const newStatus = existing.status === 'closed' ? 'active' : 'closed';
+        const job = await prisma.job.update({
+            where: { id },
+            data: { status: newStatus },
+            include: {
+                pipelineStages: {
+                    where: { parentId: null },
+                    orderBy: { position: 'asc' },
+                    include: {
+                        subStages: {
+                            orderBy: { position: 'asc' },
+                        },
+                    },
+                },
+                company: {
+                    select: {
+                        name: true,
+                        logoUrl: true,
+                    },
+                },
+            },
+        });
+        return this.mapToJob(job, job.pipelineStages, job.company);
+    },
+    /**
+     * Duplicate a job (copies all job data but not candidates)
+     */
+    async duplicate(id, userId, userRole) {
+        // Validate access if user info is provided
+        if (userId && userRole) {
+            const hasAccess = await this.validateJobAccess(id, userId, userRole);
+            if (!hasAccess) {
+                throw new AuthorizationError();
+            }
+        }
+        const existing = await prisma.job.findUnique({
+            where: { id },
+            include: {
+                pipelineStages: {
+                    where: { parentId: null },
+                    orderBy: { position: 'asc' },
+                    include: {
+                        subStages: {
+                            orderBy: { position: 'asc' },
+                        },
+                    },
+                },
+            },
+        });
+        if (!existing) {
+            throw new NotFoundError('Job');
+        }
+        // Create duplicated job with "Copy of" prefix
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await prisma.$transaction(async (tx) => {
+            const newJob = await tx.job.create({
+                data: {
+                    companyId: existing.companyId,
+                    title: `Copy of ${existing.title}`,
+                    department: existing.department,
+                    // Experience range
+                    experienceMin: existing.experienceMin,
+                    experienceMax: existing.experienceMax,
+                    // Salary range
+                    salaryMin: existing.salaryMin,
+                    salaryMax: existing.salaryMax,
+                    variables: existing.variables,
+                    // Requirements
+                    educationQualification: existing.educationQualification,
+                    ageUpTo: existing.ageUpTo,
+                    skills: existing.skills,
+                    preferredIndustry: existing.preferredIndustry,
+                    // Work details
+                    workMode: existing.workMode,
+                    locations: existing.locations,
+                    priority: existing.priority,
+                    jobDomain: existing.jobDomain,
+                    // Assignment
+                    assignedRecruiterId: existing.assignedRecruiterId,
+                    // Content
+                    description: existing.description,
+                    openings: existing.openings,
+                    status: 'active', // New job starts as active
+                    // Mandatory criteria
+                    mandatoryCriteria: existing.mandatoryCriteria || {},
+                    // Screening questions
+                    screeningQuestions: existing.screeningQuestions || [],
+                    // Auto-rejection rules
+                    autoRejectionRules: existing.autoRejectionRules || { enabled: false, rules: {} },
+                    // Legacy fields
+                    location: existing.location,
+                    employmentType: existing.employmentType,
+                    salaryRange: existing.salaryRange,
+                },
+            });
+            // Duplicate pipeline stages
+            let nextSubStagePosition = existing.pipelineStages.length * 100;
+            for (const stage of existing.pipelineStages) {
+                const createdStage = await tx.pipelineStage.create({
+                    data: {
+                        jobId: newJob.id,
+                        name: stage.name,
+                        position: stage.position,
+                        isDefault: stage.isDefault,
+                        isMandatory: stage.isMandatory,
+                    },
+                });
+                // Create sub-stages if any
+                if (stage.subStages && stage.subStages.length > 0) {
+                    for (const subStage of stage.subStages) {
+                        await tx.pipelineStage.create({
+                            data: {
+                                jobId: newJob.id,
+                                name: subStage.name,
+                                position: nextSubStagePosition++,
+                                isDefault: subStage.isDefault,
+                                isMandatory: subStage.isMandatory,
+                                parentId: createdStage.id,
+                            },
+                        });
+                    }
+                }
+            }
+            // Fetch the created stages
+            const stages = await tx.pipelineStage.findMany({
+                where: { jobId: newJob.id, parentId: null },
+                orderBy: { position: 'asc' },
+                include: {
+                    subStages: {
+                        orderBy: { position: 'asc' },
+                    },
+                },
+            });
+            return { job: newJob, stages };
+        });
+        return this.mapToJob(result.job, result.stages);
     },
     /**
      * Map Prisma job to Job type with all new fields

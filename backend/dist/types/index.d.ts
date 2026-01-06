@@ -6,6 +6,11 @@ export interface User {
     email: string;
     role: UserRole;
     isActive: boolean;
+    companyRoleId?: string | null;
+    companyRole?: {
+        id: string;
+        name: string;
+    } | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -40,7 +45,7 @@ export interface MandatoryCriteria {
 }
 export type ScreeningQuestionType = 'text' | 'textarea' | 'single_choice' | 'multiple_choice' | 'yes_no' | 'number';
 export interface ScreeningQuestion {
-    id: string;
+    id?: string;
     question: string;
     type: ScreeningQuestionType;
     required: boolean;
@@ -51,7 +56,24 @@ export interface ScreeningQuestionAnswer {
     questionId: string;
     answer: string | string[] | number | boolean;
 }
+export type RuleField = 'experience' | 'location' | 'skills' | 'education' | 'salary_expectation';
+export type NumericOperator = 'less_than' | 'greater_than' | 'equals' | 'not_equals' | 'between';
+export type TextOperator = 'equals' | 'not_equals' | 'contains' | 'not_contains';
+export type ArrayOperator = 'contains' | 'not_contains' | 'contains_all' | 'contains_any';
+export type RuleOperator = NumericOperator | TextOperator | ArrayOperator;
+export type LogicConnector = 'AND' | 'OR';
+export interface AutoRejectionRule {
+    id: string;
+    field: RuleField;
+    operator: RuleOperator;
+    value: number | string | string[] | [number, number];
+    logicConnector?: LogicConnector;
+}
 export interface AutoRejectionRules {
+    enabled: boolean;
+    rules: AutoRejectionRule[];
+}
+export interface LegacyAutoRejectionRules {
     enabled: boolean;
     rules: {
         minExperience?: number;

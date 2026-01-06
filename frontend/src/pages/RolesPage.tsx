@@ -18,11 +18,12 @@ import {
   JobDetailsRightPanel,
   InterviewScheduleModal,
   ScoreBreakdown,
+  MoveCandidateModal,
 } from '../components';
 import type { ViewMode, PipelineCandidate } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { useJobs } from '../hooks/useJobs';
-import { getResumeUrl, candidatesService, jobsService } from '../services';
+import { getResumeUrl, candidatesService, jobsService, pipelineService } from '../services';
 import type { Job, JobCandidate } from '../services';
 import type { Job as JobType } from '../types';
 import { filterRolesBySearch, filterRolesByStatus } from '../utils/filters';
@@ -57,9 +58,15 @@ interface Role {
 function CandidateDetailContent({
   candidate,
   onScheduleInterview,
+  onMove,
+  onReject,
+  onSendEmail,
 }: {
   candidate: PipelineCandidate;
   onScheduleInterview: () => void;
+  onMove: () => void;
+  onReject: () => void;
+  onSendEmail: () => void;
 }) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -79,20 +86,20 @@ function CandidateDetailContent({
   ];
 
   const actions = [
-    { label: 'Change Stage', onClick: () => { }, variant: 'secondary' as const },
+    { label: 'Change Stage', onClick: onMove, variant: 'secondary' as const },
     { label: 'Schedule Interview', onClick: onScheduleInterview, variant: 'primary' as const },
-    { label: 'Send Email', onClick: () => { }, variant: 'secondary' as const },
-    { label: 'Reject', onClick: () => { }, variant: 'danger' as const },
+    { label: 'Send Email', onClick: onSendEmail, variant: 'secondary' as const },
+    { label: 'Reject', onClick: onReject, variant: 'danger' as const },
   ];
 
   return (
     <>
       <DetailSection title="Summary">
-        <SummaryRow label="Current company" value={candidate.currentCompany} />
+        <SummaryRow label="Current company" value={candidate.currentCompany || 'Not specified'} />
         <SummaryRow label="Total experience" value={`${candidate.experience} years`} />
-        <SummaryRow label="Current CTC" value={candidate.currentCtc} />
-        <SummaryRow label="Expected CTC" value={candidate.expectedCtc} />
-        <SummaryRow label="Notice period" value={candidate.noticePeriod} />
+        <SummaryRow label="Current CTC" value={candidate.currentCtc || 'Not specified'} />
+        <SummaryRow label="Expected CTC" value={candidate.expectedCtc || 'Not specified'} />
+        <SummaryRow label="Notice period" value={candidate.noticePeriod || 'Not specified'} />
       </DetailSection>
 
       {/* Score Breakdown Section - Requirements 2.1 */}
@@ -172,6 +179,9 @@ export function RolesPage() {
 
   // Interview Schedule Modal state (for detail panel)
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
+
+  // Move Candidate Modal state (for detail panel)
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
 
   // Resizable splitter state
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
@@ -267,6 +277,66 @@ export function RolesPage() {
       console.error('Failed to duplicate job:', error);
     }
   }, [selectedRole, refetchJobs, navigate]);
+
+  // Handler to reject candidate
+  const handleRejectCandidate = useCallback(async () => {
+    if (!selectedCandidate) return;
+    // Find rejected stage ID or name (case insensitive)
+    const rejectedStage = pipelineStages.find(s => s.name.toLowerCase() === 'rejected');
+
+    if (!rejectedStage) {
+      console.error('Rejected stage not found in pipeline');
+      alert('Error: "Rejected" stage not configured for this job. Please add a "Rejected" stage to the pipeline.');
+      return;
+    }
+
+    const targetStageId = rejectedStage.id;
+
+    try {
+      // Use selectedRole.id as primary source for job ID
+      if (selectedRole?.id) {
+        await pipelineService.moveCandidate(
+          selectedCandidate.jobCandidateId || selectedCandidate.id,
+          targetStageId,
+          selectedRole.id
+        );
+      } else {
+        console.error('Missing Job ID for move operation');
+        return;
+      }
+      setCandidatesRefreshKey(prev => prev + 1);
+      setSelectedCandidate(null);
+    } catch (error) {
+      console.error('Failed to reject candidate:', error);
+      alert('Failed to reject candidate. Please try again.');
+    }
+  }, [selectedCandidate, pipelineStages, selectedRole]);
+
+  // Handler to send email
+  const handleSendEmail = useCallback(() => {
+    if (!selectedCandidate) return;
+    window.location.href = `mailto:${selectedCandidate.email}?subject=Regarding your application for ${selectedRole?.title || 'Job'}`;
+  }, [selectedCandidate, selectedRole]);
+
+  // Handler for move success
+  // Handler for move success
+  const handleMoveSuccess = useCallback(async (targetStageId: string) => {
+    if (!selectedCandidate || !selectedRole) return;
+    try {
+      await pipelineService.moveCandidate(
+        selectedCandidate.jobCandidateId || selectedCandidate.id,
+        targetStageId,
+        selectedRole.id
+      );
+      setCandidatesRefreshKey(prev => prev + 1);
+      setIsMoveModalOpen(false);
+      setSelectedCandidate(null);
+    } catch (error) {
+      console.error('Failed to move candidate:', error);
+      throw error;
+    }
+  }, [selectedCandidate, selectedRole]);
+
 
   // Map API jobs to local format - Requirements 4.1, 4.3, 4.4
   const rolesFromApi: Role[] = useMemo(() => {
@@ -516,6 +586,9 @@ export function RolesPage() {
           <CandidateDetailContent
             candidate={selectedCandidate}
             onScheduleInterview={() => setIsInterviewModalOpen(true)}
+            onMove={() => setIsMoveModalOpen(true)}
+            onReject={handleRejectCandidate}
+            onSendEmail={handleSendEmail}
           />
         )}
       </DetailPanel>
@@ -533,6 +606,18 @@ export function RolesPage() {
           candidateName={selectedCandidate.name}
           jobTitle={selectedRole.title}
           jobId={selectedRole.id}
+        />
+      )}
+
+      {/* Move Candidate Modal (from detail panel) */}
+      {selectedCandidate && (
+        <MoveCandidateModal
+          isOpen={isMoveModalOpen}
+          onClose={() => setIsMoveModalOpen(false)}
+          candidateName={selectedCandidate.name}
+          currentStageId={pipelineStages.find(s => s.name === selectedCandidate.stage)?.id || selectedCandidate.stage}
+          stages={pipelineStages.map(s => ({ id: s.id, name: s.name }))}
+          onMove={handleMoveSuccess}
         />
       )}
 

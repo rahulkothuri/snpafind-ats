@@ -21,6 +21,8 @@ import {
   AddCandidateModal,
   AddNoteModal,
   MoveCandidateModal,
+  StageImportModal,
+  BulkImportModal,
   calculateAverageScore
 } from './index';
 import { LegacyAdvancedFilters } from './AdvancedFilters';
@@ -707,6 +709,9 @@ export function JobDetailsRightPanel({
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedCandidateForInterview, setSelectedCandidateForInterview] = useState<PipelineCandidate | null>(null);
 
+  // Bulk Import Modal State
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
   // Share job modal state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -894,11 +899,10 @@ export function JobDetailsRightPanel({
   }, []);
 
 
-  // Handle bulk import (placeholder)
+  // Handle bulk import
   const handleBulkImport = useCallback(() => {
-    // TODO: Implement bulk import functionality
-    console.log('Bulk import clicked for job:', role?.id);
-  }, [role]);
+    setIsBulkImportOpen(true);
+  }, []);
 
   // Handle interview scheduled success
   const handleInterviewScheduled = useCallback((_interview: any) => {
@@ -1197,6 +1201,18 @@ export function JobDetailsRightPanel({
           currentStageId={pipelineStages.find(s => s.name === selectedCandidateForMove.stage)?.id || selectedCandidateForMove.stage}
           stages={bulkMoveStages}
           onMove={handleConfirmMove}
+        />
+      )}
+
+      {role && (
+        <BulkImportModal
+          isOpen={isBulkImportOpen}
+          onClose={() => setIsBulkImportOpen(false)}
+          jobId={role.id}
+          onSuccess={() => {
+            setIsBulkImportOpen(false);
+            if (onCandidatesMoved) onCandidatesMoved();
+          }}
         />
       )}
 

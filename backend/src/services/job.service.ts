@@ -1,10 +1,10 @@
 import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError, AuthorizationError } from '../middleware/errorHandler.js';
-import type { Job, PipelineStage, PipelineStageConfig, SubStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion, AutoRejectionRules } from '../types/index.js';
+import type { Job, PipelineStage, PipelineStageConfig, SubStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion, AutoRejectionRules, AutoRejectionRule, LegacyAutoRejectionRules } from '../types/index.js';
 import { jobAccessControlService } from './jobAccessControl.service.js';
 
 // Mandatory stages that cannot be removed (Requirements 4.2)
-const MANDATORY_STAGES = ['Screening', 'Shortlisted', 'Offer'];
+const MANDATORY_STAGES = ['Screening', 'Shortlisted', 'Offer', 'Rejected'];
 
 // Default pipeline stages as per Requirements 6.1
 const DEFAULT_STAGES: PipelineStageConfig[] = [
@@ -16,13 +16,31 @@ const DEFAULT_STAGES: PipelineStageConfig[] = [
   { name: 'Selected', position: 5, isMandatory: false },
   { name: 'Offer', position: 6, isMandatory: true },
   { name: 'Hired', position: 7, isMandatory: false },
+  { name: 'Rejected', position: 8, isMandatory: true },
 ];
 
 /**
- * Validate auto-rejection rules structure
+ * Check if rules are in legacy format
+ */
+function isLegacyRulesFormat(rules: unknown): rules is LegacyAutoRejectionRules {
+  if (!rules || typeof rules !== 'object') return false;
+  const r = rules as Record<string, unknown>;
+  if (!r.rules || typeof r.rules !== 'object') return false;
+  const innerRules = r.rules as Record<string, unknown>;
+  // Legacy format has minExperience/maxExperience directly, not an array
+  return !Array.isArray(innerRules) && (
+    'minExperience' in innerRules ||
+    'maxExperience' in innerRules ||
+    'requiredSkills' in innerRules ||
+    'requiredEducation' in innerRules
+  );
+}
+
+/**
+ * Validate auto-rejection rules structure (supports both legacy and new formats)
  * Requirements: 9.1, 9.5
  */
-function validateAutoRejectionRules(rules: AutoRejectionRules | null | undefined): { valid: boolean; errors: Record<string, string[]> } {
+function validateAutoRejectionRules(rules: AutoRejectionRules | LegacyAutoRejectionRules | null | undefined): { valid: boolean; errors: Record<string, string[]> } {
   const errors: Record<string, string[]> = {};
 
   if (!rules) {
@@ -40,48 +58,77 @@ function validateAutoRejectionRules(rules: AutoRejectionRules | null | undefined
     return { valid: true, errors };
   }
 
-  // Validate rules object
-  if (!rules.rules || typeof rules.rules !== 'object') {
-    errors.autoRejectionRules = ['rules must be an object when enabled'];
+  // Validate rules exist
+  if (!rules.rules) {
+    errors.autoRejectionRules = ['rules must be defined when enabled'];
     return { valid: false, errors };
   }
 
-  // Validate minExperience
-  if (rules.rules.minExperience !== undefined) {
-    if (typeof rules.rules.minExperience !== 'number' || rules.rules.minExperience < 0) {
-      errors['autoRejectionRules.minExperience'] = ['minExperience must be a non-negative number'];
-    }
-  }
+  // Check if legacy format
+  if (isLegacyRulesFormat(rules)) {
+    const legacyRules = rules as LegacyAutoRejectionRules;
 
-  // Validate maxExperience
-  if (rules.rules.maxExperience !== undefined) {
-    if (typeof rules.rules.maxExperience !== 'number' || rules.rules.maxExperience < 0) {
-      errors['autoRejectionRules.maxExperience'] = ['maxExperience must be a non-negative number'];
+    // Validate minExperience
+    if (legacyRules.rules.minExperience !== undefined) {
+      if (typeof legacyRules.rules.minExperience !== 'number' || legacyRules.rules.minExperience < 0) {
+        errors['autoRejectionRules.minExperience'] = ['minExperience must be a non-negative number'];
+      }
     }
-  }
 
-  // Validate experience range
-  if (rules.rules.minExperience !== undefined && rules.rules.maxExperience !== undefined) {
-    if (rules.rules.minExperience > rules.rules.maxExperience) {
-      errors['autoRejectionRules.minExperience'] = ['minExperience cannot be greater than maxExperience'];
+    // Validate maxExperience
+    if (legacyRules.rules.maxExperience !== undefined) {
+      if (typeof legacyRules.rules.maxExperience !== 'number' || legacyRules.rules.maxExperience < 0) {
+        errors['autoRejectionRules.maxExperience'] = ['maxExperience must be a non-negative number'];
+      }
     }
-  }
 
-  // Validate requiredSkills
-  if (rules.rules.requiredSkills !== undefined) {
-    if (!Array.isArray(rules.rules.requiredSkills)) {
-      errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array'];
-    } else if (!rules.rules.requiredSkills.every(s => typeof s === 'string')) {
-      errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array of strings'];
+    // Validate experience range
+    if (legacyRules.rules.minExperience !== undefined && legacyRules.rules.maxExperience !== undefined) {
+      if (legacyRules.rules.minExperience > legacyRules.rules.maxExperience) {
+        errors['autoRejectionRules.minExperience'] = ['minExperience cannot be greater than maxExperience'];
+      }
     }
-  }
 
-  // Validate requiredEducation
-  if (rules.rules.requiredEducation !== undefined) {
-    if (!Array.isArray(rules.rules.requiredEducation)) {
-      errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array'];
-    } else if (!rules.rules.requiredEducation.every(s => typeof s === 'string')) {
-      errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array of strings'];
+    // Validate requiredSkills
+    if (legacyRules.rules.requiredSkills !== undefined) {
+      if (!Array.isArray(legacyRules.rules.requiredSkills)) {
+        errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array'];
+      } else if (!legacyRules.rules.requiredSkills.every(s => typeof s === 'string')) {
+        errors['autoRejectionRules.requiredSkills'] = ['requiredSkills must be an array of strings'];
+      }
+    }
+
+    // Validate requiredEducation
+    if (legacyRules.rules.requiredEducation !== undefined) {
+      if (!Array.isArray(legacyRules.rules.requiredEducation)) {
+        errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array'];
+      } else if (!legacyRules.rules.requiredEducation.every(s => typeof s === 'string')) {
+        errors['autoRejectionRules.requiredEducation'] = ['requiredEducation must be an array of strings'];
+      }
+    }
+  } else {
+    // New array format - validate rules array
+    const newRules = rules as AutoRejectionRules;
+    if (!Array.isArray(newRules.rules)) {
+      errors.autoRejectionRules = ['rules must be an array of rule objects'];
+      return { valid: false, errors };
+    }
+
+    // Validate each rule in the array
+    for (let i = 0; i < newRules.rules.length; i++) {
+      const rule = newRules.rules[i];
+      if (!rule.id || typeof rule.id !== 'string') {
+        errors[`autoRejectionRules.rules[${i}].id`] = ['rule id is required'];
+      }
+      if (!rule.field || !['experience', 'location', 'skills', 'education', 'salary_expectation'].includes(rule.field)) {
+        errors[`autoRejectionRules.rules[${i}].field`] = ['invalid rule field'];
+      }
+      if (!rule.operator) {
+        errors[`autoRejectionRules.rules[${i}].operator`] = ['rule operator is required'];
+      }
+      if (rule.value === undefined) {
+        errors[`autoRejectionRules.rules[${i}].value`] = ['rule value is required'];
+      }
     }
   }
 
@@ -127,8 +174,8 @@ export interface CreateJobData {
   // Screening questions - questions candidates must answer before applying
   screeningQuestions?: ScreeningQuestion[];
 
-  // Auto-rejection rules (Requirements 9.1)
-  autoRejectionRules?: AutoRejectionRules;
+  // Auto-rejection rules (Requirements 9.1) - supports both new and legacy formats
+  autoRejectionRules?: AutoRejectionRules | LegacyAutoRejectionRules;
 
   // Pipeline stages configuration (Requirements 4.1)
   pipelineStages?: PipelineStageConfig[];
@@ -178,8 +225,8 @@ export interface UpdateJobData {
   // Screening questions - questions candidates must answer before applying
   screeningQuestions?: ScreeningQuestion[] | null;
 
-  // Auto-rejection rules (Requirements 9.1)
-  autoRejectionRules?: AutoRejectionRules | null;
+  // Auto-rejection rules (Requirements 9.1) - supports both new and legacy formats
+  autoRejectionRules?: AutoRejectionRules | LegacyAutoRejectionRules | null;
 
   // Pipeline stages configuration
   pipelineStages?: PipelineStageConfig[];

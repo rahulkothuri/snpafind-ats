@@ -168,6 +168,34 @@ export declare const candidateService: {
      * Requirements: 7.2 (for autocomplete/selection)
      */
     getAllTags(companyId: string): Promise<string[]>;
+    /**
+     * Add an existing candidate to a job's Applied stage
+     * Used by the candidate master database "Add to Job" feature
+     */
+    addToJob(candidateId: string, jobId: string, companyId: string): Promise<{
+        message: string;
+        jobCandidate: JobCandidate;
+    }>;
+    /**
+     * Create a new candidate and assign them to a job
+     * Used by the AddCandidateModal
+     */
+    createAndAssignToJob(data: {
+        companyId: string;
+        jobId: string;
+        name: string;
+        email: string;
+        phone: string;
+        experienceYears?: number;
+        currentCompany?: string;
+        currentCtc?: string;
+        expectedCtc?: string;
+        location: string;
+        noticePeriod?: string;
+        skills?: string[];
+        source: string;
+        resumeUrl?: string;
+    }): Promise<Candidate>;
 };
 export default candidateService;
 //# sourceMappingURL=candidate.service.d.ts.map

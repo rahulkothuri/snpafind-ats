@@ -37,17 +37,17 @@ const storage = multer.diskStorage({
 
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  
+
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     cb(new Error(`Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`));
     return;
   }
-  
+
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     cb(new Error('Invalid file type. Allowed: PDF, DOC, DOCX'));
     return;
   }
-  
+
   cb(null, true);
 };
 
@@ -70,6 +70,10 @@ const publicApplicationSchema = z.object({
   linkedinProfile: z.string().optional(),
   portfolioUrl: z.string().optional(),
   coverLetter: z.string().optional(),
+  currentCompany: z.string().optional(),
+  currentCtc: z.string().optional(),
+  expectedCtc: z.string().optional(),
+  noticePeriod: z.string().optional(),
   desiredSalary: z.string().optional(),
   workAuthorization: z.enum(['yes', 'no']),
   agreedToTerms: z.boolean(),
@@ -80,28 +84,28 @@ const publicApplicationSchema = z.object({
  * Validate resume file format and size for public applications
  * Requirements: 5.5
  */
-export const validatePublicResumeFile = (file: { 
-  mimetype: string; 
-  size: number; 
-  originalname: string 
+export const validatePublicResumeFile = (file: {
+  mimetype: string;
+  size: number;
+  originalname: string
 }): { valid: boolean; error?: string } => {
   const ext = path.extname(file.originalname).toLowerCase();
-  
+
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    return { 
-      valid: false, 
-      error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` 
+    return {
+      valid: false,
+      error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`
     };
   }
-  
+
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     return { valid: false, error: 'Invalid file type. Allowed: PDF, DOC, DOCX' };
   }
-  
+
   if (file.size > MAX_FILE_SIZE) {
     return { valid: false, error: 'File size exceeds maximum limit of 5MB' };
   }
-  
+
   return { valid: true };
 };
 
@@ -147,7 +151,7 @@ router.get('/jobs/:id', async (req: Request, res: Response, next: NextFunction) 
       title: job.title,
       companyId: job.companyId,
       department: job.department,
-      
+
       // Company info (Requirements 5.2)
       companyName: job.company.name,
       companyLogo: job.company.logoUrl,
@@ -157,35 +161,35 @@ router.get('/jobs/:id', async (req: Request, res: Response, next: NextFunction) 
       companyCity: job.company.city,
       companyState: job.company.state,
       companyCountry: job.company.country,
-      
+
       // Experience range (Requirements 5.3)
       experienceMin: job.experienceMin,
       experienceMax: job.experienceMax,
-      
+
       // Salary range (Requirements 5.3)
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
       variables: job.variables,
-      
+
       // Requirements (Requirements 5.3)
       educationQualification: job.educationQualification,
       ageUpTo: job.ageUpTo,
       skills: job.skills,
       preferredIndustry: job.preferredIndustry,
-      
+
       // Work details (Requirements 5.3)
       workMode: job.workMode,
       locations: job.locations,
       priority: job.priority,
       jobDomain: job.jobDomain,
-      
+
       // Content (Requirements 5.4)
       description: job.description,
       openings: job.openings,
-      
+
       // Screening questions for application form
       screeningQuestions: job.screeningQuestions || [],
-      
+
       // Legacy fields (kept for compatibility)
       location: job.location,
       employmentType: job.employmentType,
@@ -218,7 +222,7 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
           message: err.message,
         });
       }
-      
+
       if (err) {
         return res.status(400).json({
           code: 'INVALID_FILE',
@@ -236,6 +240,10 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
         linkedinProfile: req.body.linkedinProfile,
         portfolioUrl: req.body.portfolioUrl,
         coverLetter: req.body.coverLetter,
+        currentCompany: req.body.currentCompany,
+        currentCtc: req.body.currentCtc,
+        expectedCtc: req.body.expectedCtc,
+        noticePeriod: req.body.noticePeriod,
         desiredSalary: req.body.desiredSalary,
         workAuthorization: req.body.workAuthorization,
         agreedToTerms: req.body.agreedToTerms === 'true' || req.body.agreedToTerms === true,
@@ -311,6 +319,10 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
             name: data.fullName,
             phone: data.phone,
             location: data.currentLocation,
+            currentCompany: data.currentCompany,
+            currentCtc: data.currentCtc,
+            expectedCtc: data.expectedCtc,
+            noticePeriod: data.noticePeriod,
             resumeUrl: resumeUrl || existingCandidate.resumeUrl,
             updatedAt: new Date(),
           },
@@ -325,6 +337,10 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
             email: data.email.toLowerCase(),
             phone: data.phone,
             location: data.currentLocation,
+            currentCompany: data.currentCompany,
+            currentCtc: data.currentCtc,
+            expectedCtc: data.expectedCtc,
+            noticePeriod: data.noticePeriod,
             source: 'Public Application',
             resumeUrl: resumeUrl,
             experienceYears: 0,
@@ -341,23 +357,62 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
             candidateId: candidate.id,
           },
         },
-      });
-
-      if (existingApplication) {
-        return res.status(409).json({
-          code: 'ALREADY_APPLIED',
-          message: 'You have already applied to this job',
-        });
-      }
-
-      // Create JobCandidate association with "Applied" stage (Requirements 6.2)
-      const jobCandidate = await prisma.jobCandidate.create({
-        data: {
-          jobId: data.jobId,
-          candidateId: candidate.id,
-          currentStageId: appliedStage.id,
+        include: {
+          currentStage: true,
         },
       });
+
+      let jobCandidate;
+      let movedFromQueue = false;
+
+      if (existingApplication) {
+        // Check if candidate is in Queue stage (from bulk import)
+        if (existingApplication.currentStage.name === 'Queue') {
+          // Move candidate from Queue to Applied stage
+          jobCandidate = await prisma.jobCandidate.update({
+            where: { id: existingApplication.id },
+            data: {
+              currentStageId: appliedStage.id,
+            },
+          });
+          movedFromQueue = true;
+
+          // Create stage history entry for the move
+          await prisma.stageHistory.updateMany({
+            where: {
+              jobCandidateId: existingApplication.id,
+              exitedAt: null,
+            },
+            data: {
+              exitedAt: new Date(),
+            },
+          });
+
+          await prisma.stageHistory.create({
+            data: {
+              jobCandidateId: existingApplication.id,
+              stageId: appliedStage.id,
+              stageName: appliedStage.name,
+              comment: 'Completed application form',
+            },
+          });
+        } else {
+          // Already applied (not in Queue stage)
+          return res.status(409).json({
+            code: 'ALREADY_APPLIED',
+            message: 'You have already applied to this job',
+          });
+        }
+      } else {
+        // Create JobCandidate association with "Applied" stage (Requirements 6.2)
+        jobCandidate = await prisma.jobCandidate.create({
+          data: {
+            jobId: data.jobId,
+            candidateId: candidate.id,
+            currentStageId: appliedStage.id,
+          },
+        });
+      }
 
       // Create activity record for the application
       // Parse screening answers if provided
@@ -375,7 +430,9 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
           candidateId: candidate.id,
           jobCandidateId: jobCandidate.id,
           activityType: 'stage_change',
-          description: 'Applied via public application form',
+          description: movedFromQueue
+            ? 'Completed application form (moved from Queue to Applied)'
+            : 'Applied via public application form',
           metadata: {
             linkedinProfile: data.linkedinProfile,
             portfolioUrl: data.portfolioUrl,
@@ -397,8 +454,8 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
           {
             experience: candidate.experienceYears,
             location: candidate.location,
-            skills: candidate.skills,
-            education: data.educationQualification,
+            skills: (candidate.skills as string[]) || [],
+            education: undefined, // Not available in application data
             salaryExpectation: data.desiredSalary ? parseFloat(data.desiredSalary) : undefined,
           },
           data.jobId
@@ -413,8 +470,9 @@ router.post('/applications', (req: Request, res: Response, next: NextFunction) =
         applicationId: jobCandidate.id,
         candidateId: candidate.id,
         isNewCandidate,
+        movedFromQueue,
         wasAutoRejected,
-        message: wasAutoRejected 
+        message: wasAutoRejected
           ? 'Application submitted but did not meet minimum requirements'
           : 'Application submitted successfully',
       });

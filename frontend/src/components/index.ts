@@ -51,6 +51,8 @@ export { JobDescriptionModal } from './JobDescriptionModal';
 export type { JobDescriptionModalProps } from './JobDescriptionModal';
 export { StageImportModal } from './StageImportModal';
 export type { StageImportModalProps } from './StageImportModal';
+export { BulkImportModal } from './BulkImportModal';
+export type { BulkImportModalProps } from './BulkImportModal';
 
 // Route Protection Components
 export { JobProtectedRoute } from './JobProtectedRoute';
@@ -134,6 +136,7 @@ export type { CancelConfirmationModalProps } from './CancelConfirmationModal';
 export { JobActionsDropdown } from './JobActionsDropdown';
 export { ShareJobModal } from './ShareJobModal';
 export { AddCandidateModal } from './AddCandidateModal';
+export { AddToJobModal } from './AddToJobModal';
 export { RichTextEditor } from './RichTextEditor';
 export { RoleManagementModal } from './RoleManagementModal';
 export { AddNoteModal } from './AddNoteModal';

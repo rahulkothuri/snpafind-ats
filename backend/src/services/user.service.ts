@@ -241,6 +241,11 @@ export const userService = {
   async getAll(): Promise<User[]> {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
+      include: {
+        companyRole: {
+          select: { id: true, name: true }
+        }
+      }
     });
 
     return users.map((u: PrismaUserResult) => mapPrismaUserToUser(u));

@@ -690,6 +690,32 @@ router.get('/tags/all', authenticate, async (req: AuthenticatedRequest, res: Res
 export { ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES, MAX_FILE_SIZE };
 
 /**
+ * POST /api/candidates/:id/add-to-job
+ * Add an existing candidate to a job's Applied stage
+ * Used by the candidate master database "Add to Job" feature
+ */
+router.post('/:id/add-to-job', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const candidateId = req.params.id;
+    const { jobId } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Job ID is required' });
+    }
+
+    const companyId = req.user?.companyId;
+    if (!companyId) {
+      return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Company ID not found' });
+    }
+
+    const result = await candidateService.addToJob(candidateId, jobId, companyId);
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/candidates/add-to-job
  * Create a new candidate and add them to a specific job
  * Used by the AddCandidateModal in the Roles page

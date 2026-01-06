@@ -629,5 +629,110 @@ router.get('/tags/all', authenticate, async (req, res, next) => {
     }
 });
 export { ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES, MAX_FILE_SIZE };
+/**
+ * POST /api/candidates/:id/add-to-job
+ * Add an existing candidate to a job's Applied stage
+ * Used by the candidate master database "Add to Job" feature
+ */
+router.post('/:id/add-to-job', authenticate, async (req, res, next) => {
+    try {
+        const candidateId = req.params.id;
+        const { jobId } = req.body;
+        if (!jobId) {
+            return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Job ID is required' });
+        }
+        const companyId = req.user?.companyId;
+        if (!companyId) {
+            return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Company ID not found' });
+        }
+        const result = await candidateService.addToJob(candidateId, jobId, companyId);
+        return res.json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/candidates/add-to-job
+ * Create a new candidate and add them to a specific job
+ * Used by the AddCandidateModal in the Roles page
+ */
+router.post('/add-to-job', authenticate, (req, res, next) => {
+    upload.single('resume')(req, res, async (err) => {
+        try {
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({
+                        code: 'FILE_TOO_LARGE',
+                        message: 'File size exceeds maximum limit of 10MB',
+                    });
+                }
+                return res.status(400).json({
+                    code: 'UPLOAD_ERROR',
+                    message: err.message,
+                });
+            }
+            if (err) {
+                return res.status(400).json({
+                    code: 'INVALID_FILE',
+                    message: err.message,
+                });
+            }
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Company ID not found' });
+            }
+            const { jobId, name, email, phone, experienceYears, currentCompany, currentCtc, expectedCtc, location, noticePeriod, skills, source } = req.body;
+            if (!jobId) {
+                return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Job ID is required' });
+            }
+            if (!name) {
+                return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Name is required' });
+            }
+            if (!email) {
+                return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Email is required' });
+            }
+            if (!phone) {
+                return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Phone is required' });
+            }
+            // Parse skills if provided as JSON string
+            let parsedSkills = [];
+            if (skills) {
+                try {
+                    parsedSkills = typeof skills === 'string' ? JSON.parse(skills) : skills;
+                }
+                catch {
+                    parsedSkills = [];
+                }
+            }
+            // Prepare resume URL if file was uploaded
+            const resumeUrl = req.file ? `/${UPLOAD_DIR}/${req.file.filename}` : undefined;
+            // Create candidate with job assignment
+            const candidate = await candidateService.createAndAssignToJob({
+                companyId,
+                jobId,
+                name,
+                email,
+                phone,
+                experienceYears: experienceYears ? parseInt(experienceYears, 10) : undefined,
+                currentCompany,
+                currentCtc,
+                expectedCtc,
+                location: location || 'Not specified',
+                noticePeriod,
+                skills: parsedSkills,
+                source: source || 'Manual',
+                resumeUrl,
+            });
+            return res.status(201).json({
+                message: 'Candidate created and added to job successfully',
+                candidate,
+            });
+        }
+        catch (error) {
+            next(error);
+        }
+    });
+});
 export default router;
 //# sourceMappingURL=candidate.routes.js.map

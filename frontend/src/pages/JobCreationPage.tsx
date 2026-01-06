@@ -574,18 +574,18 @@ export function JobCreationPage() {
                 <label htmlFor="locations" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Locations <span className="text-red-500">*</span>
                 </label>
-                <div className="h-[34px]">
-                  <MultiSelect
-                    id="locations"
-                    options={CITIES}
-                    value={formData.locations}
-                    onChange={(locations) => handleChange('locations', locations)}
-                    placeholder="Select..."
-                    searchPlaceholder="Search..."
-                    maxDisplayTags={2}
-                    error={!!errors.locations}
-                  />
-                </div>
+                <MultiSelect
+                  id="locations"
+                  options={CITIES}
+                  value={formData.locations}
+                  onChange={(locations) => handleChange('locations', locations)}
+                  placeholder="Select or type location..."
+                  searchPlaceholder="Search or add..."
+                  maxDisplayTags={2}
+                  error={!!errors.locations}
+                  allowCustom={true}
+                  customPlaceholder="Type location and press Enter"
+                />
               </div>
 
               <div className="col-span-1">
@@ -661,17 +661,17 @@ export function JobCreationPage() {
                 <label htmlFor="skills" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Skills
                 </label>
-                <div className="h-[34px]">
-                  <MultiSelect
-                    id="skills"
-                    options={SKILLS}
-                    value={formData.skills}
-                    onChange={(skills) => handleChange('skills', skills)}
-                    placeholder="Select required skills..."
-                    searchPlaceholder="Search..."
-                    maxDisplayTags={4}
-                  />
-                </div>
+                <MultiSelect
+                  id="skills"
+                  options={SKILLS}
+                  value={formData.skills}
+                  onChange={(skills) => handleChange('skills', skills)}
+                  placeholder="Select or type skills..."
+                  searchPlaceholder="Search or add..."
+                  allowCustom={true}
+                  customPlaceholder="Type skill and press Enter"
+                  maxDisplayTags={4}
+                />
               </div>
 
               <div className="col-span-1">
@@ -796,10 +796,10 @@ export function JobCreationPage() {
             </div>
           </div>
         </form>
-      </div>
+      </div >
 
       {/* Job Share Modal - Requirement 7.1 */}
-      <JobShareModal
+      < JobShareModal
         isOpen={showShareModal}
         onClose={handleShareModalClose}
         jobId={createdJobId}
@@ -807,13 +807,14 @@ export function JobCreationPage() {
       />
 
       {/* Stage Import Modal - Requirements 3.1, 3.2, 3.4 */}
-      <StageImportModal
+      < StageImportModal
         isOpen={showStageImportModal}
-        onClose={() => setShowStageImportModal(false)}
+        onClose={() => setShowStageImportModal(false)
+        }
         onImport={handleStageImport}
         currentJobId={id}
       />
-    </Layout>
+    </Layout >
   );
 }
 

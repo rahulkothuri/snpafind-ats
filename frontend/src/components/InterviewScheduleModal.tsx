@@ -19,8 +19,8 @@ import type { MultiSelectOption } from './MultiSelect';
 import { usersService } from '../services/users.service';
 import type { User } from '../services/users.service';
 import { interviewsService } from '../services/interviews.service';
-import type { 
-  InterviewMode, 
+import type {
+  InterviewMode,
   TimezoneOption,
   CreateInterviewInput,
   Interview,
@@ -50,11 +50,32 @@ interface InterviewFormData {
   roundType: string; // Interview round type (Requirements 6.5)
 }
 
+// Duration options grouped by category for better UX
 const DURATION_OPTIONS = [
-  { value: 30, label: '30 minutes' },
-  { value: 45, label: '45 minutes' },
-  { value: 60, label: '60 minutes' },
-  { value: 90, label: '90 minutes' },
+  // Quick durations (10-25 min)
+  { value: 10, label: '10 min', group: 'Quick' },
+  { value: 15, label: '15 min', group: 'Quick' },
+  { value: 20, label: '20 min', group: 'Quick' },
+  { value: 25, label: '25 min', group: 'Quick' },
+  // Standard durations (30-90 min)
+  { value: 30, label: '30 min', group: 'Standard' },
+  { value: 45, label: '45 min', group: 'Standard' },
+  { value: 60, label: '1 hour', group: 'Standard' },
+  { value: 90, label: '1.5 hours', group: 'Standard' },
+  // Extended durations (2-4 hours)
+  { value: 120, label: '2 hours', group: 'Extended' },
+  { value: 150, label: '2.5 hours', group: 'Extended' },
+  { value: 180, label: '3 hours', group: 'Extended' },
+  { value: 210, label: '3.5 hours', group: 'Extended' },
+  { value: 240, label: '4 hours', group: 'Extended' },
+];
+
+// Quick select buttons for common durations
+const QUICK_DURATION_OPTIONS = [
+  { value: 30, label: '30m' },
+  { value: 45, label: '45m' },
+  { value: 60, label: '1h' },
+  { value: 90, label: '1.5h' },
 ];
 
 const MODE_OPTIONS: { value: InterviewMode; label: string; icon: string }[] = [
@@ -208,8 +229,8 @@ export function InterviewScheduleModal({
   };
 
   const handleModeChange = (mode: InterviewMode) => {
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       mode,
       location: mode !== 'in_person' ? '' : prev.location,
       customUrl: mode !== 'custom_url' ? '' : prev.customUrl
@@ -293,8 +314,8 @@ export function InterviewScheduleModal({
         duration: formData.duration,
         timezone: formData.timezone,
         mode: formData.mode,
-        location: formData.mode === 'in_person' ? formData.location : 
-                 formData.mode === 'custom_url' ? formData.customUrl : undefined,
+        location: formData.mode === 'in_person' ? formData.location :
+          formData.mode === 'custom_url' ? formData.customUrl : undefined,
         panelMemberIds: formData.panelMemberIds,
         notes: formData.notes || undefined,
         roundType: formData.roundType || undefined, // Interview round type (Requirements 6.5)
@@ -331,11 +352,11 @@ export function InterviewScheduleModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6 transform transition-all max-h-[90vh] overflow-y-auto">
@@ -378,9 +399,8 @@ export function InterviewScheduleModal({
                     value={formData.scheduledDate}
                     onChange={handleInputChange}
                     min={getTodayDate()}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${
-                      errors.scheduledDate ? 'border-red-500' : 'border-[#e2e8f0]'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${errors.scheduledDate ? 'border-red-500' : 'border-[#e2e8f0]'
+                      }`}
                   />
                   {errors.scheduledDate && (
                     <p className="text-xs text-red-500 mt-1">{errors.scheduledDate}</p>
@@ -396,9 +416,8 @@ export function InterviewScheduleModal({
                     name="scheduledTime"
                     value={formData.scheduledTime}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${
-                      errors.scheduledTime ? 'border-red-500' : 'border-[#e2e8f0]'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${errors.scheduledTime ? 'border-red-500' : 'border-[#e2e8f0]'
+                      }`}
                   />
                   {errors.scheduledTime && (
                     <p className="text-xs text-red-500 mt-1">{errors.scheduledTime}</p>
@@ -416,9 +435,8 @@ export function InterviewScheduleModal({
                   name="timezone"
                   value={formData.timezone}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${
-                    errors.timezone ? 'border-red-500' : 'border-[#e2e8f0]'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${errors.timezone ? 'border-red-500' : 'border-[#e2e8f0]'
+                    }`}
                 >
                   {timezones.map(tz => (
                     <option key={tz.value} value={tz.value}>
@@ -436,22 +454,54 @@ export function InterviewScheduleModal({
                 <label className="block text-sm font-medium text-[#374151] mb-1.5">
                   Duration <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-2">
-                  {DURATION_OPTIONS.map(option => (
+                {/* Quick select buttons for common durations */}
+                <div className="flex gap-2 mb-2">
+                  {QUICK_DURATION_OPTIONS.map(option => (
                     <button
                       key={option.value}
                       type="button"
                       onClick={() => handleDurationChange(option.value)}
-                      className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${
-                        formData.duration === option.value
+                      className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${formData.duration === option.value
                           ? 'bg-[#0b6cf0] text-white border-[#0b6cf0]'
                           : 'bg-white text-[#374151] border-[#e2e8f0] hover:border-[#0b6cf0]'
-                      }`}
+                        }`}
                     >
                       {option.label}
                     </button>
                   ))}
                 </div>
+                {/* Full dropdown for all duration options */}
+                <select
+                  id="duration"
+                  value={formData.duration}
+                  onChange={(e) => handleDurationChange(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-[#e2e8f0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] bg-white"
+                >
+                  <optgroup label="⚡ Quick (10-25 min)">
+                    {DURATION_OPTIONS.filter(o => o.group === 'Quick').map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📋 Standard (30-90 min)">
+                    {DURATION_OPTIONS.filter(o => o.group === 'Standard').map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📅 Extended (2-4 hours)">
+                    {DURATION_OPTIONS.filter(o => o.group === 'Extended').map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <p className="text-xs text-[#64748b] mt-1">
+                  Quick select above or choose from dropdown for all options
+                </p>
               </div>
 
               {/* Interview Mode */}
@@ -465,11 +515,10 @@ export function InterviewScheduleModal({
                       key={option.value}
                       type="button"
                       onClick={() => handleModeChange(option.value)}
-                      className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors flex items-center justify-center gap-2 ${
-                        formData.mode === option.value
-                          ? 'bg-[#0b6cf0] text-white border-[#0b6cf0]'
-                          : 'bg-white text-[#374151] border-[#e2e8f0] hover:border-[#0b6cf0]'
-                      }`}
+                      className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors flex items-center justify-center gap-2 ${formData.mode === option.value
+                        ? 'bg-[#0b6cf0] text-white border-[#0b6cf0]'
+                        : 'bg-white text-[#374151] border-[#e2e8f0] hover:border-[#0b6cf0]'
+                        }`}
                     >
                       <span>{option.icon}</span>
                       <span>{option.label}</span>
@@ -498,8 +547,8 @@ export function InterviewScheduleModal({
                   ))}
                 </select>
                 <p className="text-xs text-[#64748b] mt-1">
-                  {interviewRounds.some(r => r.isCustom) 
-                    ? 'Options based on job pipeline sub-stages' 
+                  {interviewRounds.some(r => r.isCustom)
+                    ? 'Options based on job pipeline sub-stages'
                     : 'Default interview round options'}
                 </p>
               </div>
@@ -517,9 +566,8 @@ export function InterviewScheduleModal({
                     value={formData.location}
                     onChange={handleInputChange}
                     placeholder="Enter interview location/address"
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${
-                      errors.location ? 'border-red-500' : 'border-[#e2e8f0]'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${errors.location ? 'border-red-500' : 'border-[#e2e8f0]'
+                      }`}
                   />
                   {errors.location && (
                     <p className="text-xs text-red-500 mt-1">{errors.location}</p>
@@ -540,9 +588,8 @@ export function InterviewScheduleModal({
                     value={formData.customUrl}
                     onChange={handleInputChange}
                     placeholder="https://zoom.us/j/123456789 or https://meet.jit.si/room-name"
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${
-                      errors.customUrl ? 'border-red-500' : 'border-[#e2e8f0]'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b6cf0] ${errors.customUrl ? 'border-red-500' : 'border-[#e2e8f0]'
+                      }`}
                   />
                   {errors.customUrl && (
                     <p className="text-xs text-red-500 mt-1">{errors.customUrl}</p>

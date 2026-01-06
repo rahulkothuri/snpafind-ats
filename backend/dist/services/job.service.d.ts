@@ -1,4 +1,4 @@
-import type { Job, PipelineStage, PipelineStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion, AutoRejectionRules } from '../types/index.js';
+import type { Job, PipelineStage, PipelineStageConfig, WorkMode, JobPriority, UserRole, MandatoryCriteria, ScreeningQuestion, AutoRejectionRules, LegacyAutoRejectionRules } from '../types/index.js';
 export interface CreateJobData {
     companyId: string;
     title: string;
@@ -21,7 +21,7 @@ export interface CreateJobData {
     openings?: number;
     mandatoryCriteria?: MandatoryCriteria;
     screeningQuestions?: ScreeningQuestion[];
-    autoRejectionRules?: AutoRejectionRules;
+    autoRejectionRules?: AutoRejectionRules | LegacyAutoRejectionRules;
     pipelineStages?: PipelineStageConfig[];
     location?: string;
     employmentType?: string;
@@ -49,7 +49,7 @@ export interface UpdateJobData {
     openings?: number;
     mandatoryCriteria?: MandatoryCriteria | null;
     screeningQuestions?: ScreeningQuestion[] | null;
-    autoRejectionRules?: AutoRejectionRules | null;
+    autoRejectionRules?: AutoRejectionRules | LegacyAutoRejectionRules | null;
     pipelineStages?: PipelineStageConfig[];
     location?: string | null;
     employmentType?: string | null;
@@ -104,6 +104,14 @@ export declare const jobService: {
      * Requirements: 4.4
      */
     delete(id: string, userId?: string, userRole?: UserRole): Promise<void>;
+    /**
+     * Toggle job status between active and closed
+     */
+    toggleStatus(id: string, userId?: string, userRole?: UserRole): Promise<JobWithStages>;
+    /**
+     * Duplicate a job (copies all job data but not candidates)
+     */
+    duplicate(id: string, userId?: string, userRole?: UserRole): Promise<JobWithStages>;
     /**
      * Map Prisma job to Job type with all new fields
      */

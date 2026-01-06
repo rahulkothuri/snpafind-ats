@@ -775,6 +775,194 @@ export const candidateService = {
         }
         return Array.from(allTags).sort();
     },
+    /**
+     * Add an existing candidate to a job's Applied stage
+     * Used by the candidate master database "Add to Job" feature
+     */
+    async addToJob(candidateId, jobId, companyId) {
+        // Verify candidate exists and belongs to the company
+        const candidate = await prisma.candidate.findUnique({
+            where: { id: candidateId },
+        });
+        if (!candidate) {
+            throw new NotFoundError('Candidate');
+        }
+        if (candidate.companyId !== companyId) {
+            throw new ValidationError({ candidateId: ['Candidate does not belong to your company'] });
+        }
+        // Find the job and its Applied stage (usually the first stage, position 0)
+        const job = await prisma.job.findUnique({
+            where: { id: jobId },
+            include: {
+                pipelineStages: {
+                    where: { parentId: null },
+                    orderBy: { position: 'asc' },
+                },
+            },
+        });
+        if (!job) {
+            throw new NotFoundError('Job');
+        }
+        if (job.companyId !== companyId) {
+            throw new ValidationError({ jobId: ['Job does not belong to your company'] });
+        }
+        // Find the "Applied" stage (position 0 or first stage)
+        const appliedStage = job.pipelineStages.find(s => s.name.toLowerCase() === 'applied') || job.pipelineStages[0];
+        if (!appliedStage) {
+            throw new ValidationError({ jobId: ['Job has no pipeline stages configured'] });
+        }
+        // Check if candidate is already assigned to this job
+        const existingAssignment = await prisma.jobCandidate.findFirst({
+            where: {
+                jobId,
+                candidateId,
+            },
+        });
+        if (existingAssignment) {
+            throw new ConflictError('Candidate is already added to this job', {
+                code: 'ALREADY_IN_JOB',
+                existingId: existingAssignment.id,
+            });
+        }
+        // Create job candidate assignment and activity in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // Create job candidate assignment
+            const jobCandidate = await tx.jobCandidate.create({
+                data: {
+                    jobId,
+                    candidateId,
+                    currentStageId: appliedStage.id,
+                },
+            });
+            // Create stage history entry for the initial assignment
+            await stageHistoryService.createStageEntry({
+                jobCandidateId: jobCandidate.id,
+                stageId: appliedStage.id,
+                stageName: appliedStage.name,
+                comment: 'Added from candidate database',
+            }, tx);
+            // Create activity entry
+            await tx.candidateActivity.create({
+                data: {
+                    candidateId,
+                    jobCandidateId: jobCandidate.id,
+                    activityType: 'stage_change',
+                    description: `Added to job "${job.title}" in ${appliedStage.name} stage`,
+                    metadata: {
+                        jobId,
+                        jobTitle: job.title,
+                        stageId: appliedStage.id,
+                        stageName: appliedStage.name,
+                        source: 'candidate_database',
+                    },
+                },
+            });
+            return jobCandidate;
+        });
+        return {
+            message: `Candidate successfully added to ${job.title}`,
+            jobCandidate: {
+                id: result.id,
+                jobId: result.jobId,
+                candidateId: result.candidateId,
+                currentStageId: result.currentStageId,
+                appliedAt: result.appliedAt,
+                updatedAt: result.updatedAt,
+            },
+        };
+    },
+    /**
+     * Create a new candidate and assign them to a job
+     * Used by the AddCandidateModal
+     */
+    async createAndAssignToJob(data) {
+        // Check if candidate with this email already exists
+        const existingCandidate = await prisma.candidate.findUnique({
+            where: { email: data.email.toLowerCase() },
+        });
+        // Use transaction to create candidate and job assignment
+        const result = await prisma.$transaction(async (tx) => {
+            let candidate;
+            if (existingCandidate) {
+                // Use existing candidate
+                candidate = existingCandidate;
+            }
+            else {
+                // Create new candidate
+                candidate = await tx.candidate.create({
+                    data: {
+                        companyId: data.companyId,
+                        name: data.name.trim(),
+                        email: data.email.trim().toLowerCase(),
+                        phone: data.phone?.trim(),
+                        experienceYears: data.experienceYears || 0,
+                        currentCompany: data.currentCompany?.trim(),
+                        location: data.location.trim(),
+                        currentCtc: data.currentCtc?.trim(),
+                        expectedCtc: data.expectedCtc?.trim(),
+                        noticePeriod: data.noticePeriod?.trim(),
+                        source: data.source.trim(),
+                        skills: data.skills || [],
+                        resumeUrl: data.resumeUrl,
+                        score: 0,
+                    },
+                });
+            }
+            // Find the job and its first pipeline stage
+            const job = await tx.job.findUnique({
+                where: { id: data.jobId },
+                include: {
+                    pipelineStages: {
+                        where: { parentId: null },
+                        orderBy: { position: 'asc' },
+                        take: 1,
+                    },
+                },
+            });
+            if (!job) {
+                throw new NotFoundError('Job');
+            }
+            if (job.pipelineStages.length === 0) {
+                throw new ValidationError({ jobId: ['Job has no pipeline stages configured'] });
+            }
+            const firstStage = job.pipelineStages[0];
+            // Check if candidate is already assigned to this job
+            const existingAssignment = await tx.jobCandidate.findFirst({
+                where: {
+                    jobId: data.jobId,
+                    candidateId: candidate.id,
+                },
+            });
+            if (existingAssignment) {
+                throw new ConflictError('Candidate is already assigned to this job', {
+                    existingId: existingAssignment.id,
+                });
+            }
+            // Create job candidate assignment
+            await tx.jobCandidate.create({
+                data: {
+                    jobId: data.jobId,
+                    candidateId: candidate.id,
+                    currentStageId: firstStage.id,
+                },
+            });
+            // Create activity entry
+            await tx.candidateActivity.create({
+                data: {
+                    candidateId: candidate.id,
+                    activityType: 'stage_change',
+                    description: `Added to job: ${job.title}`,
+                    metadata: {
+                        jobId: data.jobId,
+                        jobTitle: job.title,
+                        source: data.source,
+                    },
+                },
+            });
+            return candidate;
+        });
+        return mapPrismaCandidateToCandidate(result);
+    },
 };
 export default candidateService;
 //# sourceMappingURL=candidate.service.js.map

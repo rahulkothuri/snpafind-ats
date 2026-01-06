@@ -1,10 +1,10 @@
 import prisma from '../lib/prisma.js';
-import type { 
-  AutoRejectionRules, 
-  AutoRejectionRule, 
-  RuleField, 
+import type {
+  AutoRejectionRules,
+  AutoRejectionRule,
+  RuleField,
   RuleOperator,
-  LegacyAutoRejectionRules 
+  LegacyAutoRejectionRules
 } from '../types/index.js';
 
 // Transaction client type
@@ -66,7 +66,7 @@ function isLegacyRules(rules: unknown): rules is LegacyAutoRejectionRules {
   const innerRules = r.rules as Record<string, unknown>;
   // Legacy format has minExperience/maxExperience directly, not an array
   return !Array.isArray(innerRules) && (
-    'minExperience' in innerRules || 
+    'minExperience' in innerRules ||
     'maxExperience' in innerRules ||
     'requiredSkills' in innerRules ||
     'requiredEducation' in innerRules
@@ -172,7 +172,7 @@ function evaluateArrayOperator(
   if (!candidateValue || !Array.isArray(candidateValue)) return false;
 
   const normalizedCandidate = candidateValue.map(v => v.toLowerCase().trim());
-  const ruleValues = Array.isArray(ruleValue) 
+  const ruleValues = Array.isArray(ruleValue)
     ? ruleValue.map(v => v.toLowerCase().trim())
     : [ruleValue.toLowerCase().trim()];
 
@@ -225,7 +225,7 @@ function evaluateSingleRule(
   rule: AutoRejectionRule
 ): boolean {
   const candidateValue = getCandidateFieldValue(candidate, rule.field);
-  
+
   // Determine field type and evaluate accordingly
   switch (rule.field) {
     case 'experience':
@@ -263,7 +263,7 @@ function generateRejectionReason(
   const fieldLabel = FIELD_LABELS[rule.field];
   const operatorLabel = OPERATOR_LABELS[rule.operator];
   const candidateValue = getCandidateFieldValue(candidate, rule.field);
-  
+
   let valueStr: string;
   if (Array.isArray(rule.value)) {
     if (rule.operator === 'between') {
@@ -397,7 +397,7 @@ export async function processAutoRejection(
     select: {
       autoRejectionRules: true,
       pipelineStages: {
-        where: { 
+        where: {
           name: 'Rejected',
           parentId: null,
         },
@@ -443,7 +443,13 @@ export async function processAutoRejection(
         toStageId: rejectedStage.id,
         autoRejected: true,
         rejectionReason: evaluation.reason,
-        triggeredRule: evaluation.triggeredRule,
+        triggeredRule: evaluation.triggeredRule ? {
+          id: evaluation.triggeredRule.id,
+          field: evaluation.triggeredRule.field,
+          operator: evaluation.triggeredRule.operator,
+          value: evaluation.triggeredRule.value,
+          logicConnector: evaluation.triggeredRule.logicConnector,
+        } : undefined,
       },
     },
   });

@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import jobService from '../services/job.service.js';
 import pipelineService from '../services/pipeline.service.js';
 import stageHistoryService from '../services/stageHistory.service.js';
 import pipelineAnalyticsService from '../services/pipelineAnalytics.service.js';
+import { bulkImportService, parseCSV, parseExcel } from '../services/bulkImport.service.js';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
@@ -29,14 +33,35 @@ const pipelineStageSchema = z.object({
     estimatedDuration: z.number().optional(),
 });
 // Auto-rejection rules schema (Requirements 9.1)
+// Supports both legacy object format and new flexible array format
+const autoRejectionRuleSchema = z.object({
+    id: z.string().optional(),
+    field: z.enum(['experience', 'location', 'skills', 'education', 'salary_expectation']),
+    operator: z.enum([
+        'less_than', 'greater_than', 'equals', 'not_equals', 'between',
+        'contains', 'not_contains', 'contains_all', 'contains_any'
+    ]),
+    value: z.union([
+        z.number(),
+        z.string(),
+        z.array(z.string()),
+        z.tuple([z.number(), z.number()])
+    ]),
+    logicConnector: z.enum(['AND', 'OR']).optional(),
+});
+// Legacy format for backward compatibility
+const legacyRulesSchema = z.object({
+    minExperience: z.number().min(0).optional(),
+    maxExperience: z.number().min(0).optional(),
+    requiredSkills: z.array(z.string()).optional(),
+    requiredEducation: z.array(z.string()).optional(),
+});
 const autoRejectionRulesSchema = z.object({
     enabled: z.boolean(),
-    rules: z.object({
-        minExperience: z.number().min(0).optional(),
-        maxExperience: z.number().min(0).optional(),
-        requiredSkills: z.array(z.string()).optional(),
-        requiredEducation: z.array(z.string()).optional(),
-    }),
+    rules: z.union([
+        z.array(autoRejectionRuleSchema), // New flexible array format
+        legacyRulesSchema, // Legacy object format
+    ]),
 }).optional();
 // Validation schemas with all new fields (Requirements 1.1)
 const createJobSchema = z.object({
@@ -294,6 +319,8 @@ router.post('/', authenticate, requireJobCreatePermission(), async (req, res, ne
         const job = await jobService.create({
             ...result.data,
             companyId: req.user.companyId,
+            // Cast autoRejectionRules to expected type since Zod union type is broader
+            autoRejectionRules: result.data.autoRejectionRules,
         });
         res.status(201).json(job);
     }
@@ -329,6 +356,32 @@ router.delete('/:id', authenticate, requireJobDeletePermission(), async (req, re
     try {
         await jobService.delete(req.params.id, req.user.userId, req.user.role);
         res.status(204).send();
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/jobs/:id/toggle-status
+ * Toggle job status between active and closed
+ */
+router.post('/:id/toggle-status', authenticate, requireJobUpdatePermission(), async (req, res, next) => {
+    try {
+        const job = await jobService.toggleStatus(req.params.id, req.user.userId, req.user.role);
+        res.json(job);
+    }
+    catch (error) {
+        next(error);
+    }
+});
+/**
+ * POST /api/jobs/:id/duplicate
+ * Duplicate a job (copies all job data but not candidates)
+ */
+router.post('/:id/duplicate', authenticate, requireJobCreatePermission(), async (req, res, next) => {
+    try {
+        const job = await jobService.duplicate(req.params.id, req.user.userId, req.user.role);
+        res.status(201).json(job);
     }
     catch (error) {
         next(error);
@@ -452,6 +505,115 @@ router.post('/:id/import-stages', authenticate, requireJobUpdatePermission(), as
     catch (error) {
         next(error);
     }
+});
+// Configure multer for bulk import file uploads
+const BULK_IMPORT_UPLOAD_DIR = 'uploads/bulk-imports';
+const MAX_BULK_IMPORT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_BULK_IMPORT_EXTENSIONS = ['.csv', '.xlsx', '.xls'];
+const ALLOWED_BULK_IMPORT_MIME_TYPES = [
+    'text/csv',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+// Ensure bulk import upload directory exists
+if (!fs.existsSync(BULK_IMPORT_UPLOAD_DIR)) {
+    fs.mkdirSync(BULK_IMPORT_UPLOAD_DIR, { recursive: true });
+}
+const bulkImportStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, BULK_IMPORT_UPLOAD_DIR);
+    },
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `bulk-import-${uniqueSuffix}${ext}`);
+    },
+});
+const bulkImportFileFilter = (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_BULK_IMPORT_EXTENSIONS.includes(ext)) {
+        cb(new Error(`Invalid file extension. Allowed: ${ALLOWED_BULK_IMPORT_EXTENSIONS.join(', ')}`));
+        return;
+    }
+    cb(null, true);
+};
+const bulkImportUpload = multer({
+    storage: bulkImportStorage,
+    limits: {
+        fileSize: MAX_BULK_IMPORT_FILE_SIZE,
+    },
+    fileFilter: bulkImportFileFilter,
+});
+/**
+ * POST /api/jobs/:id/bulk-import
+ * Import candidates from CSV/Excel file
+ * Candidates are placed in Queue stage and sent application form invitations
+ */
+router.post('/:id/bulk-import', authenticate, requireJobAccess(), (req, res, next) => {
+    bulkImportUpload.single('file')(req, res, async (err) => {
+        try {
+            // Handle multer errors
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({
+                        code: 'FILE_TOO_LARGE',
+                        message: 'File size exceeds maximum limit of 10MB',
+                    });
+                }
+                return res.status(400).json({
+                    code: 'UPLOAD_ERROR',
+                    message: err.message,
+                });
+            }
+            if (err) {
+                return res.status(400).json({
+                    code: 'INVALID_FILE',
+                    message: err.message,
+                });
+            }
+            // Verify file was uploaded
+            if (!req.file) {
+                return res.status(400).json({
+                    code: 'NO_FILE',
+                    message: 'No file uploaded. Please upload a CSV or Excel file.',
+                });
+            }
+            const jobId = req.params.id;
+            const companyId = req.user.companyId;
+            const userId = req.user.userId;
+            const sendEmails = req.body.sendEmails !== 'false';
+            // Parse file based on extension
+            const ext = path.extname(req.file.originalname).toLowerCase();
+            let candidates;
+            if (ext === '.csv') {
+                const content = fs.readFileSync(req.file.path, 'utf-8');
+                candidates = parseCSV(content);
+            }
+            else if (ext === '.xlsx' || ext === '.xls') {
+                const buffer = fs.readFileSync(req.file.path);
+                candidates = await parseExcel(buffer);
+            }
+            else {
+                return res.status(400).json({
+                    code: 'INVALID_FILE_TYPE',
+                    message: 'Unsupported file type. Please upload a CSV or Excel file.',
+                });
+            }
+            // Clean up uploaded file
+            try {
+                fs.unlinkSync(req.file.path);
+            }
+            catch {
+                // Ignore cleanup errors
+            }
+            // Import candidates
+            const result = await bulkImportService.importCandidates(jobId, companyId, candidates, userId, sendEmails);
+            res.status(200).json(result);
+        }
+        catch (error) {
+            next(error);
+        }
+    });
 });
 export default router;
 //# sourceMappingURL=job.routes.js.map

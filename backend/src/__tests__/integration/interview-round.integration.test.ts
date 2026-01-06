@@ -185,7 +185,7 @@ describe('Integration: Interview Scheduling with Round Type', () => {
 
     const input: CreateInterviewInput = {
       jobCandidateId: testJobCandidateId,
-      scheduledAt: scheduledAt.toISOString(),
+      scheduledAt: scheduledAt,
       duration: 60,
       timezone: 'America/New_York',
       mode: 'google_meet',
@@ -262,7 +262,7 @@ describe('Integration: Interview Scheduling with Round Type', () => {
     });
 
     expect(interviews.length).toBeGreaterThan(0);
-    
+
     const interview = interviews.find(i => i.id === testInterviewId);
     expect(interview).toBeDefined();
     expect(interview!.roundType).toBe('HR Round'); // Updated in previous test
@@ -277,7 +277,7 @@ describe('Integration: Interview Scheduling with Round Type', () => {
 
     const input: CreateInterviewInput = {
       jobCandidateId: testJobCandidateId,
-      scheduledAt: scheduledAt.toISOString(),
+      scheduledAt: scheduledAt,
       duration: 45,
       timezone: 'UTC',
       mode: 'in_person',
@@ -315,7 +315,7 @@ describe('Integration: Interview Scheduling with Round Type', () => {
     expect(roundOptions.map(o => o.name)).toContain('HR Round');
     expect(roundOptions.map(o => o.name)).toContain('Managerial Round');
     expect(roundOptions.map(o => o.name)).toContain('Final Round');
-    
+
     // All should be marked as not custom
     expect(roundOptions.every(o => o.isCustom === false)).toBe(true);
   }, 30000);
@@ -345,7 +345,7 @@ describe('Integration: Interview Scheduling with Round Type', () => {
     expect(roundOptions.map(o => o.name)).toContain('Coding Challenge');
     expect(roundOptions.map(o => o.name)).toContain('System Design');
     expect(roundOptions.map(o => o.name)).toContain('Culture Fit');
-    
+
     // All should be marked as custom
     expect(roundOptions.every(o => o.isCustom === true)).toBe(true);
 

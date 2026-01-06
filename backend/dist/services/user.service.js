@@ -10,6 +10,8 @@ function mapPrismaUserToUser(user) {
         email: user.email,
         role: user.role,
         isActive: user.isActive,
+        companyRoleId: user.companyRoleId,
+        companyRole: user.companyRole,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
     };
@@ -28,7 +30,13 @@ export const userService = {
                 email: data.email,
                 passwordHash,
                 role: data.role,
+                companyRoleId: data.companyRoleId,
             },
+            include: {
+                companyRole: {
+                    select: { id: true, name: true }
+                }
+            }
         });
         return mapPrismaUserToUser(user);
     },
@@ -38,6 +46,11 @@ export const userService = {
     async getById(id) {
         const user = await prisma.user.findUnique({
             where: { id },
+            include: {
+                companyRole: {
+                    select: { id: true, name: true }
+                }
+            }
         });
         if (!user) {
             throw new NotFoundError('User');
@@ -50,6 +63,11 @@ export const userService = {
     async getByEmail(email) {
         const user = await prisma.user.findUnique({
             where: { email },
+            include: {
+                companyRole: {
+                    select: { id: true, name: true }
+                }
+            }
         });
         if (!user) {
             return null;
@@ -81,9 +99,18 @@ export const userService = {
         if (data.password !== undefined) {
             updateData.passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
         }
+        if (data.companyRoleId !== undefined) {
+            // @ts-ignore
+            updateData.companyRoleId = data.companyRoleId;
+        }
         const user = await prisma.user.update({
             where: { id },
             data: updateData,
+            include: {
+                companyRole: {
+                    select: { id: true, name: true }
+                }
+            }
         });
         return mapPrismaUserToUser(user);
     },
@@ -102,6 +129,11 @@ export const userService = {
         const user = await prisma.user.update({
             where: { id },
             data: { isActive: false },
+            include: {
+                companyRole: {
+                    select: { id: true, name: true }
+                }
+            }
         });
         return mapPrismaUserToUser(user);
     },
@@ -128,6 +160,11 @@ export const userService = {
         const users = await prisma.user.findMany({
             where: { companyId },
             orderBy: { createdAt: 'desc' },
+            include: {
+                companyRole: {
+                    select: { id: true, name: true }
+                }
+            }
         });
         return users.map((u) => mapPrismaUserToUser(u));
     },
@@ -137,6 +174,11 @@ export const userService = {
     async getAll() {
         const users = await prisma.user.findMany({
             orderBy: { createdAt: 'desc' },
+            include: {
+                companyRole: {
+                    select: { id: true, name: true }
+                }
+            }
         });
         return users.map((u) => mapPrismaUserToUser(u));
     },

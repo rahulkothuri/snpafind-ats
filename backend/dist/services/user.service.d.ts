@@ -5,6 +5,7 @@ export interface CreateUserData {
     email: string;
     password: string;
     role: UserRole;
+    companyRoleId?: string;
 }
 export interface UpdateUserData {
     name?: string;
@@ -12,6 +13,7 @@ export interface UpdateUserData {
     role?: UserRole;
     isActive?: boolean;
     password?: string;
+    companyRoleId?: string | null;
 }
 export declare const userService: {
     /**

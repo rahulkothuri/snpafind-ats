@@ -46,9 +46,11 @@ interface ApplicationFormData {
   portfolioUrl: string;
   resumeFile: File | null;
   coverLetter: string;
+  currentCompany: string;
   currentSalary: string;
   expectedSalary: string;
-  desiredSalary: string;
+  desiredSalary?: string;
+  noticePeriod: string;
   workAuthorization: 'yes' | 'no' | null;
   agreedToTerms: boolean;
   screeningAnswers: Record<string, string | string[] | number | boolean>;
@@ -73,9 +75,11 @@ const initialFormData: ApplicationFormData = {
   portfolioUrl: '',
   resumeFile: null,
   coverLetter: '',
+  currentCompany: '',
   currentSalary: '',
   expectedSalary: '',
   desiredSalary: '',
+  noticePeriod: '',
   workAuthorization: null,
   agreedToTerms: false,
   screeningAnswers: {},
@@ -273,9 +277,10 @@ export function ApplicationPage() {
       if (formData.linkedinProfile) submitData.append('linkedinProfile', formData.linkedinProfile);
       if (formData.portfolioUrl) submitData.append('portfolioUrl', formData.portfolioUrl);
       if (formData.coverLetter) submitData.append('coverLetter', formData.coverLetter);
+      if (formData.currentCompany) submitData.append('currentCompany', formData.currentCompany);
       if (formData.currentSalary) submitData.append('currentCtc', formData.currentSalary);
       if (formData.expectedSalary) submitData.append('expectedCtc', formData.expectedSalary);
-      if (formData.desiredSalary) submitData.append('desiredSalary', formData.desiredSalary);
+      if (formData.noticePeriod) submitData.append('noticePeriod', formData.noticePeriod);
       if (formData.resumeFile) submitData.append('resume', formData.resumeFile);
 
       // Add screening answers as JSON string
@@ -713,6 +718,18 @@ export function ApplicationPage() {
         </div>
 
         <div className="form-group">
+          <label htmlFor="currentCompany" className="form-label">Current Company</label>
+          <input
+            id="currentCompany"
+            type="text"
+            value={formData.currentCompany || ''}
+            onChange={(e) => updateFormData('currentCompany', e.target.value)}
+            className="form-input min-h-[44px]"
+            placeholder="e.g. Acme Corp"
+          />
+        </div>
+
+        <div className="form-group">
           <label htmlFor="currentSalary" className="form-label">Current Salary (CTC) *</label>
           <input
             id="currentSalary"
@@ -739,14 +756,14 @@ export function ApplicationPage() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="desiredSalary" className="form-label">Desired Salary (Optional)</label>
+          <label htmlFor="noticePeriod" className="form-label">Notice Period</label>
           <input
-            id="desiredSalary"
+            id="noticePeriod"
             type="text"
-            value={formData.desiredSalary}
-            onChange={(e) => updateFormData('desiredSalary', e.target.value)}
+            value={formData.noticePeriod || ''}
+            onChange={(e) => updateFormData('noticePeriod', e.target.value)}
             className="form-input min-h-[44px]"
-            placeholder="e.g., $80,000 - $100,000"
+            placeholder="e.g., 30 days, 2 months"
           />
         </div>
 
@@ -844,7 +861,8 @@ export function ApplicationPage() {
             <h3 className="text-sm font-medium text-[#64748b] mb-2">Additional Information</h3>
             <div className="text-sm space-y-1">
               {formData.coverLetter && <p><span className="text-[#64748b]">Cover Letter:</span> <span className="text-[#111827]">{formData.coverLetter.substring(0, 100)}...</span></p>}
-              {formData.desiredSalary && <p><span className="text-[#64748b]">Desired Salary:</span> <span className="text-[#111827]">{formData.desiredSalary}</span></p>}
+              {formData.currentCompany && <p><span className="text-[#64748b]">Current Company:</span> <span className="text-[#111827]">{formData.currentCompany}</span></p>}
+              {formData.noticePeriod && <p><span className="text-[#64748b]">Notice Period:</span> <span className="text-[#111827]">{formData.noticePeriod}</span></p>}
               <p><span className="text-[#64748b]">Work Authorization:</span> <span className="text-[#111827]">{formData.workAuthorization === 'yes' ? 'Yes' : formData.workAuthorization === 'no' ? 'No' : 'Not specified'}</span></p>
             </div>
           </div>

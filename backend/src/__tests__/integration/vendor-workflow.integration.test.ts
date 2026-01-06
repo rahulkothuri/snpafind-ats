@@ -207,9 +207,9 @@ describe('Integration: Vendor Workflow', () => {
     expect(vendor.isActive).toBe(true);
 
     // Verify job assignment was created
-    expect(vendor.assignedJobs).toHaveLength(1);
-    expect(vendor.assignedJobs[0].id).toBe(assignedJobId);
-    expect(vendor.assignedJobs[0].title).toBe('Assigned Job');
+    expect(vendor.assignedJobs!).toHaveLength(1);
+    expect(vendor.assignedJobs![0].id).toBe(assignedJobId);
+    expect(vendor.assignedJobs![0].title).toBe('Assigned Job');
   }, 30000);
 
   /**
@@ -290,9 +290,9 @@ describe('Integration: Vendor Workflow', () => {
     });
 
     // Verify both jobs are now assigned
-    expect(updatedVendor.assignedJobs).toHaveLength(2);
-    expect(updatedVendor.assignedJobs.map(j => j.id)).toContain(assignedJobId);
-    expect(updatedVendor.assignedJobs.map(j => j.id)).toContain(unassignedJobId);
+    expect(updatedVendor.assignedJobs!).toHaveLength(2);
+    expect(updatedVendor.assignedJobs!.map(j => j.id)).toContain(assignedJobId);
+    expect(updatedVendor.assignedJobs!.map(j => j.id)).toContain(unassignedJobId);
 
     // Verify vendor now has access to previously unassigned job
     const hasAccess = await vendorService.hasJobAccess(testVendorId, unassignedJobId);
@@ -319,8 +319,8 @@ describe('Integration: Vendor Workflow', () => {
     });
 
     // Verify only one job is assigned
-    expect(updatedVendor.assignedJobs).toHaveLength(1);
-    expect(updatedVendor.assignedJobs[0].id).toBe(assignedJobId);
+    expect(updatedVendor.assignedJobs!).toHaveLength(1);
+    expect(updatedVendor.assignedJobs![0].id).toBe(assignedJobId);
 
     // Verify vendor no longer has access to removed job
     const hasAccess = await vendorService.hasJobAccess(testVendorId, unassignedJobId);
@@ -354,7 +354,7 @@ describe('Integration: Vendor Workflow', () => {
     const vendors = await vendorService.getVendors(testCompanyId);
 
     expect(vendors.length).toBeGreaterThan(0);
-    
+
     const testVendor = vendors.find(v => v.id === testVendorId);
     expect(testVendor).toBeDefined();
     expect(testVendor?.role).toBe('vendor');
@@ -379,9 +379,9 @@ describe('Integration: Vendor Workflow', () => {
     );
 
     // Verify both jobs are now assigned
-    expect(updatedVendor.assignedJobs).toHaveLength(2);
-    expect(updatedVendor.assignedJobs.map(j => j.id)).toContain(assignedJobId);
-    expect(updatedVendor.assignedJobs.map(j => j.id)).toContain(unassignedJobId);
+    expect(updatedVendor.assignedJobs!).toHaveLength(2);
+    expect(updatedVendor.assignedJobs!.map(j => j.id)).toContain(assignedJobId);
+    expect(updatedVendor.assignedJobs!.map(j => j.id)).toContain(unassignedJobId);
   }, 30000);
 
   /**
@@ -395,7 +395,7 @@ describe('Integration: Vendor Workflow', () => {
     );
 
     // Verify only one job remains
-    expect(updatedVendor.assignedJobs).toHaveLength(1);
-    expect(updatedVendor.assignedJobs[0].id).toBe(assignedJobId);
+    expect(updatedVendor.assignedJobs!).toHaveLength(1);
+    expect(updatedVendor.assignedJobs![0].id).toBe(assignedJobId);
   }, 30000);
 });

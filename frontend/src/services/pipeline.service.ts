@@ -35,6 +35,17 @@ export const pipelineService = {
     const response = await api.post('/pipeline/bulk-move', data);
     return response.data;
   },
+
+  /**
+   * Move a single candidate to a target stage
+   */
+  async moveCandidate(jobCandidateId: string, targetStageId: string, jobId: string): Promise<void> {
+    await api.post('/pipeline/bulk-move', {
+      candidateIds: [jobCandidateId],
+      targetStageId,
+      jobId,
+    });
+  },
 };
 
 export default pipelineService;
