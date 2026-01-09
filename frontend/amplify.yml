@@ -60,8 +60,8 @@ customHeaders:
 
 # Redirects for SPA routing
 redirects:
-  # Redirect all routes to index.html for client-side routing
-  - source: /<*>
+  # SPA catch-all: redirect all routes to index.html for client-side routing
+  # Status 200 means rewrite (not redirect), and Amplify serves existing files first
+  - source: </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>
     target: /index.html
     status: '200'
-    condition: null
