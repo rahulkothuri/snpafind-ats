@@ -58,10 +58,9 @@ customHeaders:
       - key: 'Cache-Control'
         value: 'no-cache, no-store, must-revalidate'
 
-# Redirects for SPA routing
-redirects:
-  # SPA catch-all: redirect all routes to index.html for client-side routing
-  # Status 200 means rewrite (not redirect), and Amplify serves existing files first
-  - source: </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>
-    target: /index.html
-    status: '200'
+# NOTE: Redirects must be configured in Amplify Console under
+# "Hosting" > "Rewrites and redirects", not in this file.
+# Add this rule in the console:
+#   Source: </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>
+#   Target: /index.html
+#   Type: 200 (Rewrite)
