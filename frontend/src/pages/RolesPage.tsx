@@ -70,13 +70,47 @@ function CandidateDetailContent({
 }) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [notes, setNotes] = useState<{ id: string; content: string; authorName: string; createdAt: string }[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
 
-  const handleSaveNote = () => {
+  // Fetch existing notes when candidate changes
+  useEffect(() => {
+    async function fetchNotes() {
+      setNotesLoading(true);
+      try {
+        const fetchedNotes = await candidatesService.getNotes(candidate.id);
+        setNotes(fetchedNotes);
+      } catch (error) {
+        console.error('Failed to fetch notes:', error);
+        setNotes([]);
+      } finally {
+        setNotesLoading(false);
+      }
+    }
+    fetchNotes();
+  }, [candidate.id]);
+
+  const handleSaveNote = async () => {
+    if (!note.trim()) return;
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      const newNote = await candidatesService.createNote(candidate.id, note.trim());
+      setNotes(prev => [newNote, ...prev]);
       setNote('');
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to save note:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await candidatesService.deleteNote(candidate.id, noteId);
+      setNotes(prev => prev.filter(n => n.id !== noteId));
+    } catch (error) {
+      console.error('Failed to delete note:', error);
+    }
   };
 
   const timelineEntries = [
@@ -133,6 +167,9 @@ function CandidateDetailContent({
           onChange={setNote}
           onSave={handleSaveNote}
           saving={saving}
+          notes={notes}
+          notesLoading={notesLoading}
+          onDeleteNote={handleDeleteNote}
         />
       </DetailSection>
 
@@ -458,18 +495,15 @@ export function RolesPage() {
     setCandidatesRefreshKey(prev => prev + 1);
   }, []);
 
-  // Filter candidates by stage and search - Requirements 3.2
-  const filteredCandidates = useMemo(() => {
+  // Filter candidates by search only (stage filtering is done in JobDetailsRightPanel) - Requirements 3.2
+  const searchFilteredCandidates = useMemo(() => {
     let result = jobCandidates;
-    if (stageFilter) {
-      result = result.filter((c) => c.stage === stageFilter);
-    }
     if (candidateSearchQuery.trim()) {
       const lowerQuery = candidateSearchQuery.toLowerCase();
       result = result.filter((c) => c.name.toLowerCase().includes(lowerQuery));
     }
     return result;
-  }, [jobCandidates, stageFilter, candidateSearchQuery]);
+  }, [jobCandidates, candidateSearchQuery]);
 
   // Header actions
   const headerActions = (
@@ -553,7 +587,7 @@ export function RolesPage() {
           >
             <JobDetailsRightPanel
               role={selectedRole}
-              candidates={filteredCandidates}
+              candidates={searchFilteredCandidates}
               candidateSearchQuery={candidateSearchQuery}
               onCandidateSearchChange={setCandidateSearchQuery}
               viewMode={viewMode}

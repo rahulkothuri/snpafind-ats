@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
 import jobService from '../services/job.service.js';
 import pipelineService from '../services/pipeline.service.js';
 import stageHistoryService from '../services/stageHistory.service.js';
@@ -12,6 +11,7 @@ import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import { requireJobAccess, requireJobCreatePermission, requireJobUpdatePermission, requireJobDeletePermission } from '../middleware/jobAccessControl.js';
+import { getDownloadPresignedUrl, isS3Configured } from '../lib/s3.js';
 const router = Router();
 // Sub-stage schema for pipeline configuration
 const subStageSchema = z.object({
@@ -241,34 +241,41 @@ router.get('/:id/candidates', authenticate, requireJobAccess(), async (req, res,
             orderBy: { appliedAt: 'desc' },
         });
         // Map to response format
-        const result = jobCandidates.map((jc) => ({
-            id: jc.id,
-            jobId: jc.jobId,
-            candidateId: jc.candidateId,
-            currentStageId: jc.currentStageId,
-            appliedAt: jc.appliedAt,
-            updatedAt: jc.updatedAt,
-            stageName: jc.currentStage?.name || 'Applied',
-            candidate: jc.candidate ? {
-                id: jc.candidate.id,
-                companyId: jc.candidate.companyId,
-                name: jc.candidate.name,
-                email: jc.candidate.email,
-                phone: jc.candidate.phone,
-                experienceYears: jc.candidate.experienceYears,
-                currentCompany: jc.candidate.currentCompany,
-                location: jc.candidate.location,
-                currentCtc: jc.candidate.currentCtc,
-                expectedCtc: jc.candidate.expectedCtc,
-                noticePeriod: jc.candidate.noticePeriod,
-                source: jc.candidate.source,
-                availability: jc.candidate.availability,
-                skills: jc.candidate.skills,
-                resumeUrl: jc.candidate.resumeUrl,
-                score: jc.candidate.score,
-                createdAt: jc.candidate.createdAt,
-                updatedAt: jc.candidate.updatedAt,
-            } : null,
+        const result = await Promise.all(jobCandidates.map(async (jc) => {
+            // Convert S3 key to presigned URL if needed
+            let resumeUrl = jc.candidate?.resumeUrl;
+            if (resumeUrl && isS3Configured() && !resumeUrl.startsWith('/uploads') && !resumeUrl.startsWith('http')) {
+                resumeUrl = await getDownloadPresignedUrl({ key: resumeUrl });
+            }
+            return {
+                id: jc.id,
+                jobId: jc.jobId,
+                candidateId: jc.candidateId,
+                currentStageId: jc.currentStageId,
+                appliedAt: jc.appliedAt,
+                updatedAt: jc.updatedAt,
+                stageName: jc.currentStage?.name || 'Applied',
+                candidate: jc.candidate ? {
+                    id: jc.candidate.id,
+                    companyId: jc.candidate.companyId,
+                    name: jc.candidate.name,
+                    email: jc.candidate.email,
+                    phone: jc.candidate.phone,
+                    experienceYears: jc.candidate.experienceYears,
+                    currentCompany: jc.candidate.currentCompany,
+                    location: jc.candidate.location,
+                    currentCtc: jc.candidate.currentCtc,
+                    expectedCtc: jc.candidate.expectedCtc,
+                    noticePeriod: jc.candidate.noticePeriod,
+                    source: jc.candidate.source,
+                    availability: jc.candidate.availability,
+                    skills: jc.candidate.skills,
+                    resumeUrl: resumeUrl,
+                    score: jc.candidate.score,
+                    createdAt: jc.candidate.createdAt,
+                    updatedAt: jc.candidate.updatedAt,
+                } : null,
+            };
         }));
         res.json(result);
     }
@@ -507,28 +514,10 @@ router.post('/:id/import-stages', authenticate, requireJobUpdatePermission(), as
     }
 });
 // Configure multer for bulk import file uploads
-const BULK_IMPORT_UPLOAD_DIR = 'uploads/bulk-imports';
 const MAX_BULK_IMPORT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_BULK_IMPORT_EXTENSIONS = ['.csv', '.xlsx', '.xls'];
-const ALLOWED_BULK_IMPORT_MIME_TYPES = [
-    'text/csv',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-];
-// Ensure bulk import upload directory exists
-if (!fs.existsSync(BULK_IMPORT_UPLOAD_DIR)) {
-    fs.mkdirSync(BULK_IMPORT_UPLOAD_DIR, { recursive: true });
-}
-const bulkImportStorage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-        cb(null, BULK_IMPORT_UPLOAD_DIR);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `bulk-import-${uniqueSuffix}${ext}`);
-    },
-});
+// Configure multer for memory storage (for bulk import)
+const bulkImportStorage = multer.memoryStorage();
 const bulkImportFileFilter = (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_BULK_IMPORT_EXTENSIONS.includes(ext)) {
@@ -586,25 +575,17 @@ router.post('/:id/bulk-import', authenticate, requireJobAccess(), (req, res, nex
             const ext = path.extname(req.file.originalname).toLowerCase();
             let candidates;
             if (ext === '.csv') {
-                const content = fs.readFileSync(req.file.path, 'utf-8');
+                const content = req.file.buffer.toString('utf-8');
                 candidates = parseCSV(content);
             }
             else if (ext === '.xlsx' || ext === '.xls') {
-                const buffer = fs.readFileSync(req.file.path);
-                candidates = await parseExcel(buffer);
+                candidates = await parseExcel(req.file.buffer);
             }
             else {
                 return res.status(400).json({
                     code: 'INVALID_FILE_TYPE',
                     message: 'Unsupported file type. Please upload a CSV or Excel file.',
                 });
-            }
-            // Clean up uploaded file
-            try {
-                fs.unlinkSync(req.file.path);
-            }
-            catch {
-                // Ignore cleanup errors
             }
             // Import candidates
             const result = await bulkImportService.importCandidates(jobId, companyId, candidates, userId, sendEmails);

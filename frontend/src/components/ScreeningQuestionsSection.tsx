@@ -210,6 +210,12 @@ export function ScreeningQuestionsSection({
                       type="text"
                       value={question.question}
                       onChange={(e) => updateQuestion(question.id, { question: e.target.value })}
+                      onKeyDown={(e) => {
+                        // Prevent form submission when pressing Enter in question input
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                        }
+                      }}
                       className="form-input"
                       placeholder="Enter your question..."
                     />
@@ -268,6 +274,12 @@ export function ScreeningQuestionsSection({
                               type="text"
                               value={option}
                               onChange={(e) => updateOption(question.id, optIndex, e.target.value)}
+                              onKeyDown={(e) => {
+                                // Prevent form submission when pressing Enter in option input
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                }
+                              }}
                               className="form-input flex-1"
                               placeholder={`Option ${optIndex + 1}`}
                             />

@@ -6,6 +6,7 @@ import fs from 'fs';
 import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError } from '../middleware/errorHandler.js';
 import { processAutoRejection } from '../services/autoRejection.service.js';
+import { uploadToS3, generateS3Key, isS3Configured } from '../lib/s3.js';
 const router = Router();
 // Configure multer for resume uploads (public applications)
 const UPLOAD_DIR = 'uploads/resumes';
@@ -20,16 +21,8 @@ const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
-const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-        cb(null, UPLOAD_DIR);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `resume-${uniqueSuffix}${ext}`);
-    },
-});
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
 const fileFilter = (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
@@ -59,6 +52,10 @@ const publicApplicationSchema = z.object({
     linkedinProfile: z.string().optional(),
     portfolioUrl: z.string().optional(),
     coverLetter: z.string().optional(),
+    currentCompany: z.string().optional(),
+    currentCtc: z.string().optional(),
+    expectedCtc: z.string().optional(),
+    noticePeriod: z.string().optional(),
     desiredSalary: z.string().optional(),
     workAuthorization: z.enum(['yes', 'no']),
     agreedToTerms: z.boolean(),
@@ -154,6 +151,8 @@ router.get('/jobs/:id', async (req, res, next) => {
             openings: job.openings,
             // Screening questions for application form
             screeningQuestions: job.screeningQuestions || [],
+            // Mandatory criteria (Requirements 3.1)
+            mandatoryCriteria: job.mandatoryCriteria,
             // Legacy fields (kept for compatibility)
             location: job.location,
             employmentType: job.employmentType,
@@ -201,6 +200,10 @@ router.post('/applications', (req, res, next) => {
                 linkedinProfile: req.body.linkedinProfile,
                 portfolioUrl: req.body.portfolioUrl,
                 coverLetter: req.body.coverLetter,
+                currentCompany: req.body.currentCompany,
+                currentCtc: req.body.currentCtc,
+                expectedCtc: req.body.expectedCtc,
+                noticePeriod: req.body.noticePeriod,
                 desiredSalary: req.body.desiredSalary,
                 workAuthorization: req.body.workAuthorization,
                 agreedToTerms: req.body.agreedToTerms === 'true' || req.body.agreedToTerms === true,
@@ -251,7 +254,33 @@ router.post('/applications', (req, res, next) => {
                 });
             }
             // Build resume URL if file was uploaded
-            const resumeUrl = req.file ? `/${UPLOAD_DIR}/${req.file.filename}` : null;
+            let resumeUrl = null;
+            if (req.file) {
+                if (isS3Configured()) {
+                    const key = generateS3Key({
+                        folder: 'resumes',
+                        filename: req.file.originalname,
+                        companyId: job.companyId
+                    });
+                    await uploadToS3({
+                        key,
+                        body: req.file.buffer,
+                        contentType: req.file.mimetype,
+                    });
+                    resumeUrl = key;
+                }
+                else {
+                    // Fallback
+                    if (!fs.existsSync(UPLOAD_DIR)) {
+                        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+                    }
+                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                    const ext = path.extname(req.file.originalname).toLowerCase();
+                    const filename = `resume-${uniqueSuffix}${ext}`;
+                    fs.writeFileSync(path.join(UPLOAD_DIR, filename), req.file.buffer);
+                    resumeUrl = `/${UPLOAD_DIR}/${filename}`;
+                }
+            }
             // Check if candidate with email already exists (Requirements 5.12)
             const existingCandidate = await prisma.candidate.findUnique({
                 where: { email: data.email.toLowerCase() },
@@ -266,6 +295,10 @@ router.post('/applications', (req, res, next) => {
                         name: data.fullName,
                         phone: data.phone,
                         location: data.currentLocation,
+                        currentCompany: data.currentCompany,
+                        currentCtc: data.currentCtc,
+                        expectedCtc: data.expectedCtc,
+                        noticePeriod: data.noticePeriod,
                         resumeUrl: resumeUrl || existingCandidate.resumeUrl,
                         updatedAt: new Date(),
                     },
@@ -281,6 +314,10 @@ router.post('/applications', (req, res, next) => {
                         email: data.email.toLowerCase(),
                         phone: data.phone,
                         location: data.currentLocation,
+                        currentCompany: data.currentCompany,
+                        currentCtc: data.currentCtc,
+                        expectedCtc: data.expectedCtc,
+                        noticePeriod: data.noticePeriod,
                         source: 'Public Application',
                         resumeUrl: resumeUrl,
                         experienceYears: 0,

@@ -116,12 +116,17 @@ const getModeIcon = (mode: InterviewMode) => {
   }
 };
 
+// Helper to get local date string in YYYY-MM-DD format
+const getLocalDateString = (date: Date): string => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 // Determine pipeline stage for an interview
 const getInterviewStage = (interview: Interview): PipelineStageId => {
   const scheduledDate = new Date(interview.scheduledAt);
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
-  const interviewDateStr = scheduledDate.toISOString().split('T')[0];
+  const todayStr = getLocalDateString(now);
+  const interviewDateStr = getLocalDateString(scheduledDate);
 
   if (interview.status === 'cancelled') return 'no_show';
   if (interview.status === 'no_show') return 'no_show';
@@ -820,7 +825,7 @@ export function InterviewDashboardPage() {
     return { year: now.getFullYear(), month: now.getMonth() };
   });
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
+    return getLocalDateString(new Date());
   });
 
   // Filters
@@ -915,14 +920,14 @@ export function InterviewDashboardPage() {
   // KPI calculations
   const kpiStats = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(now);
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - now.getDay());
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
     const todayInterviews = filteredInterviews.filter(i =>
-      new Date(i.scheduledAt).toISOString().split('T')[0] === todayStr
+      getLocalDateString(new Date(i.scheduledAt)) === todayStr
     );
 
     const weekInterviews = filteredInterviews.filter(i => {
@@ -985,7 +990,11 @@ export function InterviewDashboardPage() {
   // Selected date interviews
   const selectedDateInterviews = useMemo(() => {
     return filteredInterviews
-      .filter(i => new Date(i.scheduledAt).toISOString().split('T')[0] === selectedDate)
+      .filter(i => {
+        const date = new Date(i.scheduledAt);
+        const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        return localDateStr === selectedDate;
+      })
       .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   }, [filteredInterviews, selectedDate]);
 
@@ -1294,7 +1303,7 @@ export function InterviewDashboardPage() {
                   {Array.from({ length: calendarData.daysInMonth }).map((_, i) => {
                     const day = i + 1;
                     const dateStr = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayStr = getLocalDateString(new Date());
                     return (
                       <CalendarDayCell
                         key={day}

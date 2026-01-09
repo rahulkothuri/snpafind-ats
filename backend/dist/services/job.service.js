@@ -2,17 +2,47 @@ import prisma from '../lib/prisma.js';
 import { NotFoundError, ValidationError, AuthorizationError } from '../middleware/errorHandler.js';
 import { jobAccessControlService } from './jobAccessControl.service.js';
 // Mandatory stages that cannot be removed (Requirements 4.2)
-const MANDATORY_STAGES = ['Screening', 'Shortlisted', 'Offer'];
-// Default pipeline stages as per Requirements 6.1
+const MANDATORY_STAGES = ['Screening', 'Shortlisted', 'Offered', 'Rejected'];
+// Default pipeline stages with sub-stages configuration (Requirements 1.1, 4.1, 4.2)
 const DEFAULT_STAGES = [
-    { name: 'Queue', position: 0, isMandatory: false },
-    { name: 'Applied', position: 1, isMandatory: false },
-    { name: 'Screening', position: 2, isMandatory: true },
-    { name: 'Shortlisted', position: 3, isMandatory: true },
-    { name: 'Interview', position: 4, isMandatory: false },
-    { name: 'Selected', position: 5, isMandatory: false },
-    { name: 'Offer', position: 6, isMandatory: true },
-    { name: 'Hired', position: 7, isMandatory: false },
+    { name: 'Queue', position: 0, isMandatory: false, subStages: [] },
+    { name: 'Applied', position: 1, isMandatory: false, subStages: [] },
+    {
+        name: 'Screening',
+        position: 2,
+        isMandatory: true,
+        subStages: [{ name: 'HR Screening', position: 0 }]
+    },
+    {
+        name: 'Shortlisted',
+        position: 3,
+        isMandatory: true,
+        subStages: [
+            { name: 'CV Shortlist', position: 0 },
+            { name: 'Panel Shortlist', position: 1 }
+        ]
+    },
+    {
+        name: 'Interview',
+        position: 4,
+        isMandatory: false,
+        subStages: [
+            { name: 'Round 1', position: 0 },
+            { name: 'Round 2', position: 1 }
+        ]
+    },
+    { name: 'Selected', position: 5, isMandatory: false, subStages: [] },
+    {
+        name: 'Offered',
+        position: 6,
+        isMandatory: true,
+        subStages: [
+            { name: 'Offer Sent', position: 0 },
+            { name: 'Offer Accepted', position: 1 }
+        ]
+    },
+    { name: 'Hired', position: 7, isMandatory: false, subStages: [] },
+    { name: 'Rejected', position: 8, isMandatory: true, subStages: [] },
 ];
 /**
  * Check if rules are in legacy format

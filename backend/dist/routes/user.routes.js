@@ -6,16 +6,16 @@ import { ValidationError } from '../middleware/errorHandler.js';
 const router = Router();
 // Validation schemas
 const createUserSchema = z.object({
-    companyId: z.string().uuid('Invalid company ID'),
+    companyId: z.string().uuid('Invalid company ID').optional(),
     name: z.string().min(1, 'Name is required'),
     email: z.string().email('Invalid email format'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
-    role: z.enum(['admin', 'hiring_manager', 'recruiter']),
+    role: z.enum(['admin', 'hiring_manager', 'recruiter', 'vendor']),
 });
 const updateUserSchema = z.object({
     name: z.string().min(1, 'Name is required').optional(),
     email: z.string().email('Invalid email format').optional(),
-    role: z.enum(['admin', 'hiring_manager', 'recruiter']).optional(),
+    role: z.enum(['admin', 'hiring_manager', 'recruiter', 'vendor']).optional(),
     isActive: z.boolean().optional(),
     password: z.string().min(8, 'Password must be at least 8 characters').optional(),
 });
@@ -76,11 +76,16 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
         if (!result.success) {
             throw new ValidationError(parseZodErrors(result.error));
         }
+        // Use the authenticated user's companyId if not provided
+        const companyId = result.data.companyId || req.user.companyId;
         // Admin can only create users in their own company
-        if (result.data.companyId !== req.user.companyId) {
+        if (companyId !== req.user.companyId) {
             return res.status(403).json({ code: 'FORBIDDEN', message: 'Cannot create users in other companies' });
         }
-        const user = await userService.create(result.data);
+        const user = await userService.create({
+            ...result.data,
+            companyId,
+        });
         res.status(201).json(user);
     }
     catch (error) {

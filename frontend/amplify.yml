@@ -61,6 +61,7 @@ customHeaders:
 # Redirects for SPA routing
 redirects:
   # Redirect all routes to index.html for client-side routing
-  - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>'
+  - source: /<*>
     target: /index.html
     status: '200'
+    condition: null

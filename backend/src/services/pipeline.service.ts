@@ -25,6 +25,12 @@ export interface ReorderStageData {
   newPosition: number;
 }
 
+export interface CreateSubStageData {
+  parentStageId: string;
+  name: string;
+  position?: number;
+}
+
 export const pipelineService = {
   /**
    * Get all stages for a job
@@ -232,6 +238,101 @@ export const pipelineService = {
           position: { decrement: 1 },
         },
       });
+    });
+  },
+
+  /**
+   * Add a sub-stage to a parent stage
+   * Requirements: 3.1, 3.2, 3.3
+   */
+  async addSubStage(data: CreateSubStageData): Promise<PipelineStage> {
+    // Validate input
+    if (!data.name || data.name.trim() === '') {
+      throw new ValidationError({ name: ['Sub-stage name is required'] });
+    }
+
+    // Find the parent stage
+    const parentStage = await prisma.pipelineStage.findUnique({
+      where: { id: data.parentStageId },
+      include: { subStages: true },
+    });
+
+    if (!parentStage) {
+      throw new NotFoundError('Pipeline stage');
+    }
+
+    // Verify parent is a main stage (not a sub-stage itself)
+    if (parentStage.parentId) {
+      throw new ValidationError({ 
+        parentStageId: ['Cannot add sub-stages to a sub-stage'] 
+      });
+    }
+
+    // Check for duplicate sub-stage name within parent
+    const existingSubStage = parentStage.subStages.find(
+      (s: PrismaStageResult) => s.name.toLowerCase() === data.name.trim().toLowerCase()
+    );
+
+    if (existingSubStage) {
+      throw new ValidationError({ 
+        name: ['Sub-stage name already exists under this stage'] 
+      });
+    }
+
+    // Determine position - use provided position or assign next available
+    let position: number;
+    if (data.position !== undefined) {
+      if (data.position < 0) {
+        throw new ValidationError({ position: ['Position must be non-negative'] });
+      }
+      position = data.position;
+    } else {
+      // Assign next available position
+      const maxPosition = parentStage.subStages.reduce(
+        (max: number, s: PrismaStageResult) => Math.max(max, s.position),
+        -1
+      );
+      position = maxPosition + 1;
+    }
+
+    // Create the sub-stage
+    const subStage = await prisma.pipelineStage.create({
+      data: {
+        jobId: parentStage.jobId,
+        name: data.name.trim(),
+        position,
+        isDefault: false,
+        isMandatory: false,
+        parentId: data.parentStageId,
+      },
+    });
+
+    return this.mapToStage(subStage);
+  },
+
+  /**
+   * Delete a sub-stage
+   * Requirements: 2.1, 2.2
+   */
+  async deleteSubStage(subStageId: string): Promise<void> {
+    const subStage = await prisma.pipelineStage.findUnique({
+      where: { id: subStageId },
+    });
+
+    if (!subStage) {
+      throw new NotFoundError('Sub-stage');
+    }
+
+    // Verify this is a sub-stage (has a parentId)
+    if (!subStage.parentId) {
+      throw new ValidationError({ 
+        subStageId: ['Cannot delete a main stage using this method. Use deleteStage instead.'] 
+      });
+    }
+
+    // Delete the sub-stage
+    await prisma.pipelineStage.delete({
+      where: { id: subStageId },
     });
   },
 

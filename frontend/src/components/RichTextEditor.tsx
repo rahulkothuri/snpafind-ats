@@ -9,6 +9,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
+import HardBreak from '@tiptap/extension-hard-break';
 import { useEffect } from 'react';
 
 interface RichTextEditorProps {
@@ -70,6 +71,7 @@ export function RichTextEditor({
                 heading: {
                     levels: [1, 2, 3],
                 },
+                hardBreak: false, // Disable default, we'll add our own
             }),
             Underline,
             TextAlign.configure({
@@ -77,6 +79,9 @@ export function RichTextEditor({
             }),
             Placeholder.configure({
                 placeholder,
+            }),
+            HardBreak.configure({
+                keepMarks: true,
             }),
         ],
         content: value,
@@ -305,6 +310,10 @@ export function RichTextEditor({
         }
         .ProseMirror p {
           margin: 0.5rem 0;
+          min-height: 1.5em;
+        }
+        .ProseMirror p:empty::before {
+          content: "\\00a0";
         }
         .ProseMirror strong {
           font-weight: 700;
@@ -317,6 +326,11 @@ export function RichTextEditor({
         }
         .ProseMirror s {
           text-decoration: line-through;
+        }
+        .ProseMirror br {
+          display: block;
+          content: "";
+          margin-top: 0.5rem;
         }
       `}</style>
         </div>

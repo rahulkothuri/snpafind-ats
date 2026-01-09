@@ -78,6 +78,8 @@
   --sidebar-collapsed-width: 64px;
   --header-height: 56px;
   /* Compact Header */
+  --detail-panel-width: 420px;
+  /* Fixed width for candidate detail sidebar */
 
   /* Border radius */
   --radius-sm: 4px;

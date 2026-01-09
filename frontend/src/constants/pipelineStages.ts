@@ -6,17 +6,17 @@
  */
 
 /**
- * Default pipeline stages in order - Requirements 5.1, 5.2
- * Order: Queue → Applied → Screening → Shortlisted → Interview → Selected → Offer → Hired → Rejected
+ * Default pipeline stages in order - Requirements 5.1, 5.2, 6.1, 6.2
+ * Order: Queue → Applied → Screening → Shortlist → Interview → Selected → Offered → Hired → Rejected
  */
 export const DEFAULT_PIPELINE_STAGES = [
   'Queue',
   'Applied',
   'Screening',
-  'Shortlisted',
+  'Shortlisted',   // Changed from 'Shortlist' - Requirements 6.1
   'Interview',
-  'Selected',  // NEW STAGE - between Interview and Offer
-  'Offer',
+  'Selected',
+  'Offered',     // Changed from 'Offer' - Requirements 6.2
   'Hired',
   'Rejected'
 ] as const;
@@ -24,7 +24,7 @@ export const DEFAULT_PIPELINE_STAGES = [
 export type PipelineStageName = typeof DEFAULT_PIPELINE_STAGES[number];
 
 /**
- * Stage colors for visual styling - Requirements 5.5
+ * Stage colors for visual styling - Requirements 5.5, 6.3
  * Each stage has background, text, indicator, and border colors
  */
 export const STAGE_COLORS: Record<string, { 
@@ -51,7 +51,7 @@ export const STAGE_COLORS: Record<string, {
     indicator: 'bg-[#f59e0b]',
     border: 'border-[#fde68a]'
   },
-  'Shortlisted': { 
+  'Shortlisted': {  // Changed from 'Shortlist' - Requirements 6.3
     bg: 'bg-[#dcfce7]', 
     text: 'text-[#166534]', 
     indicator: 'bg-[#22c55e]',
@@ -69,7 +69,7 @@ export const STAGE_COLORS: Record<string, {
     indicator: 'bg-[#ec4899]',
     border: 'border-[#fbcfe8]'
   },
-  'Offer': { 
+  'Offered': {  // Changed from 'Offer' - Requirements 6.3
     bg: 'bg-[#f5f3ff]', 
     text: 'text-[#6d28d9]', 
     indicator: 'bg-[#8b5cf6]',

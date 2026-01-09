@@ -211,7 +211,7 @@ export function JobDetailsPage() {
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-[#111827] mb-4">Job Description</h3>
             <div
-              className="prose prose-sm max-w-none text-[#64748b]"
+              className="prose prose-sm max-w-none text-[#64748b] [&_p]:min-h-[1.5em] [&_p:empty]:before:content-['\00a0']"
               dangerouslySetInnerHTML={{ __html: job.description }}
             />
           </div>

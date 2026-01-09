@@ -131,7 +131,18 @@ export async function parseExcel(buffer) {
         const record = {};
         headers.forEach((header, index) => {
             const value = row[index];
-            record[header] = value !== null && value !== undefined ? String(value).trim() : '';
+            // Handle ExcelJS cell values: can be string, number, or object (hyperlink/rich text)
+            let cellValue = '';
+            if (value !== null && value !== undefined) {
+                if (typeof value === 'object' && value !== null) {
+                    // ExcelJS hyperlink or rich text object
+                    cellValue = value.text || value.result || String(value);
+                }
+                else {
+                    cellValue = String(value);
+                }
+            }
+            record[header] = cellValue.trim();
         });
         // Validate required fields
         if (!record.name || !record.email) {

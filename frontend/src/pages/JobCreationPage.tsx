@@ -351,14 +351,20 @@ export function JobCreationPage() {
   };
 
   // Helper function to infer stage type from name
-  const inferStageType = (stageName: string): 'shortlisting' | 'screening' | 'interview' | 'offer' | 'hired' => {
+  const inferStageType = (stageName: string): 'queue' | 'applied' | 'screening' | 'shortlist' | 'interview' | 'selected' | 'offer' | 'hired' => {
     const name = stageName.toLowerCase();
-    if (name.includes('shortlist') || name.includes('applied') || name.includes('queue')) {
-      return 'shortlisting';
+    if (name.includes('queue')) {
+      return 'queue';
+    } else if (name.includes('applied')) {
+      return 'applied';
     } else if (name.includes('screen') || name.includes('review')) {
       return 'screening';
-    } else if (name.includes('interview') || name.includes('selected')) {
+    } else if (name.includes('shortlist')) {
+      return 'shortlist';
+    } else if (name.includes('interview')) {
       return 'interview';
+    } else if (name.includes('selected')) {
+      return 'selected';
     } else if (name.includes('offer')) {
       return 'offer';
     } else if (name.includes('hired') || name.includes('onboard')) {
@@ -375,6 +381,34 @@ export function JobCreationPage() {
     setCreatedJobId('');
     setCreatedJobTitle('');
   };
+
+  // Helper function to get user-friendly field labels for validation errors
+  const getFieldLabel = (field: string): string => {
+    const fieldLabels: Record<string, string> = {
+      title: 'Job Title',
+      openings: 'Openings',
+      experienceMin: 'Minimum Experience',
+      experienceMax: 'Maximum Experience',
+      salaryMin: 'Minimum Salary',
+      salaryMax: 'Maximum Salary',
+      workMode: 'Work Mode',
+      locations: 'Locations',
+      description: 'Job Description',
+      skills: 'Skills',
+      educationQualification: 'Education',
+      preferredIndustry: 'Industry',
+      jobDomain: 'Job Domain',
+      priority: 'Priority',
+      assignedRecruiterId: 'Assigned Recruiter',
+      country: 'Country',
+      variables: 'Incentives',
+      ageUpTo: 'Max Age',
+    };
+    return fieldLabels[field] || field;
+  };
+
+  // Check if there are validation errors to display
+  const hasValidationErrors = Object.keys(errors).length > 0;
 
 
   if (isLoading) {
@@ -405,15 +439,34 @@ export function JobCreationPage() {
     >
       <div className="max-w-[1600px] mx-auto p-4">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Error Banner */}
-          {submitError && (
+          {/* Error Banner - Shows validation errors and submit errors */}
+          {(submitError || hasValidationErrors) && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
               <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
-              <div>
-                <p className="text-sm font-medium text-red-800">Error</p>
-                <p className="text-xs text-red-700">{submitError}</p>
+              <div className="flex-1">
+                {submitError && (
+                  <>
+                    <p className="text-sm font-medium text-red-800">Error</p>
+                    <p className="text-xs text-red-700">{submitError}</p>
+                  </>
+                )}
+                {hasValidationErrors && (
+                  <>
+                    <p className="text-sm font-medium text-red-800">
+                      {submitError ? 'Validation Errors' : 'Please fix the following errors'}
+                    </p>
+                    <ul className="text-xs text-red-700 mt-1 space-y-0.5">
+                      {Object.entries(errors).map(([field, message]) => (
+                        <li key={field} className="flex items-start gap-1">
+                          <span className="font-medium">{getFieldLabel(field)}:</span>
+                          <span>{message}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -476,7 +529,7 @@ export function JobCreationPage() {
                 </select>
               </div>
 
-              {/* Row 2: Experience (1), Salary (1), Openings (1), Work Mode (1) */}
+              {/* Row 2: Experience (1), Salary (1), Incentives (1), Openings (1) */}
               <div className="col-span-1">
                 <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Experience (Yrs) <span className="text-red-500">*</span>
@@ -539,6 +592,20 @@ export function JobCreationPage() {
               </div>
 
               <div className="col-span-1">
+                <label htmlFor="variables" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                  Incentives
+                </label>
+                <input
+                  id="variables"
+                  type="text"
+                  value={formData.variables}
+                  onChange={(e) => handleChange('variables', e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                  placeholder="e.g., Annual bonus"
+                />
+              </div>
+
+              <div className="col-span-1">
                 <label htmlFor="openings" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Openings <span className="text-red-500">*</span>
                 </label>
@@ -552,6 +619,7 @@ export function JobCreationPage() {
                 />
               </div>
 
+              {/* Row 3: Work Mode (1), Locations (1), Country (1), Industry (1) */}
               <div className="col-span-1">
                 <label htmlFor="workMode" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Work Mode <span className="text-red-500">*</span>
@@ -569,7 +637,7 @@ export function JobCreationPage() {
                 </select>
               </div>
 
-              {/* Row 3: Locations (1), Industry (1), Domain (1), Education (1) */}
+              {/* Row 4: Locations (1), Domain (1), Education (1), Max Age (1) */}
               <div className="col-span-1">
                 <label htmlFor="locations" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Locations <span className="text-red-500">*</span>
@@ -639,6 +707,7 @@ export function JobCreationPage() {
                 </select>
               </div>
 
+              {/* Row 5: Education (1), Skills (2), Max Age (1) */}
               <div className="col-span-1">
                 <label htmlFor="educationQualification" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Education
@@ -656,7 +725,6 @@ export function JobCreationPage() {
                 </select>
               </div>
 
-              {/* Row 4: Skills (2), Variables (1), Age (1) */}
               <div className="col-span-2">
                 <label htmlFor="skills" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
                   Skills
@@ -671,20 +739,6 @@ export function JobCreationPage() {
                   allowCustom={true}
                   customPlaceholder="Type skill and press Enter"
                   maxDisplayTags={4}
-                />
-              </div>
-
-              <div className="col-span-1">
-                <label htmlFor="variables" className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1">
-                  Variables / Incentives
-                </label>
-                <input
-                  id="variables"
-                  type="text"
-                  value={formData.variables}
-                  onChange={(e) => handleChange('variables', e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
-                  placeholder="e.g., Annual bonus"
                 />
               </div>
 

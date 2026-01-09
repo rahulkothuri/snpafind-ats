@@ -78,6 +78,12 @@ cat > /tmp/apprunner-config.json << EOF
     "Memory": "2 GB",
     "InstanceRoleArn": "${INSTANCE_ROLE_ARN}"
   },
+  "NetworkConfiguration": {
+    "EgressConfiguration": {
+      "EgressType": "VPC",
+      "VpcConnectorArn": "${VPC_CONNECTOR_ARN}"
+    }
+  },
   "HealthCheckConfiguration": {
     "Protocol": "HTTP",
     "Path": "/api/health",

@@ -253,7 +253,7 @@ export function JobDetailsPanel({ job, company }: JobDetailsPanelProps) {
             Job Description
           </h3>
           <div
-            className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal"
+            className="prose prose-sm max-w-none text-[#374151] prose-headings:text-[#111827] prose-headings:font-semibold prose-p:text-[#374151] prose-li:text-[#374151] prose-strong:text-[#111827] prose-ul:list-disc prose-ol:list-decimal [&_p]:min-h-[1.5em] [&_p:empty]:before:content-['\00a0']"
             dangerouslySetInnerHTML={{ __html: job.description }}
           />
         </div>

@@ -82,13 +82,17 @@ describe('Integration: Complete Application Flow', () => {
         expect(job.status).toBe('active');
         // Verify pipeline stages were created (Requirements 4.3)
         expect(job.stages).toBeDefined();
-        expect(job.stages.length).toBe(8); // Default stages
+        expect(job.stages.length).toBe(9); // Default stages: Queue, Applied, Screening, Shortlisted, Interview, Selected, Offered, Hired, Rejected
         const stageNames = job.stages.map(s => s.name);
         expect(stageNames).toContain('Queue');
         expect(stageNames).toContain('Applied');
         expect(stageNames).toContain('Screening');
+        expect(stageNames).toContain('Shortlisted');
         expect(stageNames).toContain('Interview');
+        expect(stageNames).toContain('Selected');
+        expect(stageNames).toContain('Offered');
         expect(stageNames).toContain('Hired');
+        expect(stageNames).toContain('Rejected');
         // Verify unique application URL can be constructed (Requirements 4.4)
         const applicationUrl = `/apply/${job.id}`;
         expect(applicationUrl).toBe(`/apply/${testJobId}`);

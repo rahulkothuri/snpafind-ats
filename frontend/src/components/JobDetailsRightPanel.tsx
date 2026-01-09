@@ -143,19 +143,42 @@ function getStageColor(stage: string): { bg: string; text: string } {
 function StageSummaryStrip({
   stages,
   activeStage,
-  onStageFilter
+  onStageFilter,
+  totalCount
 }: {
   stages: StageCount[];
   activeStage: string | null;
   onStageFilter: (stage: string | null) => void;
+  totalCount: number;
 }) {
   const handleStageClick = (stageName: string) => {
+    // Toggle: if clicking the active stage, clear filter (show all)
+    // Otherwise, set the filter to the clicked stage
     const newStage = activeStage === stageName ? null : stageName;
     onStageFilter(newStage);
   };
 
+  const handleAllClick = () => {
+    // Always clear the filter to show all
+    onStageFilter(null);
+  };
+
   return (
     <div className="flex flex-wrap gap-2">
+      {/* All button */}
+      <button
+        onClick={handleAllClick}
+        className={`
+          flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all
+          ${activeStage === null
+            ? 'bg-[#0b6cf0] text-white shadow-sm'
+            : 'bg-[#f8fafc] text-[#4b5563] border border-dashed border-[#e2e8f0] hover:bg-[#e8f2fe] hover:border-[#0b6cf0]'
+          }
+        `}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${activeStage === null ? 'bg-white' : 'bg-[#64748b]'}`}></span>
+        All <span className="ml-0.5 opacity-75">{totalCount}</span>
+      </button>
       {stages.map((stage) => (
         <button
           key={stage.name}
@@ -766,6 +789,23 @@ export function JobDetailsRightPanel({
     return applyAdvancedFilters(candidatesForFilter, advancedFilters);
   }, [candidates, advancedFilters]);
 
+  // Calculate stage counts from candidates with advanced filters (before stage filter) - Requirements 4.4
+  const stageCounts: StageCount[] = useMemo(() => defaultStages.map((stage) => ({
+    name: stage,
+    count: filteredByAdvanced.filter((c) => c.stage === stage).length,
+  })), [filteredByAdvanced]);
+
+  // Total count for "All" button
+  const totalCandidatesCount = filteredByAdvanced.length;
+
+  // Apply stage filter to get final display list
+  const displayCandidates = useMemo(() => {
+    if (!stageFilter) {
+      return filteredByAdvanced;
+    }
+    return filteredByAdvanced.filter((c) => c.stage === stageFilter);
+  }, [filteredByAdvanced, stageFilter]);
+
   // Sync stage filter with URL - Requirements 4.2
   useEffect(() => {
     const urlStage = searchParams.get('stage');
@@ -803,12 +843,6 @@ export function JobDetailsRightPanel({
 
     fetchAnalytics();
   }, [role, showEnhancedPipeline]);
-
-  // Calculate stage counts from filtered candidates - Requirements 4.4
-  const stageCounts: StageCount[] = defaultStages.map((stage) => ({
-    name: stage,
-    count: filteredByAdvanced.filter((c) => c.stage === stage).length,
-  }));
 
   // Calculate KPI metrics
   const totalCandidates = candidates.length;
@@ -1071,6 +1105,7 @@ export function JobDetailsRightPanel({
           stages={stageCounts}
           activeStage={stageFilter}
           onStageFilter={handleStageFilterChange}
+          totalCount={totalCandidatesCount}
         />
       </div>
 
@@ -1089,7 +1124,7 @@ export function JobDetailsRightPanel({
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
-      ) : filteredByAdvanced.length === 0 ? (
+      ) : displayCandidates.length === 0 ? (
         <div className="bg-white rounded-xl border border-[#e2e8f0] p-8 text-center">
           {/* Empty state for no matching candidates - Requirement 3.4 */}
           {candidateSearchQuery.trim() || stageFilter || advancedFilters.skills.length > 0 || advancedFilters.source || advancedFilters.experienceMin !== null || advancedFilters.experienceMax !== null ? (
@@ -1112,7 +1147,7 @@ export function JobDetailsRightPanel({
         </div>
       ) : viewMode === 'table' ? (
         <CandidateTableView
-          candidates={filteredByAdvanced}
+          candidates={displayCandidates}
           onCandidateClick={onCandidateClick}
           selectedCandidates={selectedCandidates}
           onSelectionChange={setSelectedCandidates}
@@ -1123,7 +1158,7 @@ export function JobDetailsRightPanel({
         />
       ) : (
         <KanbanBoardView
-          candidates={filteredByAdvanced}
+          candidates={displayCandidates}
           stages={defaultStages}
           pipelineStages={pipelineStages}
           onCandidateClick={onCandidateClick}

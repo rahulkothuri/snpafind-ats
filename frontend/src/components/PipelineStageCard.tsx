@@ -23,14 +23,15 @@ export interface PipelineStageCardProps {
 }
 
 // Stage color mapping for visual differentiation
+// Stage names aligned with DEFAULT_PIPELINE_STAGES from constants/pipelineStages.ts
 const stageColors: Record<string, { bg: string; border: string; indicator: string; selectedBg: string }> = {
   'Queue': { bg: 'bg-[#f8fafc]', border: 'border-[#e2e8f0]', indicator: 'bg-[#94a3b8]', selectedBg: 'bg-[#f1f5f9]' },
   'Applied': { bg: 'bg-[#f0f9ff]', border: 'border-[#bae6fd]', indicator: 'bg-[#0ea5e9]', selectedBg: 'bg-[#e0f2fe]' },
   'Screening': { bg: 'bg-[#fffbeb]', border: 'border-[#fde68a]', indicator: 'bg-[#f59e0b]', selectedBg: 'bg-[#fef3c7]' },
-  'Shortlisted': { bg: 'bg-[#f0fdf4]', border: 'border-[#bbf7d0]', indicator: 'bg-[#22c55e]', selectedBg: 'bg-[#dcfce7]' },
+  'Shortlist': { bg: 'bg-[#f0fdf4]', border: 'border-[#bbf7d0]', indicator: 'bg-[#22c55e]', selectedBg: 'bg-[#dcfce7]' },  // Changed from 'Shortlisted' - Requirements 6.1
   'Interview': { bg: 'bg-[#eef2ff]', border: 'border-[#c7d2fe]', indicator: 'bg-[#6366f1]', selectedBg: 'bg-[#e0e7ff]' },
   'Selected': { bg: 'bg-[#fdf2f8]', border: 'border-[#fbcfe8]', indicator: 'bg-[#ec4899]', selectedBg: 'bg-[#fce7f3]' },
-  'Offer': { bg: 'bg-[#faf5ff]', border: 'border-[#ddd6fe]', indicator: 'bg-[#8b5cf6]', selectedBg: 'bg-[#f5f3ff]' },
+  'Offered': { bg: 'bg-[#faf5ff]', border: 'border-[#ddd6fe]', indicator: 'bg-[#8b5cf6]', selectedBg: 'bg-[#f5f3ff]' },  // Changed from 'Offer' - Requirements 6.2
   'Hired': { bg: 'bg-[#ecfdf5]', border: 'border-[#a7f3d0]', indicator: 'bg-[#10b981]', selectedBg: 'bg-[#d1fae5]' },
   'Rejected': { bg: 'bg-[#fef2f2]', border: 'border-[#fecaca]', indicator: 'bg-[#ef4444]', selectedBg: 'bg-[#fee2e2]' },
 };

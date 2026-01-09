@@ -183,7 +183,7 @@ export interface PipelineStageConfig {
   position: number;
   isMandatory: boolean;
   subStages: SubStageConfig[];
-  type?: 'shortlisting' | 'screening' | 'interview' | 'selected' | 'offer' | 'hired';
+  type?: 'queue' | 'applied' | 'screening' | 'shortlist' | 'interview' | 'selected' | 'offer' | 'hired';
   isCustom?: boolean;
   parentStageId?: string;
   requirements?: string[];

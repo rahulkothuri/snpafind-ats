@@ -17,6 +17,7 @@ import {
   requireJobUpdatePermission,
   requireJobDeletePermission
 } from '../middleware/jobAccessControl.js';
+import { getDownloadPresignedUrl, isS3Configured } from '../lib/s3.js';
 
 const router = Router();
 
@@ -190,15 +191,7 @@ const updateJobSchema = z.object({
   })).nullable().optional().or(z.undefined()),
 
   // Auto-rejection rules (Requirements 9.1)
-  autoRejectionRules: z.object({
-    enabled: z.boolean(),
-    rules: z.object({
-      minExperience: z.number().min(0).optional(),
-      maxExperience: z.number().min(0).optional(),
-      requiredSkills: z.array(z.string()).optional(),
-      requiredEducation: z.array(z.string()).optional(),
-    }),
-  }).nullable().optional().or(z.undefined()),
+  autoRejectionRules: autoRejectionRulesSchema.nullable().optional().or(z.undefined()),
 
   // Pipeline stages
   pipelineStages: z.array(pipelineStageSchema).optional(),
@@ -294,34 +287,42 @@ router.get(
       });
 
       // Map to response format
-      const result = jobCandidates.map((jc) => ({
-        id: jc.id,
-        jobId: jc.jobId,
-        candidateId: jc.candidateId,
-        currentStageId: jc.currentStageId,
-        appliedAt: jc.appliedAt,
-        updatedAt: jc.updatedAt,
-        stageName: jc.currentStage?.name || 'Applied',
-        candidate: jc.candidate ? {
-          id: jc.candidate.id,
-          companyId: jc.candidate.companyId,
-          name: jc.candidate.name,
-          email: jc.candidate.email,
-          phone: jc.candidate.phone,
-          experienceYears: jc.candidate.experienceYears,
-          currentCompany: jc.candidate.currentCompany,
-          location: jc.candidate.location,
-          currentCtc: jc.candidate.currentCtc,
-          expectedCtc: jc.candidate.expectedCtc,
-          noticePeriod: jc.candidate.noticePeriod,
-          source: jc.candidate.source,
-          availability: jc.candidate.availability,
-          skills: jc.candidate.skills,
-          resumeUrl: jc.candidate.resumeUrl,
-          score: jc.candidate.score,
-          createdAt: jc.candidate.createdAt,
-          updatedAt: jc.candidate.updatedAt,
-        } : null,
+      const result = await Promise.all(jobCandidates.map(async (jc) => {
+        // Convert S3 key to presigned URL if needed
+        let resumeUrl = jc.candidate?.resumeUrl;
+        if (resumeUrl && isS3Configured() && !resumeUrl.startsWith('/uploads') && !resumeUrl.startsWith('http')) {
+          resumeUrl = await getDownloadPresignedUrl({ key: resumeUrl });
+        }
+
+        return {
+          id: jc.id,
+          jobId: jc.jobId,
+          candidateId: jc.candidateId,
+          currentStageId: jc.currentStageId,
+          appliedAt: jc.appliedAt,
+          updatedAt: jc.updatedAt,
+          stageName: jc.currentStage?.name || 'Applied',
+          candidate: jc.candidate ? {
+            id: jc.candidate.id,
+            companyId: jc.candidate.companyId,
+            name: jc.candidate.name,
+            email: jc.candidate.email,
+            phone: jc.candidate.phone,
+            experienceYears: jc.candidate.experienceYears,
+            currentCompany: jc.candidate.currentCompany,
+            location: jc.candidate.location,
+            currentCtc: jc.candidate.currentCtc,
+            expectedCtc: jc.candidate.expectedCtc,
+            noticePeriod: jc.candidate.noticePeriod,
+            source: jc.candidate.source,
+            availability: jc.candidate.availability,
+            skills: jc.candidate.skills,
+            resumeUrl: resumeUrl,
+            score: jc.candidate.score,
+            createdAt: jc.candidate.createdAt,
+            updatedAt: jc.candidate.updatedAt,
+          } : null,
+        };
       }));
 
       res.json(result);
@@ -416,7 +417,13 @@ router.put(
         throw new ValidationError(parseZodErrors(result.error));
       }
 
-      const job = await jobService.update(req.params.id, result.data, req.user!.userId, req.user!.role);
+      // Cast autoRejectionRules to expected type since Zod union type is broader
+      const updateData = {
+        ...result.data,
+        autoRejectionRules: result.data.autoRejectionRules as any,
+      };
+
+      const job = await jobService.update(req.params.id, updateData, req.user!.userId, req.user!.role);
       res.json(job);
     } catch (error) {
       next(error);

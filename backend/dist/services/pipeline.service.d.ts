@@ -18,6 +18,11 @@ export interface ReorderStageData {
     stageId: string;
     newPosition: number;
 }
+export interface CreateSubStageData {
+    parentStageId: string;
+    name: string;
+    position?: number;
+}
 export declare const pipelineService: {
     /**
      * Get all stages for a job
@@ -38,6 +43,16 @@ export declare const pipelineService: {
      * Delete a custom stage (cannot delete default stages)
      */
     deleteStage(stageId: string): Promise<void>;
+    /**
+     * Add a sub-stage to a parent stage
+     * Requirements: 3.1, 3.2, 3.3
+     */
+    addSubStage(data: CreateSubStageData): Promise<PipelineStage>;
+    /**
+     * Delete a sub-stage
+     * Requirements: 2.1, 2.2
+     */
+    deleteSubStage(subStageId: string): Promise<void>;
     /**
      * Map Prisma stage to PipelineStage type
      */

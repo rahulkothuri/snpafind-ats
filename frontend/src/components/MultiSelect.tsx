@@ -135,6 +135,15 @@ export function MultiSelect({
             setIsOpen(true);
           }
           break;
+        case 'Tab':
+          // Close dropdown when Tab is pressed and allow normal tab navigation
+          if (isOpen) {
+            setIsOpen(false);
+            setSearchTerm('');
+            setHighlightedIndex(-1);
+          }
+          // Don't prevent default - allow normal tab behavior to move to next field
+          break;
         case 'Escape':
           setIsOpen(false);
           setSearchTerm('');

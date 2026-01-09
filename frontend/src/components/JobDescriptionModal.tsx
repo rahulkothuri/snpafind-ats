@@ -162,59 +162,113 @@ export function JobDescriptionModal({ isOpen, onClose, job }: JobDescriptionModa
                   Job Description
                 </h3>
                 <div 
-                  className="prose prose-sm max-w-none text-[#374151]"
+                  className="prose prose-sm max-w-none text-[#374151] [&_p]:min-h-[1.5em] [&_p:empty]:before:content-['\00a0']"
                   dangerouslySetInnerHTML={{ __html: job.description }}
                 />
               </div>
             )}
 
-            {/* Mandatory Criteria Section */}
-            <div className="p-6 bg-[#fffbeb]">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f59e0b] flex items-center justify-center">
-                  <svg 
-                    className="w-4 h-4 text-white" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-                    />
-                  </svg>
+            {/* Mandatory Criteria Section - Show job's actual mandatory criteria if available */}
+            {job.mandatoryCriteria && job.mandatoryCriteria.criteria && job.mandatoryCriteria.criteria.length > 0 ? (
+              <div className="p-6 bg-[#fffbeb]">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f59e0b] flex items-center justify-center">
+                    <svg 
+                      className="w-4 h-4 text-white" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#92400e]">
+                    {job.mandatoryCriteria.title}
+                  </h3>
                 </div>
-                <h3 className="text-sm font-semibold text-[#92400e]">
-                  {MANDATORY_CRITERIA_CONTENT.title}
-                </h3>
+
+                {job.mandatoryCriteria.intro && (
+                  <p className="text-sm text-[#78350f] font-medium mb-3">
+                    {job.mandatoryCriteria.intro}
+                  </p>
+                )}
+
+                <ol className="space-y-2 mb-4">
+                  {job.mandatoryCriteria.criteria.map((criterion, index) => (
+                    <li 
+                      key={index} 
+                      className="flex gap-2 text-sm text-[#78350f]"
+                    >
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#fcd34d] text-[#78350f] text-xs font-semibold flex items-center justify-center">
+                        {index + 1}
+                      </span>
+                      <span>{criterion}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                {job.mandatoryCriteria.note && (
+                  <div className="pt-3 border-t border-[#fcd34d]">
+                    <p className="text-xs font-semibold text-[#92400e] uppercase tracking-wide">
+                      {job.mandatoryCriteria.note}
+                    </p>
+                  </div>
+                )}
               </div>
+            ) : (
+              /* Fallback to default mandatory criteria if job doesn't have custom ones */
+              <div className="p-6 bg-[#fffbeb]">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f59e0b] flex items-center justify-center">
+                    <svg 
+                      className="w-4 h-4 text-white" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#92400e]">
+                    {MANDATORY_CRITERIA_CONTENT.title}
+                  </h3>
+                </div>
 
-              <p className="text-sm text-[#78350f] font-medium mb-3">
-                {MANDATORY_CRITERIA_CONTENT.intro}
-              </p>
-
-              <ol className="space-y-2 mb-4">
-                {MANDATORY_CRITERIA_CONTENT.criteria.map((criterion, index) => (
-                  <li 
-                    key={index} 
-                    className="flex gap-2 text-sm text-[#78350f]"
-                  >
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#fcd34d] text-[#78350f] text-xs font-semibold flex items-center justify-center">
-                      {index + 1}
-                    </span>
-                    <span>{criterion}</span>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="pt-3 border-t border-[#fcd34d]">
-                <p className="text-xs font-semibold text-[#92400e] uppercase tracking-wide">
-                  {MANDATORY_CRITERIA_CONTENT.note}
+                <p className="text-sm text-[#78350f] font-medium mb-3">
+                  {MANDATORY_CRITERIA_CONTENT.intro}
                 </p>
+
+                <ol className="space-y-2 mb-4">
+                  {MANDATORY_CRITERIA_CONTENT.criteria.map((criterion, index) => (
+                    <li 
+                      key={index} 
+                      className="flex gap-2 text-sm text-[#78350f]"
+                    >
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#fcd34d] text-[#78350f] text-xs font-semibold flex items-center justify-center">
+                        {index + 1}
+                      </span>
+                      <span>{criterion}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="pt-3 border-t border-[#fcd34d]">
+                  <p className="text-xs font-semibold text-[#92400e] uppercase tracking-wide">
+                    {MANDATORY_CRITERIA_CONTENT.note}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Footer */}

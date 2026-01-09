@@ -195,12 +195,16 @@ export function CVSection({ filename, onView }: CVSectionProps) {
 // Skills Tags - Requirement 18.4 - Blue/white theme
 interface SkillsTagsProps {
   skills: string[];
+  maxVisible?: number;
 }
 
-export function SkillsTags({ skills }: SkillsTagsProps) {
+export function SkillsTags({ skills, maxVisible = 5 }: SkillsTagsProps) {
+  const visibleSkills = skills.slice(0, maxVisible);
+  const remainingCount = skills.length - maxVisible;
+
   return (
     <div className="flex flex-wrap gap-2">
-      {skills.map((skill) => (
+      {visibleSkills.map((skill) => (
         <span
           key={skill}
           className="px-3 py-1.5 bg-[#dbeafe] text-[#1d4ed8] text-xs font-medium rounded-full border border-[#bfdbfe]"
@@ -208,6 +212,14 @@ export function SkillsTags({ skills }: SkillsTagsProps) {
           {skill}
         </span>
       ))}
+      {remainingCount > 0 && (
+        <span
+          className="px-3 py-1.5 bg-[#f1f5f9] text-[#64748b] text-xs font-medium rounded-full border border-[#e2e8f0]"
+          title={skills.slice(maxVisible).join(', ')}
+        >
+          +{remainingCount} more
+        </span>
+      )}
     </div>
   );
 }
@@ -252,24 +264,66 @@ interface NotesSectionProps {
   onChange: (value: string) => void;
   onSave: () => void;
   saving?: boolean;
+  notes?: { id: string; content: string; authorName: string; createdAt: string }[];
+  notesLoading?: boolean;
+  onDeleteNote?: (noteId: string) => void;
 }
 
-export function NotesSection({ value, onChange, onSave, saving = false }: NotesSectionProps) {
+export function NotesSection({ value, onChange, onSave, saving = false, notes = [], notesLoading = false, onDeleteNote }: NotesSectionProps) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="space-y-3">
+      {/* Add note input */}
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Add a note for this candidate..."
-        className="w-full h-24 resize-none px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:border-[#0b6cf0] focus:ring-2 focus:ring-[#0b6cf0]/20 bg-white placeholder-[#94a3b8]"
+        className="w-full h-20 resize-none px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:border-[#0b6cf0] focus:ring-2 focus:ring-[#0b6cf0]/20 bg-white placeholder-[#94a3b8]"
       />
       <button
         onClick={onSave}
-        disabled={saving}
+        disabled={saving || !value.trim()}
         className="px-4 py-2 text-xs font-semibold bg-[#0b6cf0] text-white rounded-lg hover:bg-[#0956c4] disabled:opacity-50 transition-colors shadow-sm"
       >
         {saving ? 'Saving...' : 'Save note'}
       </button>
+
+      {/* Existing notes list */}
+      {notesLoading ? (
+        <div className="text-xs text-[#94a3b8] py-2">Loading notes...</div>
+      ) : notes.length > 0 ? (
+        <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
+          {notes.map((note) => (
+            <div key={note.id} className="p-2 bg-[#f8fafc] rounded-lg border border-[#e2e8f0] group">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-xs text-[#374151] whitespace-pre-wrap break-words flex-1">{note.content}</p>
+                {onDeleteNote && (
+                  <button
+                    onClick={() => onDeleteNote(note.id)}
+                    className="p-1 text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                    title="Delete note"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1 mt-1 text-[10px] text-[#94a3b8]">
+                <span>{note.authorName}</span>
+                <span>•</span>
+                <span>{formatDate(note.createdAt)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-xs text-[#94a3b8] py-2">No notes yet</div>
+      )}
     </div>
   );
 }
