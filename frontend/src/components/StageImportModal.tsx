@@ -197,10 +197,10 @@ export function StageImportModal({ isOpen, onClose, onImport, currentJobId }: St
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-xl font-semibold text-gray-900">Import Pipeline Stages</h2>
           <button
             onClick={onClose}
@@ -213,7 +213,7 @@ export function StageImportModal({ isOpen, onClose, onImport, currentJobId }: St
           </button>
         </div>
 
-        <div className="flex h-[calc(90vh-120px)]">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Left Panel - Job Selection */}
           <div className="w-1/2 border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200">
@@ -395,8 +395,8 @@ export function StageImportModal({ isOpen, onClose, onImport, currentJobId }: St
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+        {/* Footer - Always visible at bottom */}
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="text-sm text-gray-600">
             {selectedStages.size > 0 && (
               <span>{selectedStages.size} stage{selectedStages.size !== 1 ? 's' : ''} selected</span>

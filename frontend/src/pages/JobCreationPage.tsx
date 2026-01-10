@@ -101,6 +101,7 @@ export function JobCreationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false); // Track if user has tried to submit
 
   // State for JobShareModal - Requirement 7.1
   const [showShareModal, setShowShareModal] = useState(false);
@@ -251,6 +252,8 @@ export function JobCreationPage() {
   // Handle form submission - Requirements 20.3, 20.4
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    setHasAttemptedSubmit(true); // Mark that user has attempted to submit
 
     if (!validate()) return;
 
@@ -407,8 +410,8 @@ export function JobCreationPage() {
     return fieldLabels[field] || field;
   };
 
-  // Check if there are validation errors to display
-  const hasValidationErrors = Object.keys(errors).length > 0;
+  // Check if there are validation errors to display (only after submit attempt)
+  const hasValidationErrors = hasAttemptedSubmit && Object.keys(errors).length > 0;
 
 
   if (isLoading) {
